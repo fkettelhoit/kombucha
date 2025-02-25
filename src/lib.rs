@@ -2,6 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     iter::{Peekable, once},
     slice::Iter,
+    sync::Arc,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,16 +80,22 @@ pub struct Meta {
 #[derive(Debug, Clone)]
 pub struct Expr(ExprEnum, Meta);
 
+impl Expr {
+    fn new(inner: ExprEnum, alias: Option<String>, pos: Pos) -> Self {
+        Self(inner, Meta { alias, pos })
+    }
+}
+
 #[derive(Debug, Clone)]
 enum ExprEnum {
-    Var(u32),
-    Tag(u32),
+    Var(usize),
+    Tag(usize),
     Abs(Box<Expr>),
     Rec(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
     Cnd {
         value: Box<Expr>,
-        pattern: (u32, u32),
+        pattern: (usize, usize),
         then_expr: Box<Expr>,
         else_expr: Box<Expr>,
     },
@@ -98,19 +105,15 @@ pub fn parse(code: &str) -> Result<Expr, String> {
     fn parse_expr(
         tokens: &mut Peekable<Iter<(Token, Pos)>>,
         vars: &mut Vec<String>,
-        tags: &mut HashMap<String, u32>,
+        tags: &mut HashMap<String, usize>,
     ) -> Result<Expr, String> {
         let Some((token, pos)) = tokens.next() else {
             return Err("Expected an expression, but found nothing".into());
         };
         let mut expr = match token {
-            Token::Symbol(s) if is_tag(s) => Expr(
-                ExprEnum::Tag(resolve_tag(tags, s)),
-                Meta {
-                    alias: Some(s.clone()),
-                    pos: *pos,
-                },
-            ),
+            Token::Symbol(s) if is_tag(s) => {
+                Expr::new(ExprEnum::Tag(resolve_tag(tags, s)), Some(s.clone()), *pos)
+            }
             Token::Symbol(s) if s.as_str() == "if" => {
                 let v = parse_expr(tokens, vars, tags)?;
                 expect(tokens, Token::Symbol("is".into()))?;
@@ -129,16 +132,10 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                     let mut bound_vars = HashSet::new();
                     alias += "(";
                     loop {
-                        let (binding, pos) = match tokens.next() {
-                            Some((Token::Symbol(s), pos)) if !is_tag(s) => (s.clone(), *pos),
-                            Some((t, pos)) => {
-                                return Err(format!("Expected a variable, found '{t}' at {pos}"));
-                            }
-                            None => return Err("Expected a variable, but found nothing".into()),
-                        };
+                        let (binding, pos) = expect_var(tokens)?;
                         if bound_vars.contains(&binding) {
                             return Err(format!(
-                                "All bound variables in a pattern must be unique, but '{binding} is used twice at {pos}"
+                                "All variables in a pattern must be unique, but '{binding} is used twice at {pos}"
                             ));
                         }
                         alias += &binding;
@@ -167,18 +164,34 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                     vars.pop();
                 }
                 let else_expr = parse_expr(tokens, vars, tags)?;
-                Expr(
-                    ExprEnum::Cnd {
-                        value: Box::new(v),
-                        pattern: (tag, bindings),
-                        then_expr: Box::new(then_expr),
-                        else_expr: Box::new(else_expr),
-                    },
-                    Meta {
-                        alias: Some(alias),
-                        pos: *pos,
-                    },
-                )
+                let cnd = ExprEnum::Cnd {
+                    value: Box::new(v),
+                    pattern: (tag, bindings),
+                    then_expr: Box::new(then_expr),
+                    else_expr: Box::new(else_expr),
+                };
+                Expr::new(cnd, Some(alias), *pos)
+            }
+            Token::Symbol(s) if s.as_str() == "let" => {
+                let (name, _) = expect_var(tokens)?;
+                expect(tokens, Token::Symbol("=".into()))?;
+                let binding = parse_expr(tokens, vars, tags)?;
+                vars.push(name.clone());
+                let body = parse_expr(tokens, vars, tags)?;
+                vars.pop();
+                let abs = Expr::new(ExprEnum::Abs(Box::new(body)), Some(name.clone()), *pos);
+                Expr::new(ExprEnum::App(Box::new(abs), Box::new(binding)), None, *pos)
+            }
+            Token::Symbol(s) if s.as_str() == "loop" => {
+                let (name, _) = expect_var(tokens)?;
+                expect(tokens, Token::Symbol("=".into()))?;
+                vars.push(name.clone());
+                let binding = parse_expr(tokens, vars, tags)?;
+                let body = parse_expr(tokens, vars, tags)?;
+                vars.pop();
+                let abs = Expr::new(ExprEnum::Abs(Box::new(body)), Some(name.clone()), *pos);
+                let rec = Expr::new(ExprEnum::Rec(Box::new(binding)), Some(name.clone()), *pos);
+                Expr::new(ExprEnum::App(Box::new(abs), Box::new(rec)), None, *pos)
             }
             Token::Symbol(s) => match tokens.peek() {
                 Some((Token::Symbol(t), pos)) if t.as_str() == "=>" => {
@@ -186,34 +199,16 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                     vars.push(s.clone());
                     let body = parse_expr(tokens, vars, tags)?;
                     vars.pop();
-                    Expr(
-                        ExprEnum::Abs(Box::new(body)),
-                        Meta {
-                            alias: Some(s.clone()),
-                            pos: *pos,
-                        },
-                    )
+                    Expr::new(ExprEnum::Abs(Box::new(body)), Some(s.clone()), *pos)
                 }
                 Some((Token::Symbol(t), _)) if t.as_str() == "~>" => {
                     tokens.next();
                     vars.push(s.clone());
                     let body = parse_expr(tokens, vars, tags)?;
                     vars.pop();
-                    Expr(
-                        ExprEnum::Rec(Box::new(body)),
-                        Meta {
-                            alias: Some(s.clone()),
-                            pos: *pos,
-                        },
-                    )
+                    Expr::new(ExprEnum::Rec(Box::new(body)), Some(s.clone()), *pos)
                 }
-                _ => Expr(
-                    ExprEnum::Var(resolve_var(vars, s)?),
-                    Meta {
-                        alias: Some(s.clone()),
-                        pos: *pos,
-                    },
-                ),
+                _ => Expr::new(ExprEnum::Var(resolve_var(vars, s)?), Some(s.clone()), *pos),
             },
             Token::LParen => {
                 let expr = parse_expr(tokens, vars, tags)?;
@@ -227,13 +222,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                 tokens.next();
                 loop {
                     let arg = parse_expr(tokens, vars, tags)?;
-                    expr = Expr(
-                        ExprEnum::App(Box::new(expr), Box::new(arg)),
-                        Meta {
-                            alias: None,
-                            pos: *pos,
-                        },
-                    );
+                    expr = Expr::new(ExprEnum::App(Box::new(expr), Box::new(arg)), None, *pos);
                     if let Some((Token::RParen, _)) = tokens.peek() {
                         tokens.next();
                         break expr;
@@ -252,19 +241,26 @@ pub fn parse(code: &str) -> Result<Expr, String> {
             None => Err(format!("Expected '{tok}', but found nothing")),
         }
     }
-    fn resolve_var(vars: &[String], s: &str) -> Result<u32, String> {
+    fn expect_var(tokens: &mut Peekable<Iter<(Token, Pos)>>) -> Result<(String, Pos), String> {
+        match tokens.next() {
+            Some((Token::Symbol(s), pos)) if !is_tag(s) => Ok((s.clone(), *pos)),
+            Some((t, pos)) => Err(format!("Expected a variable, found {t} at {pos}")),
+            None => Err("Expected a variable, but found nothing".into()),
+        }
+    }
+    fn resolve_var(vars: &[String], s: &str) -> Result<usize, String> {
         for (i, t) in vars.iter().rev().enumerate() {
             if &s == t {
-                return Ok(i as u32);
+                return Ok(i);
             }
         }
         Err(format!("Could not find binding for symbol '{s}'"))
     }
-    fn resolve_tag(tags: &mut HashMap<String, u32>, t: &str) -> u32 {
+    fn resolve_tag(tags: &mut HashMap<String, usize>, t: &str) -> usize {
         match tags.get(t) {
             Some(t) => *t,
             None => {
-                let n = tags.len() as u32;
+                let n = tags.len();
                 tags.insert(t.to_string(), n);
                 n
             }
@@ -309,6 +305,10 @@ impl Expr {
         }
     }
 
+    fn is_kept_inline(&self) -> bool {
+        matches!(&self.0, ExprEnum::Abs(_) | ExprEnum::Rec(_))
+    }
+
     fn pretty(&self, f: &mut std::fmt::Formatter<'_>, group: bool, lvl: usize) -> std::fmt::Result {
         fn indent(f: &mut std::fmt::Formatter<'_>, level: usize) -> std::fmt::Result {
             for _ in 0..level {
@@ -318,8 +318,8 @@ impl Expr {
         }
         match &self.0 {
             ExprEnum::Var(s) | ExprEnum::Tag(s) => match &self.1.alias {
-                Some(alias) => f.write_str(&alias),
-                _ => write!(f, "'{s}"),
+                Some(alias) => f.write_str(alias),
+                None => write!(f, "'{s}"),
             },
             ExprEnum::App(expr, arg) => {
                 if let Expr(ExprEnum::Abs(body), _) = expr.as_ref() {
@@ -327,12 +327,19 @@ impl Expr {
                         // loop
                         match (&expr.1.alias, &arg.1.alias) {
                             (Some(abs_name), Some(rec_name)) if abs_name == rec_name => {
-                                write!(f, "loop {abs_name} = ")?;
-                                arg.pretty(f, false, lvl)?;
+                                write!(f, "loop {abs_name} =")?;
+                                if b.is_simple() || b.is_kept_inline() {
+                                    f.write_str(" ")?;
+                                    b.pretty(f, false, lvl)?;
+                                } else {
+                                    f.write_str("\n")?;
+                                    indent(f, lvl + 1)?;
+                                    b.pretty(f, false, lvl + 1)?;
+                                }
+                                if lvl == 0 {
+                                    f.write_str("\n")?;
+                                }
                                 f.write_str("\n")?;
-                                indent(f, lvl + 1)?;
-                                b.pretty(f, false, lvl + 1)?;
-                                f.write_str("\n\n")?;
                                 indent(f, lvl)?;
                                 return body.pretty(f, false, lvl);
                             }
@@ -341,8 +348,18 @@ impl Expr {
                     }
                     // let
                     if let Some(name) = &expr.1.alias {
-                        write!(f, "let {name} = ")?;
-                        arg.pretty(f, false, lvl)?;
+                        write!(f, "let {name} =")?;
+                        if arg.is_simple() || arg.is_kept_inline() {
+                            f.write_str(" ")?;
+                            arg.pretty(f, false, lvl)?;
+                        } else {
+                            f.write_str("\n")?;
+                            indent(f, lvl + 1)?;
+                            arg.pretty(f, false, lvl + 1)?;
+                        }
+                        if lvl == 0 {
+                            f.write_str("\n")?;
+                        }
                         f.write_str("\n")?;
                         indent(f, lvl)?;
                         return body.pretty(f, false, lvl);
@@ -384,6 +401,9 @@ impl Expr {
                 write!(f, ")")
             }
             ExprEnum::Abs(body) | ExprEnum::Rec(body) => {
+                if group {
+                    f.write_str("(")?;
+                }
                 let arrow = match self.0 {
                     ExprEnum::Abs(_) => "=>",
                     _ => "~>",
@@ -392,10 +412,7 @@ impl Expr {
                     Some(var) => format!("{var} {arrow}"),
                     _ => arrow.to_string(),
                 };
-                if group {
-                    f.write_str("(")?;
-                }
-                if body.is_simple() {
+                if body.is_simple() || body.is_kept_inline() {
                     write!(f, "{var_arrow} ")?;
                     body.pretty(f, false, lvl)?;
                 } else {
@@ -440,14 +457,202 @@ impl Expr {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum Value {
+    Fn(Expr, Arc<Env>, Meta),
+    Rec(Expr, Arc<Env>, Meta),
+    Tag(usize, Vec<Value>, Meta),
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Fn(body, _, meta) => match &meta.alias {
+                Some(alias) => write!(f, "{alias} => {body}"),
+                None => write!(f, "=> {body}"),
+            },
+            Value::Rec(body, _, meta) => match &meta.alias {
+                Some(alias) => write!(f, "{alias} ~> {body}"),
+                None => write!(f, "~> {body}"),
+            },
+            Value::Tag(t, values, meta) => {
+                match &meta.alias {
+                    Some(alias) => f.write_str(alias)?,
+                    None => write!(f, "'{t}")?,
+                }
+                if !values.is_empty() {
+                    f.write_str("(")?;
+                    for (i, v) in values.iter().enumerate() {
+                        if i > 0 {
+                            f.write_str(", ")?;
+                        }
+                        v.fmt(f)?;
+                    }
+                    f.write_str(")")?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Env {
+    Empty,
+    Some(Value, Arc<Env>),
+}
+
+impl Env {
+    fn get(&self, var: usize) -> Option<&Value> {
+        match self {
+            Env::Empty => None,
+            Env::Some(expr, _) if var == 0 => Some(expr),
+            Env::Some(_, env) => env.get(var - 1),
+        }
+    }
+
+    fn push(self: &Arc<Self>, val: Value) -> Arc<Env> {
+        Arc::new(Env::Some(val, Arc::clone(self)))
+    }
+
+    fn extend(self: &Arc<Self>, vals: Vec<Value>) -> Arc<Env> {
+        let mut env = Arc::clone(self);
+        for v in vals {
+            env = env.push(v);
+        }
+        env
+    }
+}
+
+impl Expr {
+    pub fn eval(self, env: &Arc<Env>) -> Result<Value, String> {
+        let pos = self.1.pos;
+        match self.0 {
+            ExprEnum::Var(var) => env
+                .get(var)
+                .cloned()
+                .ok_or_else(|| format!("No binding for {self} at {pos}")),
+            ExprEnum::Tag(t) => Ok(Value::Tag(t, vec![], self.1.clone())),
+            ExprEnum::Abs(body) => Ok(Value::Fn(*body, Arc::clone(env), self.1.clone())),
+            ExprEnum::Rec(body) => Ok(Value::Rec(*body, Arc::clone(env), self.1.clone())),
+            ExprEnum::App(f, arg) => {
+                fn apply(f: Value, arg: Value, env: &Arc<Env>) -> Result<Value, String> {
+                    match f {
+                        Value::Rec(body, rec_env, meta) => {
+                            let rec_env =
+                                rec_env.push(Value::Rec(body.clone(), Arc::clone(&rec_env), meta));
+                            let f = body.eval(&rec_env)?;
+                            apply(f, arg, env)
+                        }
+                        Value::Fn(body, env, _) => body.eval(&env.push(arg)),
+                        Value::Tag(t, mut values, meta) => {
+                            values.push(arg);
+                            Ok(Value::Tag(t, values, meta))
+                        }
+                    }
+                }
+                let f = f.eval(env)?;
+                let arg = arg.eval(env)?;
+                apply(f, arg, env)
+            }
+            ExprEnum::Cnd {
+                value,
+                pattern: (tag, vars),
+                then_expr,
+                else_expr,
+            } => {
+                let value = value.eval(env)?;
+                fn apply(
+                    value: Value,
+                    tag: usize,
+                    vars: usize,
+                    then_expr: Box<Expr>,
+                    else_expr: Box<Expr>,
+                    env: &Arc<Env>,
+                ) -> Result<Value, String> {
+                    match value {
+                        Value::Rec(body, rec_env, meta) => {
+                            let rec_env =
+                                rec_env.push(Value::Rec(body.clone(), Arc::clone(&rec_env), meta));
+                            let f = body.eval(&rec_env)?;
+                            apply(f, tag, vars, then_expr, else_expr, env)
+                        }
+                        Value::Tag(t, values, _) if t == tag && values.len() == vars => {
+                            then_expr.eval(&env.extend(values))
+                        }
+                        Value::Tag(_, _, _) | Value::Fn(_, _, _) => else_expr.eval(env),
+                    }
+                }
+                apply(value, tag, vars, then_expr, else_expr, env)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let code = "x => Foo(x)";
+    fn fn_app() {
+        let code = "let f = x => Foo(x)
+
+f(Bar)";
         let parsed = parse(code).unwrap();
         assert_eq!(format!("{parsed}"), code);
+        let evaled = parsed.eval(&Arc::new(Env::Empty)).unwrap();
+        assert_eq!(format!("{evaled}"), "Foo(Bar)");
+    }
+
+    #[test]
+    fn fn_closure() {
+        let code = "let f = x => y => Pair(x, y)
+
+let foo = f(Foo)
+
+foo(Bar)";
+        let parsed = parse(code).unwrap();
+        assert_eq!(format!("{parsed}"), code);
+        let evaled = parsed.eval(&Arc::new(Env::Empty)).unwrap();
+        assert_eq!(format!("{evaled}"), "Pair(Foo, Bar)");
+    }
+
+    #[test]
+    fn rec_fn_app() {
+        let code = "loop map = f => xs =>
+  if xs is Cons(x, xs) then
+    Cons(f(x), map(f, xs))
+  else
+    xs
+
+map(x => Foo(x), Cons(Bar, Cons(Baz, Nil)))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(format!("{parsed}"), code);
+        let evaled = parsed.eval(&Arc::new(Env::Empty)).unwrap();
+        assert_eq!(format!("{evaled}"), "Cons(Foo(Bar), Cons(Foo(Baz), Nil))");
+    }
+
+    #[test]
+    fn rec_value_cond() {
+        let code = "loop r = Cons(Foo, r)
+
+let head = l =>
+  if l is Cons(x, xs) then
+    x
+  else
+    Nil
+
+let tail = l =>
+  if l is Cons(x, xs) then
+    xs
+  else
+    Nil
+
+head(tail(tail(r)))";
+        let parsed = parse(code).unwrap();
+        println!("{code}\n\n{parsed}");
+        assert_eq!(format!("{parsed}"), code);
+        let evaled = parsed.eval(&Arc::new(Env::Empty)).unwrap();
+        assert_eq!(format!("{evaled}"), "Foo");
     }
 }
