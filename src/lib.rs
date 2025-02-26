@@ -536,24 +536,21 @@ impl Expr {
             ExprEnum::Abs(body) => Ok(Value::Fn(*body, Arc::clone(env), self.1.clone())),
             ExprEnum::Rec(body) => Ok(Value::Rec(*body, Arc::clone(env), self.1.clone())),
             ExprEnum::App(f, arg) => {
-                fn apply(f: Value, arg: Value, env: &Arc<Env>) -> Result<Value, String> {
+                let arg = arg.eval(env)?;
+                let mut f = f.eval(env)?;
+                loop {
                     match f {
-                        Value::Rec(body, rec_env, meta) => {
-                            let rec_env =
-                                rec_env.push(Value::Rec(body.clone(), Arc::clone(&rec_env), meta));
-                            let f = body.eval(&rec_env)?;
-                            apply(f, arg, env)
+                        Value::Rec(body, env, meta) => {
+                            let env = env.push(Value::Rec(body.clone(), Arc::clone(&env), meta));
+                            f = body.eval(&env)?;
                         }
-                        Value::Fn(body, env, _) => body.eval(&env.push(arg)),
                         Value::Tag(t, mut values, meta) => {
                             values.push(arg);
-                            Ok(Value::Tag(t, values, meta))
+                            break Ok(Value::Tag(t, values, meta));
                         }
+                        Value::Fn(body, env, _) => break body.eval(&env.push(arg)),
                     }
                 }
-                let f = f.eval(env)?;
-                let arg = arg.eval(env)?;
-                apply(f, arg, env)
             }
             ExprEnum::Cnd {
                 value,
@@ -561,29 +558,19 @@ impl Expr {
                 then_expr,
                 else_expr,
             } => {
-                let value = value.eval(env)?;
-                fn apply(
-                    value: Value,
-                    tag: usize,
-                    vars: usize,
-                    then_expr: Box<Expr>,
-                    else_expr: Box<Expr>,
-                    env: &Arc<Env>,
-                ) -> Result<Value, String> {
+                let mut value = value.eval(env)?;
+                loop {
                     match value {
-                        Value::Rec(body, rec_env, meta) => {
-                            let rec_env =
-                                rec_env.push(Value::Rec(body.clone(), Arc::clone(&rec_env), meta));
-                            let f = body.eval(&rec_env)?;
-                            apply(f, tag, vars, then_expr, else_expr, env)
+                        Value::Rec(body, env, meta) => {
+                            let env = env.push(Value::Rec(body.clone(), Arc::clone(&env), meta));
+                            value = body.eval(&env)?;
                         }
                         Value::Tag(t, values, _) if t == tag && values.len() == vars => {
-                            then_expr.eval(&env.extend(values))
+                            break then_expr.eval(&env.extend(values));
                         }
-                        Value::Tag(_, _, _) | Value::Fn(_, _, _) => else_expr.eval(env),
+                        Value::Tag(_, _, _) | Value::Fn(_, _, _) => break else_expr.eval(env),
                     }
                 }
-                apply(value, tag, vars, then_expr, else_expr, env)
             }
         }
     }
