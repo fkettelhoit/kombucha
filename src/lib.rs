@@ -459,8 +459,8 @@ impl Expr {
 
 #[derive(Debug, Clone)]
 pub enum Value {
-    Fn(Expr, Arc<Env>, Meta),
-    Rec(Expr, Arc<Env>, Meta),
+    Fn(Expr, Arc<Env<Value>>, Meta),
+    Rec(Expr, Arc<Env<Value>>, Meta),
     Tag(usize, Vec<Value>, Meta),
 }
 
@@ -497,13 +497,13 @@ impl std::fmt::Display for Value {
 }
 
 #[derive(Debug, Clone)]
-pub enum Env {
+pub enum Env<T> {
     Empty,
-    Some(Value, Arc<Env>),
+    Some(T, Arc<Env<T>>),
 }
 
-impl Env {
-    fn get(&self, var: usize) -> Option<&Value> {
+impl<T> Env<T> {
+    fn get(&self, var: usize) -> Option<&T> {
         match self {
             Env::Empty => None,
             Env::Some(expr, _) if var == 0 => Some(expr),
@@ -511,11 +511,11 @@ impl Env {
         }
     }
 
-    fn push(self: &Arc<Self>, val: Value) -> Arc<Env> {
+    fn push(self: &Arc<Self>, val: T) -> Arc<Env<T>> {
         Arc::new(Env::Some(val, Arc::clone(self)))
     }
 
-    fn extend(self: &Arc<Self>, vals: Vec<Value>) -> Arc<Env> {
+    fn extend(self: &Arc<Self>, vals: Vec<T>) -> Arc<Env<T>> {
         let mut env = Arc::clone(self);
         for v in vals {
             env = env.push(v);
@@ -524,8 +524,114 @@ impl Env {
     }
 }
 
+#[derive(Clone)]
+enum V {
+    Fn(Expr, Arc<Env<V>>, Meta),
+    Tag(usize, Vec<V>, Meta),
+    Any,
+}
+
 impl Expr {
-    pub fn eval(self, env: &Arc<Env>) -> Result<Value, String> {
+    pub fn eval(self) -> Result<Value, String> {
+        self.validate()?;
+        self._eval(&Arc::new(Env::Empty))
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        self.check(&Arc::new(Env::Empty), &[]).map(|_| ())
+    }
+
+    fn check(&self, env: &Arc<Env<V>>, stack: &[(&Expr, &Meta)]) -> Result<Vec<V>, String> {
+        // Possible recursion: an expr whose set of possible functions contains `f` is called as a
+        // function inside of `f` (in other words while the call stack contains `f`)
+        fn stacktrace(stack: &[(&Expr, &Meta)]) -> String {
+            let mut msg = format!("Implicit recursion detected!");
+            for (expr, _) in stack {
+                if !expr.is_sugared_as_let_or_loop() {
+                    let pos = expr.1.pos;
+                    msg += &format!("\n\n... at {pos}:\n{expr}");
+                }
+            }
+            msg
+        }
+        let Expr(inner, meta) = self;
+        let pos = meta.pos;
+        match inner {
+            ExprEnum::Var(var) => match env.get(*var) {
+                Some(expr) => Ok(vec![expr.clone()]),
+                None => Err(format!("No binding for {self} at {pos}")),
+            },
+            ExprEnum::Tag(t) => Ok(vec![V::Tag(*t, vec![], meta.clone())]),
+            ExprEnum::Abs(body) => {
+                body.check(&env.push(V::Any), stack)?;
+                Ok(vec![V::Fn(*body.clone(), Arc::clone(env), meta.clone())])
+            }
+            ExprEnum::Rec(body) => body.check(&env.push(V::Any), stack),
+            ExprEnum::App(f, arg) => {
+                let fs = f.check(env, stack)?;
+                for v in fs.iter() {
+                    if let V::Fn(_, _, f_meta) = v {
+                        for caller in stack {
+                            if caller.1.pos == f_meta.pos {
+                                let mut stack = stack.to_vec();
+                                stack.push((self, f_meta));
+                                return Err(stacktrace(&stack));
+                            }
+                        }
+                    }
+                }
+                let args = arg.check(env, stack)?;
+                let mut results = vec![];
+                for v in fs {
+                    for arg in args.iter() {
+                        match &v {
+                            V::Any => {
+                                results.push(V::Any);
+                            }
+                            V::Tag(t, values, meta) => {
+                                let vs = values.iter().cloned().chain([arg.clone()]).collect();
+                                results.push(V::Tag(*t, vs, meta.clone()))
+                            }
+                            V::Fn(body, fn_env, f_meta) => {
+                                let mut stack = stack.to_vec();
+                                stack.push((self, f_meta));
+                                let env = fn_env.push(arg.clone());
+                                results.extend(body.check(&env, &stack)?);
+                            }
+                        }
+                    }
+                }
+                Ok(results)
+            }
+            ExprEnum::Cnd {
+                value,
+                pattern: (tag, vars),
+                then_expr,
+                else_expr,
+            } => {
+                let values = value.check(env, stack)?;
+                let mut results = vec![];
+                for value in values {
+                    match value {
+                        V::Any => {
+                            let values = vec![V::Any; *vars];
+                            results.extend(then_expr.check(&env.extend(values), stack)?);
+                            results.extend(else_expr.check(env, stack)?);
+                        }
+                        V::Tag(t, values, _) if t == *tag && values.len() == *vars => {
+                            results.extend(then_expr.check(&env.extend(values), stack)?);
+                        }
+                        V::Tag(_, _, _) | V::Fn(_, _, _) => {
+                            results.extend(else_expr.check(env, stack)?);
+                        }
+                    }
+                }
+                Ok(results)
+            }
+        }
+    }
+
+    pub fn _eval(self, env: &Arc<Env<Value>>) -> Result<Value, String> {
         let pos = self.1.pos;
         match self.0 {
             ExprEnum::Var(var) => env
@@ -536,19 +642,20 @@ impl Expr {
             ExprEnum::Abs(body) => Ok(Value::Fn(*body, Arc::clone(env), self.1.clone())),
             ExprEnum::Rec(body) => Ok(Value::Rec(*body, Arc::clone(env), self.1.clone())),
             ExprEnum::App(f, arg) => {
-                let arg = arg.eval(env)?;
-                let mut f = f.eval(env)?;
+                let mut f = f._eval(env)?;
                 loop {
                     match f {
                         Value::Rec(body, env, meta) => {
                             let env = env.push(Value::Rec(body.clone(), Arc::clone(&env), meta));
-                            f = body.eval(&env)?;
+                            f = body._eval(&env)?;
                         }
                         Value::Tag(t, mut values, meta) => {
-                            values.push(arg);
+                            values.push(arg._eval(env)?);
                             break Ok(Value::Tag(t, values, meta));
                         }
-                        Value::Fn(body, env, _) => break body.eval(&env.push(arg)),
+                        Value::Fn(body, fn_env, _) => {
+                            break body._eval(&fn_env.push(arg._eval(env)?));
+                        }
                     }
                 }
             }
@@ -558,17 +665,17 @@ impl Expr {
                 then_expr,
                 else_expr,
             } => {
-                let mut value = value.eval(env)?;
+                let mut value = value._eval(env)?;
                 loop {
                     match value {
                         Value::Rec(body, env, meta) => {
                             let env = env.push(Value::Rec(body.clone(), Arc::clone(&env), meta));
-                            value = body.eval(&env)?;
+                            value = body._eval(&env)?;
                         }
                         Value::Tag(t, values, _) if t == tag && values.len() == vars => {
-                            break then_expr.eval(&env.extend(values));
+                            break then_expr._eval(&env.extend(values));
                         }
-                        Value::Tag(_, _, _) | Value::Fn(_, _, _) => break else_expr.eval(env),
+                        Value::Tag(_, _, _) | Value::Fn(_, _, _) => break else_expr._eval(env),
                     }
                 }
             }
@@ -581,31 +688,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fn_app() {
+    fn eval_fn_app() {
         let code = "let f = x => Foo(x)
 
 f(Bar)";
         let parsed = parse(code).unwrap();
-        assert_eq!(format!("{parsed}"), code);
-        let evaled = parsed.eval(&Arc::new(Env::Empty)).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "Foo(Bar)");
     }
 
     #[test]
-    fn fn_closure() {
+    fn eval_fn_closure() {
         let code = "let f = x => y => Pair(x, y)
 
 let foo = f(Foo)
 
 foo(Bar)";
         let parsed = parse(code).unwrap();
-        assert_eq!(format!("{parsed}"), code);
-        let evaled = parsed.eval(&Arc::new(Env::Empty)).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "Pair(Foo, Bar)");
     }
 
     #[test]
-    fn rec_fn_app() {
+    fn eval_rec_fn_app() {
         let code = "loop map = f => xs =>
   if xs is Cons(x, xs) then
     Cons(f(x), map(f, xs))
@@ -614,13 +721,13 @@ foo(Bar)";
 
 map(x => Foo(x), Cons(Bar, Cons(Baz, Nil)))";
         let parsed = parse(code).unwrap();
-        assert_eq!(format!("{parsed}"), code);
-        let evaled = parsed.eval(&Arc::new(Env::Empty)).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "Cons(Foo(Bar), Cons(Foo(Baz), Nil))");
     }
 
     #[test]
-    fn rec_value_cond() {
+    fn eval_rec_value_cond() {
         let code = "loop r = Cons(Foo, r)
 
 let head = l =>
@@ -637,9 +744,189 @@ let tail = l =>
 
 head(tail(tail(r)))";
         let parsed = parse(code).unwrap();
-        println!("{code}\n\n{parsed}");
-        assert_eq!(format!("{parsed}"), code);
-        let evaled = parsed.eval(&Arc::new(Env::Empty)).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "Foo");
+    }
+
+    #[test]
+    fn eval_normal_recursion() {
+        let code = "loop add = x => y =>
+  if x is Suc(x) then
+    add(x, Suc(y))
+  else
+    y
+
+add(Suc(Suc(Zero)), Suc(Zero))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "Suc(Suc(Suc(Zero)))");
+    }
+
+    #[test]
+    fn eval_twice_identity() {
+        let code = "let twice = f => f(f)
+
+let identity = x => x
+
+twice(identity)";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "x => x");
+    }
+
+    #[test]
+    fn reject_twice_twice() {
+        let code = "let twice = f => f(f)
+
+twice(twice)";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let err = parsed.eval().unwrap_err();
+        println!("{err}");
+        assert_eq!(
+            err,
+            "Implicit recursion detected!
+
+... at line 3, col 1:
+twice(twice)
+
+... at line 1, col 18:
+f(f)"
+        );
+    }
+
+    #[test]
+    fn reject_twice1_twice2() {
+        let code = "let twice1 = f => f(f)
+
+let twice2 = f => f(f)
+
+twice1(twice2)";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let err = parsed.eval().unwrap_err();
+        assert_eq!(
+            err,
+            "Implicit recursion detected!
+
+... at line 5, col 1:
+twice1(twice2)
+
+... at line 1, col 19:
+f(f)
+
+... at line 3, col 19:
+f(f)"
+        );
+    }
+
+    #[test]
+    fn reject_twice1_twice2_branch() {
+        let code = "let twice1 = f => f(f)
+
+let twice2 = f => f(f)
+
+if Foo(twice2) is Foo(f) then
+  twice1(f)
+else
+  Nothing";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let err = parsed.eval().unwrap_err();
+        assert_eq!(
+            err,
+            "Implicit recursion detected!
+
+... at line 6, col 3:
+twice1(f)
+
+... at line 1, col 19:
+f(f)
+
+... at line 3, col 19:
+f(f)"
+        );
+    }
+
+    #[test]
+    fn reject_fixed_point_combinator() {
+        let code = "let fix = f =>
+  let x = x => f(x(x))
+  f(x(x))
+
+let add' = f => x => y =>
+  if x is Suc(x) then
+    f(x, Suc(y))
+  else
+    y
+
+let add = x => y => fix(add', x, y)
+
+add(Suc(Suc(Zero)), Suc(Zero))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let err = parsed.eval().unwrap_err();
+        assert_eq!(
+            err,
+            "Implicit recursion detected!
+
+... at line 3, col 5:
+x(x)
+
+... at line 2, col 18:
+x(x)"
+        );
+    }
+
+    #[test]
+    fn reject_fixed_point_combinator_without_app() {
+        let code = "f =>
+  let x = x => f(x(x))
+  f(x(x))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let err = parsed.eval().unwrap_err();
+        assert_eq!(
+            err,
+            "Implicit recursion detected!
+
+... at line 3, col 5:
+x(x)
+
+... at line 2, col 18:
+x(x)"
+        );
+    }
+
+    #[test]
+    fn reject_rec() {
+        let code = "let twice = f => f(f)
+
+loop add = x => y =>
+  if x is Suc(x) then
+    add(x, Suc(y))
+  else
+    y
+
+if add(Suc(Zero), Zero) is Zero then
+  Zero
+else
+  twice(twice)";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let err = parsed.eval().unwrap_err();
+        assert_eq!(
+            err,
+            "Implicit recursion detected!
+
+... at line 12, col 3:
+twice(twice)
+
+... at line 1, col 18:
+f(f)"
+        );
     }
 }
