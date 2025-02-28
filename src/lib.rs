@@ -549,7 +549,7 @@ impl Expr {
             for (expr, _) in stack {
                 if !expr.is_sugared_as_let_or_loop() {
                     let pos = expr.1.pos;
-                    msg += &format!("\n\n... at {pos}:\n{expr}");
+                    msg += &format!("\n\n...at {pos}:\n{expr}");
                 }
             }
             msg
@@ -569,17 +569,6 @@ impl Expr {
             ExprEnum::Rec(body) => body.check(&env.push(V::Any), stack),
             ExprEnum::App(f, arg) => {
                 let fs = f.check(env, stack)?;
-                for v in fs.iter() {
-                    if let V::Fn(_, _, f_meta) = v {
-                        for caller in stack {
-                            if caller.1.pos == f_meta.pos {
-                                let mut stack = stack.to_vec();
-                                stack.push((self, f_meta));
-                                return Err(stacktrace(&stack));
-                            }
-                        }
-                    }
-                }
                 let args = arg.check(env, stack)?;
                 let mut results = vec![];
                 for v in fs {
@@ -594,7 +583,16 @@ impl Expr {
                             }
                             V::Fn(body, fn_env, f_meta) => {
                                 let mut stack = stack.to_vec();
-                                stack.push((self, f_meta));
+                                for caller in stack.iter() {
+                                    if caller.1.pos == meta.pos {
+                                        if let V::Fn(_, _, arg_meta) = arg {
+                                            if arg_meta.pos == f_meta.pos {
+                                                return Err(stacktrace(&stack));
+                                            }
+                                        }
+                                    }
+                                }
+                                stack.push((self, meta));
                                 let env = fn_env.push(arg.clone());
                                 results.extend(body.check(&env, &stack)?);
                             }
@@ -765,6 +763,19 @@ add(Suc(Suc(Zero)), Suc(Zero))";
     }
 
     #[test]
+    fn eval_identity_identity() {
+        let code = "let identity1 = x => x
+
+let identity2 = x => identity1(x)
+
+identity2(identity2)";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "x => identity1(x)");
+    }
+
+    #[test]
     fn eval_twice_identity() {
         let code = "let twice = f => f(f)
 
@@ -778,6 +789,19 @@ twice(identity)";
     }
 
     #[test]
+    fn eval_nested_app() {
+        let code = "let apply = f => x => f(x)
+
+let identity = x => x
+
+apply(x => apply(identity, x), Foo(Foo(Bar)))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "Foo(Foo(Bar))");
+    }
+
+    #[test]
     fn reject_twice_twice() {
         let code = "let twice = f => f(f)
 
@@ -785,15 +809,14 @@ twice(twice)";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
         let err = parsed.eval().unwrap_err();
-        println!("{err}");
         assert_eq!(
             err,
             "Implicit recursion detected!
 
-... at line 3, col 1:
+...at line 3, col 1:
 twice(twice)
 
-... at line 1, col 18:
+...at line 1, col 18:
 f(f)"
         );
     }
@@ -812,13 +835,13 @@ twice1(twice2)";
             err,
             "Implicit recursion detected!
 
-... at line 5, col 1:
+...at line 5, col 1:
 twice1(twice2)
 
-... at line 1, col 19:
+...at line 1, col 19:
 f(f)
 
-... at line 3, col 19:
+...at line 3, col 19:
 f(f)"
         );
     }
@@ -840,13 +863,13 @@ else
             err,
             "Implicit recursion detected!
 
-... at line 6, col 3:
+...at line 6, col 3:
 twice1(f)
 
-... at line 1, col 19:
+...at line 1, col 19:
 f(f)
 
-... at line 3, col 19:
+...at line 3, col 19:
 f(f)"
         );
     }
@@ -873,10 +896,10 @@ add(Suc(Suc(Zero)), Suc(Zero))";
             err,
             "Implicit recursion detected!
 
-... at line 3, col 5:
+...at line 3, col 5:
 x(x)
 
-... at line 2, col 18:
+...at line 2, col 18:
 x(x)"
         );
     }
@@ -893,16 +916,16 @@ x(x)"
             err,
             "Implicit recursion detected!
 
-... at line 3, col 5:
+...at line 3, col 5:
 x(x)
 
-... at line 2, col 18:
+...at line 2, col 18:
 x(x)"
         );
     }
 
     #[test]
-    fn reject_rec() {
+    fn reject_dependent_on_rec1() {
         let code = "let twice = f => f(f)
 
 loop add = x => y =>
@@ -922,10 +945,39 @@ else
             err,
             "Implicit recursion detected!
 
-... at line 12, col 3:
+...at line 12, col 3:
 twice(twice)
 
-... at line 1, col 18:
+...at line 1, col 18:
+f(f)"
+        );
+    }
+
+    #[test]
+    fn reject_dependent_on_rec2() {
+        let code = "let twice = f => f(f)
+
+loop add = x => y =>
+  if x is Suc(x) then
+    add(x, Suc(y))
+  else
+    y
+
+if add(Zero, Zero) is Zero then
+  twice(twice)
+else
+  Zero";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let err = parsed.eval().unwrap_err();
+        assert_eq!(
+            err,
+            "Implicit recursion detected!
+
+...at line 10, col 3:
+twice(twice)
+
+...at line 1, col 18:
 f(f)"
         );
     }
