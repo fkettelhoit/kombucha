@@ -533,20 +533,16 @@ enum V {
 
 impl Expr {
     pub fn eval(self) -> Result<Value, String> {
-        self.validate()?;
+        self.check(&Arc::new(Env::Empty), &[]).map(|_| ())?;
         self._eval(&Arc::new(Env::Empty))
     }
 
-    pub fn validate(&self) -> Result<(), String> {
-        self.check(&Arc::new(Env::Empty), &[]).map(|_| ())
-    }
-
-    fn check(&self, env: &Arc<Env<V>>, stack: &[(&Expr, &Meta)]) -> Result<Vec<V>, String> {
+    fn check(&self, env: &Arc<Env<V>>, stack: &[&Expr]) -> Result<Vec<V>, String> {
         // Possible recursion: an expr whose set of possible functions contains `f` is called as a
-        // function inside of `f` (in other words while the call stack contains `f`)
-        fn stacktrace(stack: &[(&Expr, &Meta)]) -> String {
+        // function inside of `f` (in other words while the call stack contains `f`) with arg `f`
+        fn stacktrace(stack: &[&Expr]) -> String {
             let mut msg = format!("Implicit recursion detected!");
-            for (expr, _) in stack {
+            for expr in stack {
                 if !expr.is_sugared_as_let_or_loop() {
                     let pos = expr.1.pos;
                     msg += &format!("\n\n...at {pos}:\n{expr}");
@@ -555,11 +551,10 @@ impl Expr {
             msg
         }
         let Expr(inner, meta) = self;
-        let pos = meta.pos;
         match inner {
             ExprEnum::Var(var) => match env.get(*var) {
                 Some(expr) => Ok(vec![expr.clone()]),
-                None => Err(format!("No binding for {self} at {pos}")),
+                None => Err(format!("No binding for {self} at {}", meta.pos)),
             },
             ExprEnum::Tag(t) => Ok(vec![V::Tag(*t, vec![], meta.clone())]),
             ExprEnum::Abs(body) => {
@@ -592,7 +587,7 @@ impl Expr {
                                         }
                                     }
                                 }
-                                stack.push((self, meta));
+                                stack.push(self);
                                 let env = fn_env.push(arg.clone());
                                 results.extend(body.check(&env, &stack)?);
                             }
@@ -610,19 +605,12 @@ impl Expr {
                 let values = value.check(env, stack)?;
                 let mut results = vec![];
                 for value in values {
-                    match value {
-                        V::Any => {
-                            let values = vec![V::Any; *vars];
-                            results.extend(then_expr.check(&env.extend(values), stack)?);
-                            results.extend(else_expr.check(env, stack)?);
-                        }
-                        V::Tag(t, values, _) if t == *tag && values.len() == *vars => {
-                            results.extend(then_expr.check(&env.extend(values), stack)?);
-                        }
-                        V::Tag(_, _, _) | V::Fn(_, _, _) => {
-                            results.extend(else_expr.check(env, stack)?);
-                        }
-                    }
+                    let bound = match value {
+                        V::Tag(t, values, _) if t == *tag && values.len() == *vars => values,
+                        V::Any | V::Tag(_, _, _) | V::Fn(_, _, _) => vec![V::Any; *vars],
+                    };
+                    results.extend(then_expr.check(&env.extend(bound), stack)?);
+                    results.extend(else_expr.check(env, stack)?);
                 }
                 Ok(results)
             }
