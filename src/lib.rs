@@ -8,8 +8,9 @@ use std::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Token {
     Comma,
-    LParen,
-    RParen,
+    ParenOpenApp,
+    ParenOpenGroup,
+    ParenClose,
     Symbol(String),
 }
 
@@ -17,8 +18,8 @@ impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Token::Comma => f.write_str(","),
-            Token::LParen => f.write_str("("),
-            Token::RParen => f.write_str(")"),
+            Token::ParenOpenApp | Token::ParenOpenGroup => f.write_str("("),
+            Token::ParenClose => f.write_str(")"),
             Token::Symbol(s) => write!(f, "{s}"),
         }
     }
@@ -42,6 +43,7 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
     let mut col = 1;
     let mut line = 1;
     let mut start = Pos { col, line };
+    let mut could_open_app = false;
     for char in code.chars().chain(once(' ')) {
         match char {
             ' ' | '\n' | '(' | ')' | ',' => {
@@ -55,16 +57,20 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
                         line += 1;
                     }
                     ',' => tokens.push((Token::Comma, Pos { col, line })),
-                    '(' => tokens.push((Token::LParen, Pos { col, line })),
-                    ')' => tokens.push((Token::RParen, Pos { col, line })),
+                    '(' if could_open_app => tokens.push((Token::ParenOpenApp, Pos { col, line })),
+                    '(' => tokens.push((Token::ParenOpenGroup, Pos { col, line })),
+                    ')' => tokens.push((Token::ParenClose, Pos { col, line })),
+
                     _ => {}
                 }
                 col += 1;
                 start = Pos { col, line };
+                could_open_app = char == ')';
             }
             c => {
                 col += 1;
                 curr.push(c);
+                could_open_app = true;
             }
         }
     }
@@ -127,7 +133,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                     None => return Err("Expected a pattern, but found nothing".into()),
                 };
                 let mut bindings = 0;
-                if let Some((Token::LParen, _)) = tokens.peek() {
+                if let Some((Token::ParenOpenApp, _)) = tokens.peek() {
                     tokens.next();
                     let mut bound_vars = HashSet::new();
                     alias += "(";
@@ -143,7 +149,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                         vars.push(binding.clone());
                         bindings += 1;
                         match tokens.next() {
-                            Some((Token::RParen, _)) => {
+                            Some((Token::ParenClose, _)) => {
                                 alias += ")";
                                 break;
                             }
@@ -157,7 +163,6 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                         }
                     }
                 }
-                expect(tokens, Token::Symbol("then".into()))?;
                 let then_expr = parse_expr(tokens, vars, tags)?;
                 expect(tokens, Token::Symbol("else".into()))?;
                 for _ in 0..bindings {
@@ -210,20 +215,20 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                 }
                 _ => Expr::new(ExprEnum::Var(resolve_var(vars, s)?), Some(s.clone()), *pos),
             },
-            Token::LParen => {
+            Token::ParenOpenGroup => {
                 let expr = parse_expr(tokens, vars, tags)?;
-                expect(tokens, Token::RParen)?;
+                expect(tokens, Token::ParenClose)?;
                 expr
             }
             t => return Err(format!("Unexpected token '{t}' at {pos}",)),
         };
         let expr = match tokens.peek() {
-            Some((Token::LParen, _)) => {
+            Some((Token::ParenOpenApp, _)) => {
                 tokens.next();
                 loop {
                     let arg = parse_expr(tokens, vars, tags)?;
                     expr = Expr::new(ExprEnum::App(Box::new(expr), Box::new(arg)), None, *pos);
-                    if let Some((Token::RParen, _)) = tokens.peek() {
+                    if let Some((Token::ParenClose, _)) = tokens.peek() {
                         tokens.next();
                         break expr;
                     }
@@ -365,7 +370,6 @@ impl Expr {
                         return body.pretty(f, false, lvl);
                     }
                 }
-
                 let mut args = vec![arg];
                 let mut inner = expr;
                 while let Expr(ExprEnum::App(expr, arg), _) = inner.as_ref() {
@@ -435,6 +439,9 @@ impl Expr {
                 then_expr,
                 else_expr,
             } => {
+                if group {
+                    f.write_str("(")?;
+                }
                 f.write_str("if ")?;
                 value.pretty(f, false, lvl)?;
                 f.write_str(" is ")?;
@@ -444,14 +451,20 @@ impl Expr {
                     let (tag, bindings) = pattern;
                     write!(f, "'{tag} {bindings}")?;
                 }
-                f.write_str(" then\n")?;
+                f.write_str("\n")?;
                 indent(f, lvl + 1)?;
                 then_expr.pretty(f, false, lvl + 1)?;
                 f.write_str("\n")?;
                 indent(f, lvl)?;
                 f.write_str("else\n")?;
                 indent(f, lvl + 1)?;
-                else_expr.pretty(f, false, lvl + 1)
+                else_expr.pretty(f, false, lvl + 1)?;
+                if group {
+                    f.write_str("\n")?;
+                    indent(f, lvl)?;
+                    f.write_str(")")?;
+                }
+                Ok(())
             }
         }
     }
@@ -700,7 +713,7 @@ foo(Bar)";
     #[test]
     fn eval_rec_fn_app() {
         let code = "loop map = f => xs =>
-  if xs is Cons(x, xs) then
+  if xs is Cons(x, xs)
     Cons(f(x), map(f, xs))
   else
     xs
@@ -713,17 +726,35 @@ map(x => Foo(x), Cons(Bar, Cons(Baz, Nil)))";
     }
 
     #[test]
+    fn eval_tag_followed_by_group() {
+        let code = "let x = Foo
+
+if x is Foo
+  (if x is Foo
+    x => x
+  else
+    Nil
+  )(x)
+else
+  Bar";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "Foo");
+    }
+
+    #[test]
     fn eval_rec_value_cond() {
         let code = "loop r = Cons(Foo, r)
 
 let head = l =>
-  if l is Cons(x, xs) then
+  if l is Cons(x, xs)
     x
   else
     Nil
 
 let tail = l =>
-  if l is Cons(x, xs) then
+  if l is Cons(x, xs)
     xs
   else
     Nil
@@ -738,7 +769,7 @@ head(tail(tail(r)))";
     #[test]
     fn eval_normal_recursion() {
         let code = "loop add = x => y =>
-  if x is Suc(x) then
+  if x is Suc(x)
     add(x, Suc(y))
   else
     y
@@ -840,7 +871,7 @@ f(f)"
 
 let twice2 = f => f(f)
 
-if Foo(twice2) is Foo(f) then
+if Foo(twice2) is Foo(f)
   twice1(f)
 else
   Nothing";
@@ -869,7 +900,7 @@ f(f)"
   f(x(x))
 
 let add' = f => x => y =>
-  if x is Suc(x) then
+  if x is Suc(x)
     f(x, Suc(y))
   else
     y
@@ -917,12 +948,12 @@ x(x)"
         let code = "let twice = f => f(f)
 
 loop add = x => y =>
-  if x is Suc(x) then
+  if x is Suc(x)
     add(x, Suc(y))
   else
     y
 
-if add(Suc(Zero), Zero) is Zero then
+if add(Suc(Zero), Zero) is Zero
   Zero
 else
   twice(twice)";
@@ -946,12 +977,12 @@ f(f)"
         let code = "let twice = f => f(f)
 
 loop add = x => y =>
-  if x is Suc(x) then
+  if x is Suc(x)
     add(x, Suc(y))
   else
     y
 
-if add(Zero, Zero) is Zero then
+if add(Zero, Zero) is Zero
   twice(twice)
 else
   Zero";
