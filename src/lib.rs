@@ -111,8 +111,7 @@ enum ExprEnum {
     },
     Try {
         expr: Box<Expr>,
-        signature: (usize, usize),
-        handler: Box<Expr>,
+        handlers: Vec<(usize, usize, Expr)>,
     },
 }
 
@@ -177,60 +176,76 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
             }
             Token::Symbol(s) if s.as_str() == "try" => {
                 let expr = parse_expr(tokens, vars, pool)?;
-                expect(tokens, Token::Symbol("catch".into()))?;
-                let (h, name) = match tokens.next() {
-                    Some((Token::Symbol(h), _)) if !is_tag(h) => (pool.resolve_eff(h), h),
-                    Some((t, pos)) => {
-                        return Err(format!(
-                            "Expected the handler to start with a name, but found {t} at {pos}"
-                        ));
-                    }
-                    None => return Err("Expected a handler, but found nothing".into()),
-                };
-                expect(tokens, Token::ParenOpenApp)?;
-                let mut bindings = 0;
-                let mut bound_vars = HashSet::new();
-                let mut alias = format!("{name}(");
+                let mut aliases = vec![];
+                let mut handlers = vec![];
                 loop {
-                    let (binding, pos) = expect_var(tokens)?;
-                    if bound_vars.contains(&binding) {
-                        return Err(format!(
-                            "All variables in a handler must be unique, but '{binding} is used twice at {pos}"
-                        ));
-                    }
-                    alias += &binding;
-                    bound_vars.insert(binding.clone());
-                    vars.push(binding.clone());
-                    bindings += 1;
-                    match tokens.next() {
-                        Some((Token::ParenClose, _)) => {
-                            alias += ")";
+                    match tokens.peek() {
+                        Some((Token::Symbol(s), _)) if s.as_str() == "catch" => {
+                            tokens.next();
+                            let (h, name) = match tokens.next() {
+                                Some((Token::Symbol(h), _)) if !is_tag(h) => {
+                                    (pool.resolve_eff(h), h)
+                                }
+                                Some((t, pos)) => {
+                                    return Err(format!(
+                                        "Expected the handler to start with a name, but found {t} at {pos}"
+                                    ));
+                                }
+                                None => return Err("Expected a handler, but found nothing".into()),
+                            };
+                            expect(tokens, Token::ParenOpenApp)?;
+                            let mut bindings = 0;
+                            let mut bound_vars = HashSet::new();
+                            let mut alias = format!("{name}(");
+                            loop {
+                                let (binding, pos) = expect_var(tokens)?;
+                                if bound_vars.contains(&binding) {
+                                    return Err(format!(
+                                        "All variables in a handler must be unique, but '{binding} is used twice at {pos}"
+                                    ));
+                                }
+                                alias += &binding;
+                                bound_vars.insert(binding.clone());
+                                vars.push(binding.clone());
+                                bindings += 1;
+                                match tokens.next() {
+                                    Some((Token::ParenClose, _)) => {
+                                        alias += ")";
+                                        break;
+                                    }
+                                    Some((Token::Comma, _)) => alias += ", ",
+                                    Some((t, pos)) => {
+                                        return Err(format!(
+                                            "Expected ',' or ')', but found '{t}' at {pos}"
+                                        ));
+                                    }
+                                    None => {
+                                        return Err("Expected a ')', but found nothing".into());
+                                    }
+                                }
+                            }
+                            pool.register_handler(name, bindings);
+                            expect(tokens, Token::Symbol("as".into()))?;
+                            let (resumable, _) = expect_var(tokens)?;
+                            alias += &format!(" as {resumable}");
+                            vars.push(resumable);
+                            let handler = parse_expr(tokens, vars, pool)?;
+                            for _ in 0..bindings + 1 {
+                                vars.pop();
+                            }
+                            aliases.push(alias);
+                            handlers.push((h, bindings, handler))
+                        }
+                        _ => {
                             break;
                         }
-                        Some((Token::Comma, _)) => alias += ", ",
-                        Some((t, pos)) => {
-                            return Err(format!("Expected ',' or ')', but found '{t}' at {pos}"));
-                        }
-                        None => {
-                            return Err("Expected a ')', but found nothing".into());
-                        }
                     }
-                }
-                pool.register_handler(name, bindings);
-                expect(tokens, Token::Symbol("as".into()))?;
-                let (resumable, _) = expect_var(tokens)?;
-                alias += &format!(" as {resumable}");
-                vars.push(resumable);
-                let handler = parse_expr(tokens, vars, pool)?;
-                for _ in 0..bindings + 1 {
-                    vars.pop();
                 }
                 let try_expr = ExprEnum::Try {
                     expr: Box::new(expr),
-                    signature: (h, bindings),
-                    handler: Box::new(handler),
+                    handlers,
                 };
-                Expr::new(try_expr, Some(alias), *pos)
+                Expr::new(try_expr, Some(aliases.join("\n")), *pos)
             }
             Token::Symbol(s) if s.as_str() == "if" => {
                 let v = parse_expr(tokens, vars, pool)?;
@@ -576,29 +591,30 @@ impl Expr {
                 }
                 Ok(())
             }
-            ExprEnum::Try {
-                expr,
-                signature,
-                handler,
-            } => {
+            ExprEnum::Try { expr, handlers } => {
                 if group {
                     f.write_str("(")?;
                 }
                 f.write_str("try\n")?;
                 indent(f, lvl + 1)?;
                 expr.pretty(f, false, lvl + 1)?;
-                f.write_str("\n")?;
-                indent(f, lvl)?;
-                f.write_str("catch ")?;
-                if let Some(alias) = &self.1.alias {
-                    f.write_str(alias)?;
-                } else {
-                    let (tag, bindings) = signature;
-                    write!(f, "'{tag} {bindings}")?;
+                let aliases = match &self.1.alias {
+                    Some(alias) => alias.split("\n").collect::<Vec<_>>(),
+                    None => vec![""; handlers.len()],
+                };
+                for ((tag, bindings, handler), alias) in handlers.iter().zip(aliases) {
+                    f.write_str("\n")?;
+                    indent(f, lvl)?;
+                    f.write_str("catch ")?;
+                    if alias.is_empty() {
+                        write!(f, "'{tag} {bindings}")?;
+                    } else {
+                        f.write_str(alias)?;
+                    }
+                    f.write_str("\n")?;
+                    indent(f, lvl + 1)?;
+                    handler.pretty(f, false, lvl + 1)?;
                 }
-                f.write_str("\n")?;
-                indent(f, lvl + 1)?;
-                handler.pretty(f, false, lvl + 1)?;
                 if group {
                     f.write_str("\n")?;
                     indent(f, lvl)?;
@@ -749,8 +765,7 @@ pub enum Cont {
     },
     Try {
         expr: Box<Cont>,
-        signature: (usize, usize),
-        handler: Box<Expr>,
+        handlers: Vec<(usize, usize, Expr)>,
     },
 }
 
@@ -862,13 +877,11 @@ impl Expr {
                 }
                 Ok(results)
             }
-            ExprEnum::Try {
-                expr,
-                signature: (_, vars),
-                handler,
-            } => {
+            ExprEnum::Try { expr, handlers } => {
                 let mut results = expr.check(env, stack)?;
-                results.extend(handler.check(&env.extend(vec![V::Any; vars + 1]), stack)?);
+                for (_, vars, handler) in handlers {
+                    results.extend(handler.check(&env.extend(vec![V::Any; vars + 1]), stack)?);
+                }
                 Ok(results)
             }
         }
@@ -900,11 +913,7 @@ impl Expr {
                 then_expr,
                 else_expr,
             } => eval_cnd(value._eval(env), pattern, then_expr, else_expr, env),
-            ExprEnum::Try {
-                expr,
-                signature,
-                handler,
-            } => eval_try(expr._eval(env), signature, handler, env),
+            ExprEnum::Try { expr, handlers } => eval_try(expr._eval(env), handlers, env),
         }
     }
 }
@@ -989,16 +998,14 @@ impl Cont {
             },
             Cont::Try {
                 expr: cont,
-                signature,
-                handler,
+                handlers,
             } => match cont.resume(value, env) {
-                EvalResult::Val(v) => eval_try(EvalResult::Val(v), signature, handler, env),
+                EvalResult::Val(v) => eval_try(EvalResult::Val(v), handlers, env),
                 EvalResult::Pending(Resumable(cont, env), args) => EvalResult::Pending(
                     Resumable(
                         Cont::Try {
                             expr: Box::new(cont),
-                            signature,
-                            handler,
+                            handlers,
                         },
                         env,
                     ),
@@ -1134,33 +1141,31 @@ fn eval_cnd(
     }
 }
 
-fn eval_try(
-    mut expr: EvalResult,
-    (h, vars): (usize, usize),
-    handler: Box<Expr>,
-    env: &Arc<Env<Val>>,
-) -> EvalResult {
+fn eval_try(mut expr: EvalResult, h: Vec<(usize, usize, Expr)>, env: &Arc<Env<Val>>) -> EvalResult {
     loop {
         match expr {
             EvalResult::Val(Val::Rec(body, env, m)) => {
                 let env = env.push(Val::Rec(body.clone(), Arc::clone(&env), m));
                 expr = body._eval(&env);
             }
-            EvalResult::Val(v) => break EvalResult::Val(v),
-            EvalResult::Pending(Resumable(cont, cont_env), Handler { name, args }) if name == h => {
-                break handler._eval(&env.extend(args).push(Val::Res(cont, cont_env)));
-            }
-            EvalResult::Pending(Resumable(cont, env), args) => {
-                break EvalResult::Pending(
+            EvalResult::Val(v) => return EvalResult::Val(v),
+            EvalResult::Pending(Resumable(cont, cont_env), Handler { name, args }) => {
+                let mut handlers = vec![];
+                for (h, arity, handler) in h.into_iter() {
+                    if h == name {
+                        return handler._eval(&env.extend(args).push(Val::Res(cont, cont_env)));
+                    }
+                    handlers.push((h, arity, handler));
+                }
+                return EvalResult::Pending(
                     Resumable(
                         Cont::Try {
                             expr: Box::new(cont),
-                            signature: (h, vars),
-                            handler,
+                            handlers,
                         },
-                        env,
+                        cont_env,
                     ),
-                    args,
+                    Handler { name, args },
                 );
             }
         }
@@ -1571,10 +1576,9 @@ catch toggle(_) as resume
     fn eval_effect_handler_get_set() {
         let code = "loop with-state = val => f =>
   try
-    try
-      f(Nil)
-    catch get(_) as resume
-      with-state(val, _ => resume(val))
+    f(Nil)
+  catch get(_) as resume
+    with-state(val, _ => resume(val))
   catch set(x) as resume
     with-state(x, _ => resume(Nil))
 
