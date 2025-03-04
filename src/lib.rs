@@ -561,9 +561,14 @@ impl Expr {
                 then_expr.pretty(f, false, lvl + 1)?;
                 f.write_str("\n")?;
                 indent(f, lvl)?;
-                f.write_str("else\n")?;
-                indent(f, lvl + 1)?;
-                else_expr.pretty(f, false, lvl + 1)?;
+                if let Expr(ExprEnum::Cnd { .. }, _) = else_expr.as_ref() {
+                    f.write_str("else ")?;
+                    else_expr.pretty(f, false, lvl)?;
+                } else {
+                    f.write_str("else\n")?;
+                    indent(f, lvl + 1)?;
+                    else_expr.pretty(f, false, lvl + 1)?;
+                }
                 if group {
                     f.write_str("\n")?;
                     indent(f, lvl)?;
@@ -1578,5 +1583,22 @@ with-state(None, _ => List(get(Nil), set(Foo), get(Nil), set(Bar), set(Baz), get
         assert_eq!(parsed.to_string(), code);
         let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "List(None, Nil, Foo, Nil, Nil, Baz)");
+    }
+
+    #[test]
+    fn eval_if_else_if_else() {
+        let code = "let f = x =>
+  if x is Foo(x)
+    x
+  else if x is Bar(x)
+    x
+  else
+    Error
+
+f(Foo(X))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "X");
     }
 }
