@@ -123,6 +123,14 @@ pub struct InternPool {
 }
 
 impl InternPool {
+    fn new() -> Self {
+        Self {
+            tags: HashMap::from_iter(vec![("".to_string(), 0)]),
+            effects: (HashMap::new(), HashMap::new()),
+            handler_arities: HashMap::new(),
+        }
+    }
+
     fn resolve_var(&mut self, vars: &[String], s: &str) -> ExprEnum {
         for (i, t) in vars.iter().rev().enumerate() {
             if &s == t {
@@ -197,30 +205,38 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
                             let mut bindings = 0;
                             let mut bound_vars = HashSet::new();
                             let mut alias = format!("{name}(");
-                            loop {
-                                let (binding, pos) = expect_var(tokens)?;
-                                if bound_vars.contains(&binding) {
-                                    return Err(format!(
-                                        "All variables in a handler must be unique, but '{binding} is used twice at {pos}"
-                                    ));
-                                }
-                                alias += &binding;
-                                bound_vars.insert(binding.clone());
-                                vars.push(binding.clone());
-                                bindings += 1;
-                                match tokens.next() {
-                                    Some((Token::ParenClose, _)) => {
-                                        alias += ")";
-                                        break;
-                                    }
-                                    Some((Token::Comma, _)) => alias += ", ",
-                                    Some((t, pos)) => {
+                            if let Some((Token::ParenClose, _)) = tokens.peek() {
+                                // `catch handle()` is treated as `catch handle(_)`
+                                tokens.next();
+                                alias += ")";
+                                vars.push("".to_string());
+                                bindings = 1;
+                            } else {
+                                loop {
+                                    let (binding, pos) = expect_var(tokens)?;
+                                    if bound_vars.contains(&binding) {
                                         return Err(format!(
-                                            "Expected ',' or ')', but found '{t}' at {pos}"
+                                            "All variables in a handler must be unique, but '{binding} is used twice at {pos}"
                                         ));
                                     }
-                                    None => {
-                                        return Err("Expected a ')', but found nothing".into());
+                                    alias += &binding;
+                                    bound_vars.insert(binding.clone());
+                                    vars.push(binding.clone());
+                                    bindings += 1;
+                                    match tokens.next() {
+                                        Some((Token::ParenClose, _)) => {
+                                            alias += ")";
+                                            break;
+                                        }
+                                        Some((Token::Comma, _)) => alias += ", ",
+                                        Some((t, pos)) => {
+                                            return Err(format!(
+                                                "Expected ',' or ')', but found '{t}' at {pos}"
+                                            ));
+                                        }
+                                        None => {
+                                            return Err("Expected a ')', but found nothing".into());
+                                        }
                                     }
                                 }
                             }
@@ -352,6 +368,16 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
         let expr = match tokens.peek() {
             Some((Token::ParenOpenApp, _)) => {
                 tokens.next();
+                if let Some((Token::ParenClose, _)) = tokens.peek() {
+                    // `f()` is treated as `f(())`, where `()` is the tag with an empty name
+                    tokens.next();
+                    let arg = Expr::new(ExprEnum::Tag(0), Some("()".to_string()), *pos);
+                    return Ok(Expr::new(
+                        ExprEnum::App(Box::new(expr), Box::new(arg)),
+                        None,
+                        *pos,
+                    ));
+                }
                 loop {
                     let arg = parse_expr(tokens, vars, pool)?;
                     expr = Expr::new(ExprEnum::App(Box::new(expr), Box::new(arg)), None, *pos);
@@ -385,11 +411,7 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
     }
     let tokens = scan(code);
     let mut tokens = tokens.iter().peekable();
-    let mut pool = InternPool {
-        tags: HashMap::new(),
-        effects: (HashMap::new(), HashMap::new()),
-        handler_arities: HashMap::new(),
-    };
+    let mut pool = InternPool::new();
     let expr = parse_expr(&mut tokens, &mut vec![], &mut pool)?;
     if let Some((token, pos)) = tokens.next() {
         Err(format!("Unexpected token {token} at {pos}"))
@@ -497,6 +519,13 @@ impl Expr {
                     args.push(arg);
                 }
                 inner.pretty(f, true, lvl)?;
+                if args.len() == 1
+                    && args
+                        .iter()
+                        .all(|arg| matches!(arg.as_ref(), Expr(ExprEnum::Tag(0), _)))
+                {
+                    return f.write_str("()");
+                }
                 f.write_str("(")?;
                 let is_simple = args.iter().all(|arg| arg.is_simple());
                 if !is_simple {
@@ -1208,6 +1237,23 @@ foo(Bar)";
     }
 
     #[test]
+    fn eval_if_else_if_else() {
+        let code = "let f = x =>
+  if x is Foo(x)
+    x
+  else if x is Bar(x)
+    x
+  else
+    Error
+
+f(Foo(X))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "X");
+    }
+
+    #[test]
     fn eval_rec_fn_app() {
         let code = "loop map = f => xs =>
   if xs is Cons(x, xs)
@@ -1563,15 +1609,15 @@ Pair(f(True), f(False))";
         let code = "loop with-toggle = val => resume =>
   try
     resume(val)
-  catch toggle(_) as resume
+  catch toggle() as resume
     if val is True
       with-toggle(False, resume)
     else
       with-toggle(True, resume)
 
 try
-  List(toggle(Nil), toggle(Nil), toggle(Nil), toggle(Nil))
-catch toggle(_) as resume
+  List(toggle(), toggle(), toggle(), toggle())
+catch toggle() as resume
   with-toggle(True, resume)";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
@@ -1583,33 +1629,28 @@ catch toggle(_) as resume
     fn eval_effect_handler_get_set() {
         let code = "loop with-state = val => f =>
   try
-    f(Nil)
-  catch get(_) as resume
+    f()
+  catch get() as resume
     with-state(val, _ => resume(val))
   catch set(x) as resume
-    with-state(x, _ => resume(Nil))
+    with-state(x, _ => resume())
 
-with-state(None, _ => List(get(Nil), set(Foo), get(Nil), set(Bar), set(Baz), get(Nil)))";
+with-state(None, _ => List(get(), set(Foo), get(), set(Bar), set(Baz), get()))";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
         let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "List(None, Nil, Foo, Nil, Nil, Baz)");
+        assert_eq!(format!("{evaled}"), "List(None, (), Foo, (), (), Baz)");
     }
 
     #[test]
-    fn eval_if_else_if_else() {
-        let code = "let f = x =>
-  if x is Foo(x)
-    x
-  else if x is Bar(x)
-    x
-  else
-    Error
-
-f(Foo(X))";
+    fn eval_handler_with_multiple_resumes() {
+        let code = "try
+  Foo(eff())
+catch eff() as resume
+  Pair(resume(Bar), resume(Baz))";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
         let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "X");
+        assert_eq!(format!("{evaled}"), "Pair(Foo(Bar), Foo(Baz))");
     }
 }
