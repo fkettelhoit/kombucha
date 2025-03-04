@@ -734,13 +734,13 @@ enum V {
     Any,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum EvalResult {
     Val(Val),
     Pending(Resumable, Handler),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Resumable(Cont, Arc<Env<Val>>);
 
 #[derive(Debug, Clone)]
@@ -960,9 +960,10 @@ impl Cont {
             Cont::Effect(_) => EvalResult::Val(value),
             Cont::App(cont, expr) => match cont.resume(value, env) {
                 EvalResult::Val(f) => eval_app(EvalResult::Val(f), expr, env),
-                EvalResult::Pending(Resumable(cont, env), args) => {
-                    EvalResult::Pending(Resumable(Cont::App(Box::new(cont), expr), env), args)
-                }
+                EvalResult::Pending(Resumable(cont, _), args) => EvalResult::Pending(
+                    Resumable(Cont::App(Box::new(cont), expr), Arc::clone(&env)),
+                    args,
+                ),
             },
             Cont::AppFn(body, fn_env, m, cont) => {
                 eval_app_fn(body, fn_env, m, cont.resume(value, env))
@@ -983,7 +984,7 @@ impl Cont {
                 EvalResult::Val(v) => {
                     eval_cnd(EvalResult::Val(v), pattern, then_expr, else_expr, env)
                 }
-                EvalResult::Pending(Resumable(cont, env), args) => EvalResult::Pending(
+                EvalResult::Pending(Resumable(cont, _), args) => EvalResult::Pending(
                     Resumable(
                         Cont::Cnd {
                             value: Box::new(cont),
@@ -991,7 +992,7 @@ impl Cont {
                             then_expr,
                             else_expr,
                         },
-                        env,
+                        Arc::clone(&env),
                     ),
                     args,
                 ),
@@ -1001,13 +1002,13 @@ impl Cont {
                 handlers,
             } => match cont.resume(value, env) {
                 EvalResult::Val(v) => eval_try(EvalResult::Val(v), handlers, env),
-                EvalResult::Pending(Resumable(cont, env), args) => EvalResult::Pending(
+                EvalResult::Pending(Resumable(cont, _), args) => EvalResult::Pending(
                     Resumable(
                         Cont::Try {
                             expr: Box::new(cont),
                             handlers,
                         },
-                        env,
+                        Arc::clone(&env),
                     ),
                     args,
                 ),
@@ -1035,8 +1036,11 @@ fn eval_app(mut f: EvalResult, arg: Box<Expr>, env: &Arc<Env<Val>>) -> EvalResul
             EvalResult::Val(Val::Res(cont, cont_env)) => {
                 break eval_res(Box::new(cont), cont_env, arg._eval(env));
             }
-            EvalResult::Pending(Resumable(cont, env), args) => {
-                break EvalResult::Pending(Resumable(Cont::App(Box::new(cont), arg), env), args);
+            EvalResult::Pending(Resumable(cont, _), args) => {
+                break EvalResult::Pending(
+                    Resumable(Cont::App(Box::new(cont), arg), Arc::clone(&env)),
+                    args,
+                );
             }
         }
     }
@@ -1123,7 +1127,7 @@ fn eval_cnd(
             ) => {
                 break else_expr._eval(env);
             }
-            EvalResult::Pending(Resumable(cont, env), args) => {
+            EvalResult::Pending(Resumable(cont, _), args) => {
                 break EvalResult::Pending(
                     Resumable(
                         Cont::Cnd {
@@ -1132,7 +1136,7 @@ fn eval_cnd(
                             then_expr,
                             else_expr,
                         },
-                        env,
+                        Arc::clone(&env),
                     ),
                     args,
                 );
@@ -1141,7 +1145,11 @@ fn eval_cnd(
     }
 }
 
-fn eval_try(mut expr: EvalResult, h: Vec<(usize, usize, Expr)>, env: &Arc<Env<Val>>) -> EvalResult {
+fn eval_try(
+    mut expr: EvalResult,
+    handlers: Vec<(usize, usize, Expr)>,
+    env: &Arc<Env<Val>>,
+) -> EvalResult {
     loop {
         match expr {
             EvalResult::Val(Val::Rec(body, env, m)) => {
@@ -1150,23 +1158,22 @@ fn eval_try(mut expr: EvalResult, h: Vec<(usize, usize, Expr)>, env: &Arc<Env<Va
             }
             EvalResult::Val(v) => return EvalResult::Val(v),
             EvalResult::Pending(Resumable(cont, cont_env), Handler { name, args }) => {
-                let mut handlers = vec![];
-                for (h, arity, handler) in h.into_iter() {
-                    if h == name {
-                        return handler._eval(&env.extend(args).push(Val::Res(cont, cont_env)));
-                    }
-                    handlers.push((h, arity, handler));
+                if let Some((_, _, handler)) = handlers.iter().find(|(h, _, _)| *h == name) {
+                    expr = handler
+                        .clone()
+                        ._eval(&env.extend(args).push(Val::Res(cont, cont_env)));
+                } else {
+                    return EvalResult::Pending(
+                        Resumable(
+                            Cont::Try {
+                                expr: Box::new(cont),
+                                handlers,
+                            },
+                            cont_env,
+                        ),
+                        Handler { name, args },
+                    );
                 }
-                return EvalResult::Pending(
-                    Resumable(
-                        Cont::Try {
-                            expr: Box::new(cont),
-                            handlers,
-                        },
-                        cont_env,
-                    ),
-                    Handler { name, args },
-                );
             }
         }
     }
@@ -1535,12 +1542,12 @@ catch bar(x, y) as resume
 let f = x =>
   if x is True
     try
-      Bar(baz(Qux))
+      Bar(baz(Qux), baz(Qux))
     catch eff(x) as resume
       resume(Baz(x))
   else
     try
-      Bar(baz(Qux))
+      Bar(baz(Qux), baz(Qux))
     catch eff(x) as resume
       Nil
 
@@ -1548,7 +1555,7 @@ Pair(f(True), f(False))";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
         let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Pair(Bar(Baz(Qux)), Nil)");
+        assert_eq!(format!("{evaled}"), "Pair(Bar(Baz(Qux), Baz(Qux)), Nil)");
     }
 
     #[test]
