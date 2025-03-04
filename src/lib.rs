@@ -26,7 +26,7 @@ impl std::fmt::Display for Token {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Pos {
+pub struct Pos {
     line: usize,
     col: usize,
 }
@@ -109,15 +109,42 @@ enum ExprEnum {
         then_expr: Box<Expr>,
         else_expr: Box<Expr>,
     },
+    Try {
+        expr: Box<Expr>,
+        signature: (usize, usize),
+        handler: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub struct InternPool {
     tags: HashMap<String, usize>,
     effects: (HashMap<String, usize>, HashMap<usize, String>),
+    handler_arities: HashMap<usize, usize>,
 }
 
 impl InternPool {
+    fn resolve_var(&mut self, vars: &[String], s: &str) -> ExprEnum {
+        for (i, t) in vars.iter().rev().enumerate() {
+            if &s == t {
+                return ExprEnum::Var(i);
+            }
+        }
+        ExprEnum::Eff(self.resolve_eff(s))
+    }
+
+    fn resolve_eff(&mut self, e: &str) -> usize {
+        match self.effects.0.get(e) {
+            Some(e) => *e,
+            None => {
+                let n = self.effects.0.len();
+                self.effects.0.insert(e.to_string(), n);
+                self.effects.1.insert(n, e.to_string());
+                n
+            }
+        }
+    }
+
     fn resolve_tag(&mut self, t: &str) -> usize {
         match self.tags.get(t) {
             Some(t) => *t,
@@ -129,21 +156,9 @@ impl InternPool {
         }
     }
 
-    fn resolve_var(&mut self, vars: &[String], s: &str) -> ExprEnum {
-        for (i, t) in vars.iter().rev().enumerate() {
-            if &s == t {
-                return ExprEnum::Var(i);
-            }
-        }
-        match self.effects.0.get(s) {
-            Some(s) => ExprEnum::Eff(*s),
-            None => {
-                let n = self.effects.0.len();
-                self.effects.0.insert(s.to_string(), n);
-                self.effects.1.insert(n, s.to_string());
-                ExprEnum::Eff(n)
-            }
-        }
+    fn register_handler(&mut self, h: &str, arity: usize) {
+        let h = self.resolve_eff(h);
+        self.handler_arities.insert(h, arity);
     }
 }
 
@@ -159,6 +174,63 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
         let mut expr = match token {
             Token::Symbol(s) if is_tag(s) => {
                 Expr::new(ExprEnum::Tag(pool.resolve_tag(s)), Some(s.clone()), *pos)
+            }
+            Token::Symbol(s) if s.as_str() == "try" => {
+                let expr = parse_expr(tokens, vars, pool)?;
+                expect(tokens, Token::Symbol("catch".into()))?;
+                let (h, name) = match tokens.next() {
+                    Some((Token::Symbol(h), _)) if !is_tag(h) => (pool.resolve_eff(h), h),
+                    Some((t, pos)) => {
+                        return Err(format!(
+                            "Expected the handler to start with a name, but found {t} at {pos}"
+                        ));
+                    }
+                    None => return Err("Expected a handler, but found nothing".into()),
+                };
+                expect(tokens, Token::ParenOpenApp)?;
+                let mut bindings = 0;
+                let mut bound_vars = HashSet::new();
+                let mut alias = format!("{name}(");
+                loop {
+                    let (binding, pos) = expect_var(tokens)?;
+                    if bound_vars.contains(&binding) {
+                        return Err(format!(
+                            "All variables in a handler must be unique, but '{binding} is used twice at {pos}"
+                        ));
+                    }
+                    alias += &binding;
+                    bound_vars.insert(binding.clone());
+                    vars.push(binding.clone());
+                    bindings += 1;
+                    match tokens.next() {
+                        Some((Token::ParenClose, _)) => {
+                            alias += ")";
+                            break;
+                        }
+                        Some((Token::Comma, _)) => alias += ", ",
+                        Some((t, pos)) => {
+                            return Err(format!("Expected ',' or ')', but found '{t}' at {pos}"));
+                        }
+                        None => {
+                            return Err("Expected a ')', but found nothing".into());
+                        }
+                    }
+                }
+                pool.register_handler(name, bindings);
+                expect(tokens, Token::Symbol("as".into()))?;
+                let (resumable, _) = expect_var(tokens)?;
+                alias += &format!(" as {resumable}");
+                vars.push(resumable);
+                let handler = parse_expr(tokens, vars, pool)?;
+                for _ in 0..bindings + 1 {
+                    vars.pop();
+                }
+                let try_expr = ExprEnum::Try {
+                    expr: Box::new(expr),
+                    signature: (h, bindings),
+                    handler: Box::new(handler),
+                };
+                Expr::new(try_expr, Some(alias), *pos)
             }
             Token::Symbol(s) if s.as_str() == "if" => {
                 let v = parse_expr(tokens, vars, pool)?;
@@ -301,6 +373,7 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
     let mut pool = InternPool {
         tags: HashMap::new(),
         effects: (HashMap::new(), HashMap::new()),
+        handler_arities: HashMap::new(),
     };
     let expr = parse_expr(&mut tokens, &mut vec![], &mut pool)?;
     if let Some((token, pos)) = tokens.next() {
@@ -336,7 +409,7 @@ impl Expr {
         }
         match &self.0 {
             ExprEnum::Var(_) | ExprEnum::Tag(_) | ExprEnum::Eff(_) => true,
-            ExprEnum::Cnd { .. } => false,
+            ExprEnum::Cnd { .. } | ExprEnum::Try { .. } => false,
             ExprEnum::Abs(body) | ExprEnum::Rec(body) => body.is_simple(),
             ExprEnum::App(f, arg) => f.is_simple() && arg.is_simple(),
         }
@@ -498,6 +571,36 @@ impl Expr {
                 }
                 Ok(())
             }
+            ExprEnum::Try {
+                expr,
+                signature,
+                handler,
+            } => {
+                if group {
+                    f.write_str("(")?;
+                }
+                f.write_str("try\n")?;
+                indent(f, lvl + 1)?;
+                expr.pretty(f, false, lvl + 1)?;
+                f.write_str("\n")?;
+                indent(f, lvl)?;
+                f.write_str("catch ")?;
+                if let Some(alias) = &self.1.alias {
+                    f.write_str(alias)?;
+                } else {
+                    let (tag, bindings) = signature;
+                    write!(f, "'{tag} {bindings}")?;
+                }
+                f.write_str("\n")?;
+                indent(f, lvl + 1)?;
+                handler.pretty(f, false, lvl + 1)?;
+                if group {
+                    f.write_str("\n")?;
+                    indent(f, lvl)?;
+                    f.write_str(")")?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -508,71 +611,49 @@ pub enum Val {
     Rec(Expr, Arc<Env<Val>>, Meta),
     Tag(usize, Vec<Val>, Meta),
     Eff(usize, usize, Vec<Val>, Meta),
+    Res(Cont, Arc<Env<Val>>),
 }
 
-impl From<Val> for Expr {
-    fn from(value: Val) -> Self {
+impl TryFrom<Val> for Expr {
+    type Error = String;
+
+    fn try_from(value: Val) -> Result<Self, Self::Error> {
         match value {
-            Val::Fn(body, _, meta) => Expr(ExprEnum::Abs(Box::new(body)), meta),
-            Val::Rec(body, _, meta) => Expr(ExprEnum::Rec(Box::new(body)), meta),
+            Val::Fn(body, _, meta) => Ok(Expr(ExprEnum::Abs(Box::new(body)), meta)),
+            Val::Rec(body, _, meta) => Ok(Expr(ExprEnum::Rec(Box::new(body)), meta)),
             Val::Tag(t, vals, meta) => {
                 let mut expr = Expr(ExprEnum::Tag(t), meta.clone());
                 for v in vals {
-                    let app = ExprEnum::App(Box::new(expr), Box::new(Expr::from(v)));
+                    let app = ExprEnum::App(Box::new(expr), Box::new(Expr::try_from(v)?));
                     expr = Expr(app, meta.clone());
                 }
-                expr
+                Ok(expr)
             }
             Val::Eff(e, _, vals, meta) => {
                 let mut expr = Expr(ExprEnum::Eff(e), meta.clone());
                 for v in vals {
-                    let app = ExprEnum::App(Box::new(expr), Box::new(Expr::from(v)));
+                    let app = ExprEnum::App(Box::new(expr), Box::new(Expr::try_from(v)?));
                     expr = Expr(app, meta.clone());
                 }
-                expr
+                Ok(expr)
             }
+            Val::Res(_, _) => Err("Cannot convert resumable value to expr".to_string()),
         }
     }
 }
 
 impl std::fmt::Display for Val {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Val::Fn(body, _, meta) => match &meta.alias {
-                Some(alias) => write!(f, "{alias} => {body}"),
-                None => write!(f, "=> {body}"),
-            },
-            Val::Rec(body, _, meta) => match &meta.alias {
-                Some(alias) => write!(f, "{alias} ~> {body}"),
-                None => write!(f, "~> {body}"),
-            },
-            Val::Tag(s, values, meta) | Val::Eff(s, _, values, meta) => {
-                match &meta.alias {
-                    Some(alias) => f.write_str(alias)?,
-                    None => write!(f, "'{s}")?,
-                }
-                if !values.is_empty() {
-                    f.write_str("(")?;
-                    for (i, v) in values.iter().enumerate() {
-                        if i > 0 {
-                            f.write_str(", ")?;
-                        }
-                        v.fmt(f)?;
-                    }
-                    f.write_str(")")?;
-                }
-                Ok(())
-            }
+        match Expr::try_from(self.clone()) {
+            Ok(expr) => expr.fmt(f),
+            Err(_) => f.write_str("<RESUMABLE>"),
         }
     }
 }
 
 #[derive(Debug)]
 pub enum Env<T> {
-    Empty {
-        handlers: Arc<HashMap<String, usize>>,
-        pool: Arc<InternPool>,
-    },
+    Empty(Arc<InternPool>),
     Some(T, Arc<Env<T>>),
     Tag(String, usize, Arc<Env<T>>),
 }
@@ -599,24 +680,20 @@ impl<T> Env<T> {
         env
     }
 
-    fn root(self: &Arc<Self>) -> (&Arc<HashMap<String, usize>>, &Arc<InternPool>) {
+    fn root(self: &Arc<Self>) -> &Arc<InternPool> {
         match self.as_ref() {
-            Env::Empty { handlers, pool } => (handlers, pool),
+            Env::Empty(pool) => pool,
             Env::Some(_, env) | Env::Tag(_, _, env) => env.root(),
         }
     }
 
     fn arity(self: &Arc<Self>, handler: usize) -> Option<usize> {
-        let (handlers, pool) = self.root();
-        match pool.effects.1.get(&handler) {
-            Some(alias) => handlers.get(alias).copied(),
-            None => None,
-        }
+        self.root().handler_arities.get(&handler).copied()
     }
 
     fn tag(self: &Arc<Self>, tag: &str) -> Option<usize> {
         match self.as_ref() {
-            Env::Empty { pool, .. } => pool.tags.get(tag).copied(),
+            Env::Empty(pool) => pool.tags.get(tag).copied(),
             Env::Tag(t, id, _) if t == tag => Some(*id),
             Env::Tag(_, _, env) => env.tag(tag),
             Env::Some(_, env) => env.tag(tag),
@@ -624,8 +701,7 @@ impl<T> Env<T> {
     }
 
     fn intern(self: &Arc<Self>, tag: String) -> (usize, Arc<Self>) {
-        let (_, pool) = self.root();
-        let t = pool.tags.len();
+        let t = self.root().tags.len();
         (t, Arc::new(Env::Tag(tag, t, Arc::clone(self))))
     }
 }
@@ -640,22 +716,36 @@ enum V {
 #[derive(Clone)]
 pub enum EvalResult {
     Val(Val),
-    Pending(Resumable, Vec<Val>),
+    Pending(Resumable, Handler),
 }
 
 #[derive(Clone)]
 pub struct Resumable(Cont, Arc<Env<Val>>);
 
-#[derive(Clone)]
-enum Cont {
+#[derive(Debug, Clone)]
+pub struct Handler {
+    name: usize,
+    args: Vec<Val>,
+}
+
+#[derive(Debug, Clone)]
+pub enum Cont {
     Effect(Pos),
-    AppFn(Box<Cont>, Box<Expr>),
-    AppArg(Box<Val>, Box<Cont>),
+    App(Box<Cont>, Box<Expr>),
+    AppFn(Expr, Arc<Env<Val>>, Meta, Box<Cont>),
+    AppTag(usize, Vec<Val>, Meta, Box<Cont>),
+    AppEff(usize, usize, Vec<Val>, Meta, Box<Cont>),
+    AppRes(Box<Cont>, Arc<Env<Val>>, Box<Cont>),
     Cnd {
         value: Box<Cont>,
         pattern: (usize, usize),
         then_expr: Box<Expr>,
         else_expr: Box<Expr>,
+    },
+    Try {
+        expr: Box<Cont>,
+        signature: (usize, usize),
+        handler: Box<Expr>,
     },
 }
 
@@ -671,7 +761,7 @@ impl InternedExpr {
         self,
         handlers: &Arc<HashMap<String, usize>>,
     ) -> Result<EvalResult, String> {
-        self.0.eval_with_handlers(handlers, &Arc::new(self.1))
+        self.0.eval_with_handlers(handlers, self.1)
     }
 }
 
@@ -679,19 +769,14 @@ impl Expr {
     fn eval_with_handlers(
         self,
         handlers: &Arc<HashMap<String, usize>>,
-        pool: &Arc<InternPool>,
+        mut pool: InternPool,
     ) -> Result<EvalResult, String> {
-        self.check(
-            &Arc::new(Env::Empty {
-                handlers: Arc::clone(handlers),
-                pool: Arc::clone(&pool),
-            }),
-            &[],
-        )?;
-        Ok(self._eval(&Arc::new(Env::Empty {
-            handlers: Arc::clone(handlers),
-            pool: Arc::clone(&pool),
-        })))
+        for (h, arity) in handlers.iter() {
+            pool.register_handler(h, *arity);
+        }
+        let pool = Arc::new(pool);
+        self.check(&Arc::new(Env::Empty(Arc::clone(&pool))), &[])?;
+        Ok(self._eval(&Arc::new(Env::Empty(Arc::clone(&pool)))))
     }
 
     fn check(&self, env: &Arc<Env<V>>, stack: &[&Expr]) -> Result<Vec<V>, String> {
@@ -772,6 +857,15 @@ impl Expr {
                 }
                 Ok(results)
             }
+            ExprEnum::Try {
+                expr,
+                signature: (_, vars),
+                handler,
+            } => {
+                let mut results = expr.check(env, stack)?;
+                results.extend(handler.check(&env.extend(vec![V::Any; vars + 1]), stack)?);
+                Ok(results)
+            }
         }
     }
 
@@ -801,6 +895,11 @@ impl Expr {
                 then_expr,
                 else_expr,
             } => eval_cnd(value._eval(env), pattern, then_expr, else_expr, env),
+            ExprEnum::Try {
+                expr,
+                signature,
+                handler,
+            } => eval_try(expr._eval(env), signature, handler, env),
         }
     }
 }
@@ -832,37 +931,35 @@ impl Cont {
     fn pos(&self) -> Pos {
         match self {
             Cont::Effect(pos) => *pos,
-            Cont::AppFn(cont, _) | Cont::AppArg(_, cont) | Cont::Cnd { value: cont, .. } => {
-                cont.pos()
-            }
+            Cont::App(cont, _)
+            | Cont::AppFn(_, _, _, cont)
+            | Cont::AppTag(_, _, _, cont)
+            | Cont::AppEff(_, _, _, _, cont)
+            | Cont::AppRes(_, _, cont)
+            | Cont::Cnd { value: cont, .. }
+            | Cont::Try { expr: cont, .. } => cont.pos(),
         }
     }
 
     fn resume(self, value: Val, env: &Arc<Env<Val>>) -> EvalResult {
         match self {
             Cont::Effect(_) => EvalResult::Val(value),
-            Cont::AppFn(cont, expr) => match cont.resume(value, env) {
-                EvalResult::Val(f) => match expr._eval(env) {
-                    EvalResult::Val(arg) => {
-                        eval_app(EvalResult::Val(f), Box::new(Expr::from(arg)), env)
-                    }
-                    EvalResult::Pending(Resumable(cont, env), args) => EvalResult::Pending(
-                        Resumable(Cont::AppArg(Box::new(f), Box::new(cont)), env),
-                        args,
-                    ),
-                },
+            Cont::App(cont, expr) => match cont.resume(value, env) {
+                EvalResult::Val(f) => eval_app(EvalResult::Val(f), expr, env),
                 EvalResult::Pending(Resumable(cont, env), args) => {
-                    EvalResult::Pending(Resumable(Cont::AppFn(Box::new(cont), expr), env), args)
+                    EvalResult::Pending(Resumable(Cont::App(Box::new(cont), expr), env), args)
                 }
             },
-            Cont::AppArg(f, cont) => match cont.resume(value, env) {
-                EvalResult::Val(arg) => {
-                    eval_app(EvalResult::Val(*f), Box::new(Expr::from(arg)), env)
-                }
-                EvalResult::Pending(Resumable(cont, env), args) => {
-                    EvalResult::Pending(Resumable(Cont::AppArg(f, Box::new(cont)), env), args)
-                }
-            },
+            Cont::AppFn(body, fn_env, m, cont) => {
+                eval_app_fn(body, fn_env, m, cont.resume(value, env))
+            }
+            Cont::AppTag(t, args, m, cont) => eval_app_tag(t, args, m, cont.resume(value, env)),
+            Cont::AppEff(e, arity, args, m, cont) => {
+                eval_app_eff(e, arity, args, m, cont.resume(value, env), env)
+            }
+            Cont::AppRes(res, res_env, cont_arg) => {
+                eval_res(res, res_env, cont_arg.resume(value, env))
+            }
             Cont::Cnd {
                 value: cont,
                 pattern,
@@ -885,6 +982,24 @@ impl Cont {
                     args,
                 ),
             },
+            Cont::Try {
+                expr: cont,
+                signature,
+                handler,
+            } => match cont.resume(value, env) {
+                EvalResult::Val(v) => eval_try(EvalResult::Val(v), signature, handler, env),
+                EvalResult::Pending(Resumable(cont, env), args) => EvalResult::Pending(
+                    Resumable(
+                        Cont::Try {
+                            expr: Box::new(cont),
+                            signature,
+                            handler,
+                        },
+                        env,
+                    ),
+                    args,
+                ),
+            },
         }
     }
 }
@@ -896,53 +1011,82 @@ fn eval_app(mut f: EvalResult, arg: Box<Expr>, env: &Arc<Env<Val>>) -> EvalResul
                 let env = env.push(Val::Rec(body.clone(), Arc::clone(&env), m));
                 f = body._eval(&env);
             }
-            EvalResult::Val(Val::Fn(body, fn_env, m)) => match arg._eval(env) {
-                EvalResult::Val(arg) => break body._eval(&fn_env.push(arg)),
-                EvalResult::Pending(Resumable(cont, env), args) => {
-                    let f = Box::new(Val::Fn(body, fn_env, m));
-                    break EvalResult::Pending(
-                        Resumable(Cont::AppArg(f, Box::new(cont)), env),
-                        args,
-                    );
-                }
-            },
-            EvalResult::Val(Val::Tag(t, mut args, m)) => match arg._eval(env) {
-                EvalResult::Val(arg) => {
-                    args.push(arg);
-                    break EvalResult::Val(Val::Tag(t, args, m));
-                }
-                EvalResult::Pending(Resumable(cont, env), eff_args) => {
-                    let f = Box::new(Val::Tag(t, args, m));
-                    break EvalResult::Pending(
-                        Resumable(Cont::AppArg(f, Box::new(cont)), env),
-                        eff_args,
-                    );
-                }
-            },
-            EvalResult::Val(Val::Eff(e, arity, mut args, m)) => match arg._eval(env) {
-                EvalResult::Val(arg) => {
-                    args.push(arg);
-                    if args.len() == arity {
-                        break EvalResult::Pending(
-                            Resumable(Cont::Effect(m.pos), Arc::clone(env)),
-                            args,
-                        );
-                    } else {
-                        break EvalResult::Val(Val::Eff(e, arity, args, m));
-                    }
-                }
-                EvalResult::Pending(Resumable(cont, env), eff_args) => {
-                    let f = Box::new(Val::Eff(e, arity, args, m));
-                    break EvalResult::Pending(
-                        Resumable(Cont::AppArg(f, Box::new(cont)), env),
-                        eff_args,
-                    );
-                }
-            },
+            EvalResult::Val(Val::Fn(body, fn_env, m)) => {
+                break eval_app_fn(body, fn_env, m, arg._eval(env));
+            }
+            EvalResult::Val(Val::Tag(t, args, m)) => {
+                break eval_app_tag(t, args, m, arg._eval(env));
+            }
+            EvalResult::Val(Val::Eff(e, arity, args, m)) => {
+                break eval_app_eff(e, arity, args, m, arg._eval(env), env);
+            }
+            EvalResult::Val(Val::Res(cont, cont_env)) => {
+                break eval_res(Box::new(cont), cont_env, arg._eval(env));
+            }
             EvalResult::Pending(Resumable(cont, env), args) => {
-                break EvalResult::Pending(Resumable(Cont::AppFn(Box::new(cont), arg), env), args);
+                break EvalResult::Pending(Resumable(Cont::App(Box::new(cont), arg), env), args);
             }
         }
+    }
+}
+
+fn eval_app_fn(body: Expr, fn_env: Arc<Env<Val>>, m: Meta, arg: EvalResult) -> EvalResult {
+    match arg {
+        EvalResult::Val(arg) => body._eval(&fn_env.push(arg)),
+        EvalResult::Pending(Resumable(cont, env), args) => EvalResult::Pending(
+            Resumable(Cont::AppFn(body, fn_env, m, Box::new(cont)), env),
+            args,
+        ),
+    }
+}
+
+fn eval_app_tag(t: usize, mut args: Vec<Val>, m: Meta, arg: EvalResult) -> EvalResult {
+    match arg {
+        EvalResult::Val(arg) => {
+            args.push(arg);
+            EvalResult::Val(Val::Tag(t, args, m))
+        }
+        EvalResult::Pending(Resumable(cont, env), eff_args) => EvalResult::Pending(
+            Resumable(Cont::AppTag(t, args, m, Box::new(cont)), env),
+            eff_args,
+        ),
+    }
+}
+
+fn eval_app_eff(
+    e: usize,
+    arity: usize,
+    mut args: Vec<Val>,
+    m: Meta,
+    arg: EvalResult,
+    env: &Arc<Env<Val>>,
+) -> EvalResult {
+    match arg {
+        EvalResult::Val(arg) => {
+            args.push(arg);
+            if args.len() == arity {
+                EvalResult::Pending(
+                    Resumable(Cont::Effect(m.pos), Arc::clone(env)),
+                    Handler { name: e, args },
+                )
+            } else {
+                EvalResult::Val(Val::Eff(e, arity, args, m))
+            }
+        }
+        EvalResult::Pending(Resumable(cont, env), eff_args) => EvalResult::Pending(
+            Resumable(Cont::AppEff(e, arity, args, m, Box::new(cont)), env),
+            eff_args,
+        ),
+    }
+}
+
+fn eval_res(cont: Box<Cont>, cont_env: Arc<Env<Val>>, arg: EvalResult) -> EvalResult {
+    match arg {
+        EvalResult::Val(arg) => cont.resume(arg, &cont_env),
+        EvalResult::Pending(Resumable(cont_arg, env), args) => EvalResult::Pending(
+            Resumable(Cont::AppRes(cont, cont_env, Box::new(cont_arg)), env),
+            args,
+        ),
     }
 }
 
@@ -962,7 +1106,9 @@ fn eval_cnd(
             EvalResult::Val(Val::Tag(t, vals, _)) if t == tag && vals.len() == vars => {
                 break then_expr._eval(&env.extend(vals));
             }
-            EvalResult::Val(Val::Tag(_, _, _) | Val::Fn(_, _, _) | Val::Eff { .. }) => {
+            EvalResult::Val(
+                Val::Tag(_, _, _) | Val::Fn(_, _, _) | Val::Eff { .. } | Val::Res(_, _),
+            ) => {
                 break else_expr._eval(env);
             }
             EvalResult::Pending(Resumable(cont, env), args) => {
@@ -973,6 +1119,39 @@ fn eval_cnd(
                             pattern: (tag, vars),
                             then_expr,
                             else_expr,
+                        },
+                        env,
+                    ),
+                    args,
+                );
+            }
+        }
+    }
+}
+
+fn eval_try(
+    mut expr: EvalResult,
+    (h, vars): (usize, usize),
+    handler: Box<Expr>,
+    env: &Arc<Env<Val>>,
+) -> EvalResult {
+    loop {
+        match expr {
+            EvalResult::Val(Val::Rec(body, env, m)) => {
+                let env = env.push(Val::Rec(body.clone(), Arc::clone(&env), m));
+                expr = body._eval(&env);
+            }
+            EvalResult::Val(v) => break EvalResult::Val(v),
+            EvalResult::Pending(Resumable(cont, cont_env), Handler { name, args }) if name == h => {
+                break handler._eval(&env.extend(args).push(Val::Res(cont, cont_env)));
+            }
+            EvalResult::Pending(Resumable(cont, env), args) => {
+                break EvalResult::Pending(
+                    Resumable(
+                        Cont::Try {
+                            expr: Box::new(cont),
+                            signature: (h, vars),
+                            handler,
                         },
                         env,
                     ),
@@ -1311,8 +1490,8 @@ f(f)"
         let mut result = parsed.eval_with_handlers(&handlers).unwrap();
         loop {
             match result {
-                EvalResult::Pending(mut cont, mut vals) => {
-                    let v = vals.pop().unwrap();
+                EvalResult::Pending(mut cont, mut handler) => {
+                    let v = handler.args.pop().unwrap();
                     println!("{v}");
                     let none = cont.intern("None".to_string());
                     result = cont.resume(none)
@@ -1323,5 +1502,81 @@ f(f)"
                 }
             }
         }
+    }
+
+    #[test]
+    fn eval_effect_handler() {
+        let code = "let foo = x => y => Foo(bar(x, y))
+
+try
+  foo(Baz, Qux)
+catch bar(x, y) as resume
+  resume(Bar(x))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "Foo(Bar(Baz))");
+    }
+
+    #[test]
+    fn eval_effect_handlers() {
+        let code = "let baz = x => eff(x)
+
+let f = x =>
+  if x is True
+    try
+      Bar(baz(Qux))
+    catch eff(x) as resume
+      resume(Baz(x))
+  else
+    try
+      Bar(baz(Qux))
+    catch eff(x) as resume
+      Nil
+
+Pair(f(True), f(False))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "Pair(Bar(Baz(Qux)), Nil)");
+    }
+
+    #[test]
+    fn eval_effect_handler_toggle() {
+        let code = "loop with-toggle = val => resume =>
+  try
+    resume(val)
+  catch toggle(_) as resume
+    if val is True
+      with-toggle(False, resume)
+    else
+      with-toggle(True, resume)
+
+try
+  List(toggle(Nil), toggle(Nil), toggle(Nil), toggle(Nil))
+catch toggle(_) as resume
+  with-toggle(True, resume)";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "List(True, False, True, False)");
+    }
+
+    #[test]
+    fn eval_effect_handler_get_set() {
+        let code = "loop with-state = val => f =>
+  try
+    try
+      f(Nil)
+    catch get(_) as resume
+      with-state(val, _ => resume(val))
+  catch set(x) as resume
+    with-state(x, _ => resume(Nil))
+
+with-state(None, _ => List(get(Nil), set(Foo), get(Nil), set(Bar), set(Baz), get(Nil)))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "List(None, Nil, Foo, Nil, Nil, Baz)");
     }
 }
