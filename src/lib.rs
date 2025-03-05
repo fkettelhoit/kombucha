@@ -1582,6 +1582,18 @@ catch bar(x, y) as resume
     }
 
     #[test]
+    fn eval_handler_with_multiple_resumes() {
+        let code = "try
+  Foo(eff())
+catch eff() as resume
+  Pair(resume(Bar), resume(Baz))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "Pair(Foo(Bar), Foo(Baz))");
+    }
+
+    #[test]
     fn eval_effect_handlers() {
         let code = "let baz = x => eff(x)
 
@@ -1640,17 +1652,5 @@ with-state(None, _ => List(get(), set(Foo), get(), set(Bar), set(Baz), get()))";
         assert_eq!(parsed.to_string(), code);
         let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "List(None, (), Foo, (), (), Baz)");
-    }
-
-    #[test]
-    fn eval_handler_with_multiple_resumes() {
-        let code = "try
-  Foo(eff())
-catch eff() as resume
-  Pair(resume(Bar), resume(Baz))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Pair(Foo(Bar), Foo(Baz))");
     }
 }
