@@ -13,6 +13,7 @@ enum Token {
     ParenClose,
     Tag(String),
     Symbol(String),
+    Effect(String),
 }
 
 impl std::fmt::Display for Token {
@@ -21,7 +22,7 @@ impl std::fmt::Display for Token {
             Token::Comma => f.write_str(","),
             Token::ParenOpenApp | Token::ParenOpenGroup => f.write_str("("),
             Token::ParenClose => f.write_str(")"),
-            Token::Tag(s) | Token::Symbol(s) => write!(f, "{s}"),
+            Token::Tag(s) | Token::Symbol(s) | Token::Effect(s) => write!(f, "{s}"),
         }
     }
 }
@@ -84,6 +85,8 @@ fn scan(code: &str) -> Result<Vec<(Token, Pos)>, String> {
                     if let Some(first) = curr.chars().next() {
                         if first.is_uppercase() {
                             tokens.push((Token::Tag(curr), start));
+                        } else if curr.chars().last().unwrap_or(first) == '!' {
+                            tokens.push((Token::Effect(curr), start));
                         } else {
                             tokens.push((Token::Symbol(curr), start));
                         }
@@ -170,13 +173,13 @@ impl InternPool {
         }
     }
 
-    fn resolve_var(&mut self, vars: &[String], s: &str) -> ExprEnum {
+    fn resolve_var(&mut self, vars: &[String], s: &str) -> Option<usize> {
         for (i, t) in vars.iter().rev().enumerate() {
             if &s == t {
-                return ExprEnum::Var(i);
+                return Some(i);
             }
         }
-        ExprEnum::Eff(self.resolve_eff(s))
+        None
     }
 
     fn resolve_eff(&mut self, e: &str) -> usize {
@@ -214,6 +217,9 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
         };
         let mut expr = match token {
             Token::Tag(s) => Expr::new(ExprEnum::Tag(pool.resolve_tag(s)), Some(s.clone()), *pos),
+            Token::Effect(e) => {
+                Expr::new(ExprEnum::Eff(pool.resolve_eff(e)), Some(e.clone()), *pos)
+            }
             Token::Symbol(s) if s.as_str() == "try" => {
                 let expr = parse_expr(tokens, vars, pool)?;
                 let mut aliases = vec![];
@@ -223,7 +229,7 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
                         Some((Token::Symbol(s), _)) if s.as_str() == "catch" => {
                             tokens.next();
                             let (h, name) = match tokens.next() {
-                                Some((Token::Symbol(h), _)) => (pool.resolve_eff(h), h),
+                                Some((Token::Effect(h), _)) => (pool.resolve_eff(h), h),
                                 Some((t, pos)) => {
                                     return Err(format!(
                                         "Expected the handler to start with a name, but found {t} at {pos}"
@@ -386,7 +392,10 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
                     vars.pop();
                     Expr::new(ExprEnum::Rec(Box::new(body)), Some(s.clone()), *pos)
                 }
-                _ => Expr::new(pool.resolve_var(vars, s), Some(s.clone()), *pos),
+                _ => match pool.resolve_var(vars, s) {
+                    Some(var) => Expr::new(ExprEnum::Var(var), Some(s.clone()), *pos),
+                    None => return Err(format!("No binding for '{s}' at {pos}")),
+                },
             },
             Token::ParenOpenGroup => {
                 let expr = parse_expr(tokens, vars, pool)?;
@@ -1624,10 +1633,10 @@ f(f)"
 
     #[test]
     fn eval_print_effect() {
-        let code = "print(Hello)";
+        let code = "print!(Hello)";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
-        let handlers = Arc::new(HashMap::from_iter(vec![("print".to_string(), 1)]));
+        let handlers = Arc::new(HashMap::from_iter(vec![("print!".to_string(), 1)]));
         let mut result = parsed.eval_with_handlers(&handlers).unwrap();
         let mut printed = vec![];
         loop {
@@ -1649,10 +1658,10 @@ f(f)"
 
     #[test]
     fn eval_log_effect() {
-        let code = "List(log(Debug, Foo), log(Error, Bar), log(Debug, Baz))";
+        let code = "List(log!(Debug, Foo), log!(Error, Bar), log!(Debug, Baz))";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
-        let handlers = Arc::new(HashMap::from_iter(vec![("log".to_string(), 2)]));
+        let handlers = Arc::new(HashMap::from_iter(vec![("log!".to_string(), 2)]));
         let mut result = parsed.eval_with_handlers(&handlers).unwrap();
         let mut debug = vec![];
         let mut error = vec![];
@@ -1681,11 +1690,11 @@ f(f)"
 
     #[test]
     fn eval_effect_handler() {
-        let code = "let foo = x => y => z => Foo(eff(x, y, z))
+        let code = "let foo = x => y => z => Foo(eff!(x, y, z))
 
 try
   foo(Bar, Baz, Qux)
-catch eff(x, y, z) as resume
+catch eff!(x, y, z) as resume
   resume(Triple(x, y, z))";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
@@ -1696,8 +1705,8 @@ catch eff(x, y, z) as resume
     #[test]
     fn eval_handler_with_multiple_resumes() {
         let code = "try
-  Foo(eff())
-catch eff() as resume
+  Foo(eff!())
+catch eff!() as resume
   Pair(resume(Bar), resume(Baz))";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
@@ -1707,18 +1716,18 @@ catch eff() as resume
 
     #[test]
     fn eval_effect_handlers() {
-        let code = "let baz = x => eff(x)
+        let code = "let baz = x => eff!(x)
 
 let f = x =>
   if x is True
     try
       Bar(baz(Qux), baz(Qux))
-    catch eff(x) as resume
+    catch eff!(x) as resume
       resume(Baz(x))
   else
     try
       Bar(baz(Qux), baz(Qux))
-    catch eff(x) as resume
+    catch eff!(x) as resume
       Nil
 
 Pair(f(True), f(False))";
@@ -1733,15 +1742,15 @@ Pair(f(True), f(False))";
         let code = "loop with-toggle = val => resume =>
   try
     resume(val)
-  catch toggle() as resume
+  catch toggle!() as resume
     if val is True
       with-toggle(False, resume)
     else
       with-toggle(True, resume)
 
 try
-  List(toggle(), toggle(), toggle(), toggle())
-catch toggle() as resume
+  List(toggle!(), toggle!(), toggle!(), toggle!())
+catch toggle!() as resume
   with-toggle(True, resume)";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
@@ -1754,12 +1763,12 @@ catch toggle() as resume
         let code = "loop with-state = val => f =>
   try
     f()
-  catch get() as resume
+  catch get!() as resume
     resume(val)
-  catch set(x) as resume
+  catch set!(x) as resume
     with-state(x, _ => resume())
 
-with-state(None, _ => List(get(), set(Foo), get(), set(Bar), set(Baz), get()))";
+with-state(None, _ => List(get!(), set!(Foo), get!(), set!(Bar), set!(Baz), get!()))";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
         let evaled = parsed.eval().unwrap();
