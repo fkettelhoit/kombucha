@@ -119,7 +119,6 @@ enum ExprEnum {
 pub struct InternPool {
     tags: HashMap<String, usize>,
     effects: (HashMap<String, usize>, HashMap<usize, String>),
-    handler_arities: HashMap<usize, usize>,
 }
 
 impl InternPool {
@@ -127,7 +126,6 @@ impl InternPool {
         Self {
             tags: HashMap::from_iter(vec![("".to_string(), 0)]),
             effects: (HashMap::new(), HashMap::new()),
-            handler_arities: HashMap::new(),
         }
     }
 
@@ -161,11 +159,6 @@ impl InternPool {
                 n
             }
         }
-    }
-
-    fn register_handler(&mut self, h: &str, arity: usize) {
-        let h = self.resolve_eff(h);
-        self.handler_arities.insert(h, arity);
     }
 }
 
@@ -240,7 +233,7 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
                                     }
                                 }
                             }
-                            pool.register_handler(name, bindings);
+                            pool.resolve_eff(name);
                             expect(tokens, Token::Symbol("as".into()))?;
                             let (resumable, _) = expect_var(tokens)?;
                             alias += &format!(" as {resumable}");
@@ -660,7 +653,7 @@ pub enum Val {
     Fn(Expr, Arc<Env<Val>>, Meta),
     Rec(Expr, Arc<Env<Val>>, Meta),
     Tag(usize, Vec<Val>, Meta),
-    Eff(usize, usize, Vec<Val>, Meta),
+    Eff(usize, Vec<Val>, Meta),
     Res(Cont, Arc<Env<Val>>),
 }
 
@@ -679,7 +672,7 @@ impl TryFrom<Val> for Expr {
                 }
                 Ok(expr)
             }
-            Val::Eff(e, _, vals, meta) => {
+            Val::Eff(e, vals, meta) => {
                 let mut expr = Expr(ExprEnum::Eff(e), meta.clone());
                 for v in vals {
                     let app = ExprEnum::App(Box::new(expr), Box::new(Expr::try_from(v)?));
@@ -737,10 +730,6 @@ impl<T> Env<T> {
         }
     }
 
-    fn arity(self: &Arc<Self>, handler: usize) -> Option<usize> {
-        self.root().handler_arities.get(&handler).copied()
-    }
-
     fn tag(self: &Arc<Self>, tag: &str) -> Option<usize> {
         match self.as_ref() {
             Env::Empty(pool) => pool.tags.get(tag).copied(),
@@ -776,6 +765,7 @@ pub struct Resumable(Cont, Arc<Env<Val>>);
 pub struct Handler {
     name: usize,
     args: Vec<Val>,
+    m: Meta,
 }
 
 #[derive(Debug, Clone)]
@@ -784,7 +774,7 @@ pub enum Cont {
     App(Box<Cont>, Box<Expr>),
     AppFn(Expr, Arc<Env<Val>>, Meta, Box<Cont>),
     AppTag(usize, Vec<Val>, Meta, Box<Cont>),
-    AppEff(usize, usize, Vec<Val>, Meta, Box<Cont>),
+    AppEff(usize, Vec<Val>, Meta, Box<Cont>),
     AppRes(Box<Cont>, Arc<Env<Val>>, Box<Cont>),
     Cnd {
         value: Box<Cont>,
@@ -810,24 +800,44 @@ impl InternedExpr {
         self,
         handlers: &Arc<HashMap<String, usize>>,
     ) -> Result<EvalResult, String> {
-        self.0.eval_with_handlers(handlers, self.1)
+        let InternedExpr(expr, mut pool) = self;
+        let mut resolved_handlers = vec![];
+        for (name, arity) in handlers.iter() {
+            resolved_handlers.push((pool.resolve_eff(name), *arity));
+        }
+        let pool = Arc::new(pool);
+        expr.check(&Arc::new(Env::Empty(Arc::clone(&pool))), &[])?;
+        let result = expr._eval(&Arc::new(Env::Empty(Arc::clone(&pool))));
+        eval_with_handlers(result, resolved_handlers)
+    }
+}
+
+fn eval_with_handlers(
+    mut result: EvalResult,
+    handlers: Vec<(usize, usize)>,
+) -> Result<EvalResult, String> {
+    loop {
+        match result {
+            EvalResult::Val(val) => return Ok(EvalResult::Val(val)),
+            EvalResult::Pending(Resumable(cont, env), Handler { name, args, m }) => {
+                if let Some((h, arity)) = handlers.iter().find(|(h, _)| *h == name) {
+                    if *arity > args.len() {
+                        result = cont.resume(Val::Eff(*h, args, m), &env);
+                    } else {
+                        return Ok(EvalResult::Pending(
+                            Resumable(cont, env),
+                            Handler { name, args, m },
+                        ));
+                    }
+                } else {
+                    return Err(format!("No handler for {name}"));
+                }
+            }
+        }
     }
 }
 
 impl Expr {
-    fn eval_with_handlers(
-        self,
-        handlers: &Arc<HashMap<String, usize>>,
-        mut pool: InternPool,
-    ) -> Result<EvalResult, String> {
-        for (h, arity) in handlers.iter() {
-            pool.register_handler(h, *arity);
-        }
-        let pool = Arc::new(pool);
-        self.check(&Arc::new(Env::Empty(Arc::clone(&pool))), &[])?;
-        Ok(self._eval(&Arc::new(Env::Empty(Arc::clone(&pool)))))
-    }
-
     fn check(&self, env: &Arc<Env<V>>, stack: &[&Expr]) -> Result<Vec<V>, String> {
         // Possible recursion: an expr whose set of possible functions contains `f` is called as a
         // function inside of `f` (in other words while the call stack contains `f`) with arg `f`
@@ -925,12 +935,7 @@ impl Expr {
                     .unwrap_or_else(|| panic!("No binding for {self} at {pos}")),
             ),
             ExprEnum::Tag(t) => EvalResult::Val(Val::Tag(t, vec![], self.1.clone())),
-            ExprEnum::Eff(e) => {
-                let arity = env
-                    .arity(e)
-                    .unwrap_or_else(|| panic!("No handler for {self} at {pos}"));
-                EvalResult::Val(Val::Eff(e, arity, vec![], self.1.clone()))
-            }
+            ExprEnum::Eff(e) => EvalResult::Val(Val::Eff(e, vec![], self.1.clone())),
             ExprEnum::Abs(body) => EvalResult::Val(Val::Fn(*body, Arc::clone(env), self.1.clone())),
             ExprEnum::Rec(body) => {
                 EvalResult::Val(Val::Rec(*body, Arc::clone(env), self.1.clone()))
@@ -948,9 +953,22 @@ impl Expr {
 }
 
 impl Resumable {
-    pub fn resume(self, value: Val) -> EvalResult {
+    pub fn resume(
+        self,
+        value: Val,
+        handlers: &Arc<HashMap<String, usize>>,
+    ) -> Result<EvalResult, String> {
         let Resumable(cont, env) = self;
-        cont.resume(value, &env)
+        let result = cont.resume(value, &env);
+        let pool = env.root();
+        let mut resolved_handlers = vec![];
+        for (name, arity) in handlers.iter() {
+            match pool.effects.0.get(name) {
+                Some(h) => resolved_handlers.push((*h, *arity)),
+                None => return Err(format!("Unresolved handler: '{name}'")),
+            }
+        }
+        eval_with_handlers(result, resolved_handlers)
     }
 
     pub fn intern(&mut self, tag: String) -> Val {
@@ -968,6 +986,14 @@ impl Resumable {
         };
         Val::Tag(t, vec![], meta)
     }
+
+    pub fn unit(&self) -> Val {
+        let meta = Meta {
+            alias: Some("()".to_string()),
+            pos: self.0.pos(),
+        };
+        Val::Tag(0, vec![], meta)
+    }
 }
 
 impl Cont {
@@ -977,7 +1003,7 @@ impl Cont {
             Cont::App(cont, _)
             | Cont::AppFn(_, _, _, cont)
             | Cont::AppTag(_, _, _, cont)
-            | Cont::AppEff(_, _, _, _, cont)
+            | Cont::AppEff(_, _, _, cont)
             | Cont::AppRes(_, _, cont)
             | Cont::Cnd { value: cont, .. }
             | Cont::Try { expr: cont, .. } => cont.pos(),
@@ -998,8 +1024,8 @@ impl Cont {
                 eval_app_fn(body, fn_env, m, cont.resume(value, env))
             }
             Cont::AppTag(t, args, m, cont) => eval_app_tag(t, args, m, cont.resume(value, env)),
-            Cont::AppEff(e, arity, args, m, cont) => {
-                eval_app_eff(e, arity, args, m, cont.resume(value, env), env)
+            Cont::AppEff(e, args, m, cont) => {
+                eval_app_eff(e, args, m, cont.resume(value, env), env)
             }
             Cont::AppRes(res, res_env, cont_arg) => {
                 eval_res(res, res_env, cont_arg.resume(value, env))
@@ -1059,8 +1085,8 @@ fn eval_app(mut f: EvalResult, arg: Box<Expr>, env: &Arc<Env<Val>>) -> EvalResul
             EvalResult::Val(Val::Tag(t, args, m)) => {
                 break eval_app_tag(t, args, m, arg._eval(env));
             }
-            EvalResult::Val(Val::Eff(e, arity, args, m)) => {
-                break eval_app_eff(e, arity, args, m, arg._eval(env), env);
+            EvalResult::Val(Val::Eff(e, args, m)) => {
+                break eval_app_eff(e, args, m, arg._eval(env), env);
             }
             EvalResult::Val(Val::Res(cont, cont_env)) => {
                 break eval_res(Box::new(cont), cont_env, arg._eval(env));
@@ -1100,7 +1126,6 @@ fn eval_app_tag(t: usize, mut args: Vec<Val>, m: Meta, arg: EvalResult) -> EvalR
 
 fn eval_app_eff(
     e: usize,
-    arity: usize,
     mut args: Vec<Val>,
     m: Meta,
     arg: EvalResult,
@@ -1109,17 +1134,13 @@ fn eval_app_eff(
     match arg {
         EvalResult::Val(arg) => {
             args.push(arg);
-            if args.len() == arity {
-                EvalResult::Pending(
-                    Resumable(Cont::Effect(m.pos), Arc::clone(env)),
-                    Handler { name: e, args },
-                )
-            } else {
-                EvalResult::Val(Val::Eff(e, arity, args, m))
-            }
+            EvalResult::Pending(
+                Resumable(Cont::Effect(m.pos), Arc::clone(env)),
+                Handler { name: e, args, m },
+            )
         }
         EvalResult::Pending(Resumable(cont, env), eff_args) => EvalResult::Pending(
-            Resumable(Cont::AppEff(e, arity, args, m, Box::new(cont)), env),
+            Resumable(Cont::AppEff(e, args, m, Box::new(cont)), env),
             eff_args,
         ),
     }
@@ -1186,11 +1207,15 @@ fn eval_try(
                 expr = body._eval(&env);
             }
             EvalResult::Val(v) => return EvalResult::Val(v),
-            EvalResult::Pending(Resumable(cont, cont_env), Handler { name, args }) => {
-                if let Some((_, _, handler)) = handlers.iter().find(|(h, _, _)| *h == name) {
-                    expr = handler
-                        .clone()
-                        ._eval(&env.extend(args).push(Val::Res(cont, cont_env)));
+            EvalResult::Pending(Resumable(cont, cont_env), Handler { name, args, m }) => {
+                if let Some((h, arity, handler)) = handlers.iter().find(|(h, _, _)| *h == name) {
+                    if *arity > args.len() {
+                        expr = cont.resume(Val::Eff(*h, args, m), &cont_env);
+                    } else {
+                        expr = handler
+                            .clone()
+                            ._eval(&env.extend(args).push(Val::Res(cont, cont_env)));
+                    }
                 } else {
                     return EvalResult::Pending(
                         Resumable(
@@ -1200,7 +1225,7 @@ fn eval_try(
                             },
                             cont_env,
                         ),
-                        Handler { name, args },
+                        Handler { name, args, m },
                     );
                 }
             }
@@ -1551,16 +1576,50 @@ f(f)"
         assert_eq!(parsed.to_string(), code);
         let handlers = Arc::new(HashMap::from_iter(vec![("print".to_string(), 1)]));
         let mut result = parsed.eval_with_handlers(&handlers).unwrap();
+        let mut printed = vec![];
         loop {
             match result {
                 EvalResult::Pending(mut cont, mut handler) => {
                     let v = handler.args.pop().unwrap();
-                    println!("{v}");
+                    printed.push(v.to_string());
                     let none = cont.intern("None".to_string());
-                    result = cont.resume(none)
+                    result = cont.resume(none, &handlers).unwrap();
                 }
                 EvalResult::Val(evaled) => {
                     assert_eq!(format!("{evaled}"), "None");
+                    break;
+                }
+            }
+        }
+        assert_eq!(printed, vec!["Hello"]);
+    }
+
+    #[test]
+    fn eval_log_effect() {
+        let code = "List(log(Debug, Foo), log(Error, Bar), log(Debug, Baz))";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let handlers = Arc::new(HashMap::from_iter(vec![("log".to_string(), 2)]));
+        let mut result = parsed.eval_with_handlers(&handlers).unwrap();
+        let mut debug = vec![];
+        let mut error = vec![];
+        loop {
+            match result {
+                EvalResult::Pending(cont, mut handler) => {
+                    let msg = handler.args.pop().unwrap();
+                    let lvl = handler.args.pop().unwrap();
+                    if lvl.to_string() == "Debug" {
+                        debug.push(msg.to_string());
+                    } else if lvl.to_string() == "Error" {
+                        error.push(msg.to_string());
+                    } else {
+                        panic!("Unexpected log level: '{lvl}'")
+                    }
+                    let unit = cont.unit();
+                    result = cont.resume(unit, &handlers).unwrap();
+                }
+                EvalResult::Val(evaled) => {
+                    assert_eq!(format!("{evaled}"), "List((), (), ())");
                     break;
                 }
             }
@@ -1569,16 +1628,16 @@ f(f)"
 
     #[test]
     fn eval_effect_handler() {
-        let code = "let foo = x => y => Foo(bar(x, y))
+        let code = "let foo = x => y => z => Foo(eff(x, y, z))
 
 try
-  foo(Baz, Qux)
-catch bar(x, y) as resume
-  resume(Bar(x))";
+  foo(Bar, Baz, Qux)
+catch eff(x, y, z) as resume
+  resume(Triple(x, y, z))";
         let parsed = parse(code).unwrap();
         assert_eq!(parsed.to_string(), code);
         let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Foo(Bar(Baz))");
+        assert_eq!(format!("{evaled}"), "Foo(Triple(Bar, Baz, Qux))");
     }
 
     #[test]
@@ -1643,7 +1702,7 @@ catch toggle() as resume
   try
     f()
   catch get() as resume
-    with-state(val, _ => resume(val))
+    resume(val)
   catch set(x) as resume
     with-state(x, _ => resume())
 
