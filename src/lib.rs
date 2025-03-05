@@ -11,6 +11,7 @@ enum Token {
     ParenOpenApp,
     ParenOpenGroup,
     ParenClose,
+    Tag(String),
     Symbol(String),
 }
 
@@ -20,7 +21,7 @@ impl std::fmt::Display for Token {
             Token::Comma => f.write_str(","),
             Token::ParenOpenApp | Token::ParenOpenGroup => f.write_str("("),
             Token::ParenClose => f.write_str(")"),
-            Token::Symbol(s) => write!(f, "{s}"),
+            Token::Tag(s) | Token::Symbol(s) => write!(f, "{s}"),
         }
     }
 }
@@ -37,44 +38,84 @@ impl std::fmt::Display for Pos {
     }
 }
 
-fn scan(code: &str) -> Vec<(Token, Pos)> {
+fn scan(code: &str) -> Result<Vec<(Token, Pos)>, String> {
     let mut tokens = vec![];
     let mut curr = String::new();
     let mut col = 1;
     let mut line = 1;
     let mut start = Pos { col, line };
     let mut could_open_app = false;
+    let mut is_str = false;
+    let mut is_escape = false;
     for char in code.chars().chain(once(' ')) {
-        match char {
-            ' ' | '\n' | '(' | ')' | ',' => {
-                if !curr.is_empty() {
-                    tokens.push((Token::Symbol(curr), start));
-                    curr = String::new();
-                }
+        if is_str {
+            if is_escape {
                 match char {
+                    '"' | '\\' => curr.push(char),
+                    'n' => curr.push('\n'),
+                    c => {
+                        return Err(format!(
+                            "Invalid escape sequence \\{c} at {}",
+                            Pos { line, col }
+                        ));
+                    }
+                }
+                is_escape = false;
+            } else {
+                match char {
+                    '"' => {
+                        is_str = false;
+                        could_open_app = true;
+                        tokens.push((Token::Tag(curr), start));
+                        curr = String::new();
+                    }
+                    '\\' => is_escape = true,
                     '\n' => {
                         col = 0;
                         line += 1;
                     }
-                    ',' => tokens.push((Token::Comma, Pos { col, line })),
-                    '(' if could_open_app => tokens.push((Token::ParenOpenApp, Pos { col, line })),
-                    '(' => tokens.push((Token::ParenOpenGroup, Pos { col, line })),
-                    ')' => tokens.push((Token::ParenClose, Pos { col, line })),
-
-                    _ => {}
+                    c => curr.push(c),
                 }
-                col += 1;
-                start = Pos { col, line };
-                could_open_app = char == ')';
             }
-            c => {
-                col += 1;
-                curr.push(c);
-                could_open_app = true;
+            col += 1;
+        } else {
+            match char {
+                ' ' | '\n' | '(' | ')' | ',' | '"' => {
+                    if let Some(first) = curr.chars().next() {
+                        if first.is_uppercase() {
+                            tokens.push((Token::Tag(curr), start));
+                        } else {
+                            tokens.push((Token::Symbol(curr), start));
+                        }
+                        curr = String::new();
+                    }
+                    match char {
+                        '\n' => {
+                            col = 0;
+                            line += 1;
+                        }
+                        ',' => tokens.push((Token::Comma, Pos { col, line })),
+                        '(' if could_open_app => {
+                            tokens.push((Token::ParenOpenApp, Pos { col, line }))
+                        }
+                        '(' => tokens.push((Token::ParenOpenGroup, Pos { col, line })),
+                        ')' => tokens.push((Token::ParenClose, Pos { col, line })),
+                        '"' => is_str = true,
+                        _ => {}
+                    }
+                    col += 1;
+                    start = Pos { col, line };
+                    could_open_app = char == ')';
+                }
+                c => {
+                    col += 1;
+                    curr.push(c);
+                    could_open_app = true;
+                }
             }
         }
     }
-    tokens
+    Ok(tokens)
 }
 
 #[derive(Debug, Clone)]
@@ -172,9 +213,7 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
             return Err("Expected an expression, but found nothing".into());
         };
         let mut expr = match token {
-            Token::Symbol(s) if is_tag(s) => {
-                Expr::new(ExprEnum::Tag(pool.resolve_tag(s)), Some(s.clone()), *pos)
-            }
+            Token::Tag(s) => Expr::new(ExprEnum::Tag(pool.resolve_tag(s)), Some(s.clone()), *pos),
             Token::Symbol(s) if s.as_str() == "try" => {
                 let expr = parse_expr(tokens, vars, pool)?;
                 let mut aliases = vec![];
@@ -184,9 +223,7 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
                         Some((Token::Symbol(s), _)) if s.as_str() == "catch" => {
                             tokens.next();
                             let (h, name) = match tokens.next() {
-                                Some((Token::Symbol(h), _)) if !is_tag(h) => {
-                                    (pool.resolve_eff(h), h)
-                                }
+                                Some((Token::Symbol(h), _)) => (pool.resolve_eff(h), h),
                                 Some((t, pos)) => {
                                     return Err(format!(
                                         "Expected the handler to start with a name, but found {t} at {pos}"
@@ -260,7 +297,7 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
                 let v = parse_expr(tokens, vars, pool)?;
                 expect(tokens, Token::Symbol("is".into()))?;
                 let (tag, mut alias) = match tokens.next() {
-                    Some((Token::Symbol(t), _)) if is_tag(t) => (pool.resolve_tag(t), t.clone()),
+                    Some((Token::Tag(t), _)) => (pool.resolve_tag(t), t.clone()),
                     Some((t, pos)) => {
                         return Err(format!(
                             "Expected the pattern to start with a tag, but found {t} at {pos}"
@@ -364,7 +401,7 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
                 if let Some((Token::ParenClose, _)) = tokens.peek() {
                     // `f()` is treated as `f(())`, where `()` is the tag with an empty name
                     tokens.next();
-                    let arg = Expr::new(ExprEnum::Tag(0), Some("()".to_string()), *pos);
+                    let arg = Expr::new(ExprEnum::Tag(0), Some("".to_string()), *pos);
                     return Ok(Expr::new(
                         ExprEnum::App(Box::new(expr), Box::new(arg)),
                         None,
@@ -394,15 +431,12 @@ pub fn parse(code: &str) -> Result<InternedExpr, String> {
     }
     fn expect_var(tokens: &mut Peekable<Iter<(Token, Pos)>>) -> Result<(String, Pos), String> {
         match tokens.next() {
-            Some((Token::Symbol(s), pos)) if !is_tag(s) => Ok((s.clone(), *pos)),
+            Some((Token::Symbol(s), pos)) => Ok((s.clone(), *pos)),
             Some((t, pos)) => Err(format!("Expected a variable, found {t} at {pos}")),
             None => Err("Expected a variable, but found nothing".into()),
         }
     }
-    fn is_tag(s: &str) -> bool {
-        s.chars().next().unwrap_or_default().is_uppercase()
-    }
-    let tokens = scan(code);
+    let tokens = scan(code)?;
     let mut tokens = tokens.iter().peekable();
     let mut pool = InternPool::new();
     let expr = parse_expr(&mut tokens, &mut vec![], &mut pool)?;
@@ -457,7 +491,26 @@ impl Expr {
             Ok(())
         }
         match &self.0 {
-            ExprEnum::Var(s) | ExprEnum::Tag(s) | ExprEnum::Eff(s) => match &self.1.alias {
+            ExprEnum::Tag(t) => match &self.1.alias {
+                Some(t) => {
+                    if let Some(first) = t.chars().next() {
+                        if !first.is_uppercase() || t.chars().any(|c| c.is_whitespace() || c == '"')
+                        {
+                            let escaped = t
+                                .replace("\\", "\\\\")
+                                .replace("\"", "\\\"")
+                                .replace("\n", "\\n");
+                            write!(f, "\"{escaped}\"",)
+                        } else {
+                            f.write_str(t)
+                        }
+                    } else {
+                        f.write_str("()")
+                    }
+                }
+                None => write!(f, "\\{t}"),
+            },
+            ExprEnum::Var(s) | ExprEnum::Eff(s) => match &self.1.alias {
                 Some(alias) => f.write_str(alias),
                 None => write!(f, "'{s}"),
             },
@@ -989,7 +1042,7 @@ impl Resumable {
 
     pub fn unit(&self) -> Val {
         let meta = Meta {
-            alias: Some("()".to_string()),
+            alias: Some("".to_string()),
             pos: self.0.pos(),
         };
         Val::Tag(0, vec![], meta)
@@ -1711,5 +1764,17 @@ with-state(None, _ => List(get(), set(Foo), get(), set(Bar), set(Baz), get()))";
         assert_eq!(parsed.to_string(), code);
         let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "List(None, (), Foo, (), (), Baz)");
+    }
+
+    #[test]
+    fn eval_tag_string_syntax() {
+        let code = "List(Normal, \"lowercase\", \"With Space\", \"!\\\"?\\n\")";
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.to_string(), code);
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(
+            format!("{evaled}"),
+            "List(Normal, \"lowercase\", \"With Space\", \"!\\\"?\\n\")"
+        );
     }
 }
