@@ -1,0 +1,46 @@
+loop map = f => xs =>
+  if xs is Cons(x, xs)
+    Cons(f(x), map(f, xs))
+  else
+    xs
+
+let reverse = xs =>
+  loop reverse = xs => rest =>
+    if xs is Cons(x, xs)
+      reverse(xs, Cons(x, rest))
+    else
+      rest
+  reverse(xs, Nil)
+
+let read-lines = _ =>
+  loop split-lines = curr => lines =>
+    let c = read-char!()
+    if c is ()
+      Cons(curr, lines)
+    else if c is "\n"
+      split-lines(Nil, Cons(curr, lines))
+    else
+      split-lines(Cons(c, curr), lines)
+  let lines = map(reverse, split-lines(Nil, Nil))
+  reverse(lines)
+
+loop append = xs => ys =>
+  if xs is Cons(x, xs)
+    Cons(x, append(xs, ys))
+  else
+    ys
+
+loop wrap = pre => l => post =>
+  let pre = Cons(pre, Nil)
+  let post = Cons(post, Nil)
+  append(pre, append(l, post))
+
+let paragraph = l => wrap("<p>", l, "</p>\n")
+
+loop flatten = xs =>
+  if xs is Cons(x, xs)
+    append(x, flatten(xs))
+  else
+    xs
+
+write-strs!(flatten(map(paragraph, read-lines())))

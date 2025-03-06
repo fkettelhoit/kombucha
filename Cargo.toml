@@ -3,4 +3,12 @@ name = "vorpal"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "vorpal"
+path = "src/vorpal.rs"
+
+[[bin]]
+name = "voblog"
+path = "src/_blog.rs"
+
 [dependencies]
