@@ -35,7 +35,84 @@ loop wrap = pre => l => post =>
   let post = Cons(post, Nil)
   append(pre, append(l, post))
 
-let paragraph = l => wrap("<p>", l, "</p>\n")
+let is-empty = xs =>
+  if xs is Cons(x, xs)
+    False
+  else
+    True
+
+let is-heading = l =>
+  if l is Cons(x, l')
+    if l' is Cons(y, l'')
+      if x is "#"
+        if y is " "
+          Heading(l'')
+        else
+          Nil
+      else
+        Nil
+    else
+      Nil
+  else
+    Nil
+
+let is-code-block = l =>
+  if l is Cons(a, l')
+    if l' is Cons(b, l'')
+      if l'' is Cons(c, l''')
+        if a is "`"
+          if b is "`"
+            if c is "`"
+              if l''' is Nil
+                True
+              else
+                False
+            else
+              False
+          else
+            False
+        else
+          False
+      else
+        False
+    else
+      False
+  else
+    False
+
+loop inline-to-html = l => style =>
+  if l is Cons(c, l)
+    if c is "_"
+      if style is Em
+        Cons("</em>", inline-to-html(l, None))
+      else
+        Cons("<em>", inline-to-html(l, Em))
+    else
+      Cons(c, inline-to-html(l, style))
+  else
+    l
+
+let line-to-html = l =>
+  if is-empty(l) is True
+    Nil
+  else if is-heading(l) is Heading(l)
+    wrap("<h1>", l, "</h1>\n")
+  else
+    wrap("<p>", inline-to-html(l, None), "</p>\n")
+
+loop md-to-html = ls => style =>
+  if ls is Cons(l, ls)
+    if style is Code
+      if is-code-block(l) is True
+        Cons(Cons("</code></pre>\n", Nil), md-to-html(ls, None))
+      else
+        Cons(Cons("\n", l), md-to-html(ls, style))
+    else if is-code-block(l) is True
+      Cons(Cons("<pre><code>", Nil), md-to-html(ls, Code))
+    else
+      Cons(line-to-html(l), md-to-html(ls, style))
+  else
+    ls
 
 loop flatten = xs =>
   if xs is Cons(x, xs)
@@ -43,4 +120,6 @@ loop flatten = xs =>
   else
     xs
 
-write-strs!(flatten(map(paragraph, read-lines())))
+let body = flatten(md-to-html(read-lines(), None))
+
+write-strs!(body)
