@@ -858,15 +858,10 @@ impl<T> Env<T> {
     }
 }
 
-#[derive(Clone)]
-enum V {
-    Fn(Expr, Arc<Env<V>>, Meta),
-    Tag(usize, Vec<V>, Meta),
-    Any,
-}
+type EvalResult = Result<Eval, String>;
 
 #[derive(Debug, Clone)]
-pub enum EvalResult {
+pub enum Eval {
     Val(Val),
     Pending(Resumable, Handler),
 }
@@ -910,40 +905,33 @@ pub enum Cont {
 impl InternedExpr {
     pub fn eval(self) -> Result<Val, String> {
         match self.eval_with_handlers(&Arc::new(HashMap::new()))? {
-            EvalResult::Val(val) => Ok(val),
-            EvalResult::Pending(_, _) => Err("Evaluation requires a handler".to_string()),
+            Eval::Val(val) => Ok(val),
+            Eval::Pending(_, _) => Err("Evaluation requires a handler".to_string()),
         }
     }
 
-    pub fn eval_with_handlers(
-        self,
-        handlers: &Arc<HashMap<String, usize>>,
-    ) -> Result<EvalResult, String> {
+    pub fn eval_with_handlers(self, handlers: &Arc<HashMap<String, usize>>) -> EvalResult {
         let InternedExpr(expr, mut pool) = self;
         let mut resolved_handlers = vec![];
         for (name, arity) in handlers.iter() {
             resolved_handlers.push((pool.resolve_eff(name), *arity));
         }
         let pool = Arc::new(pool);
-        expr.check(&Arc::new(Env::Empty(Arc::clone(&pool))), &[])?;
-        let result = expr._eval(&Arc::new(Env::Empty(Arc::clone(&pool))));
+        let result = expr._eval(&Arc::new(Env::Empty(Arc::clone(&pool))))?;
         eval_with_handlers(result, resolved_handlers)
     }
 }
 
-fn eval_with_handlers(
-    mut result: EvalResult,
-    handlers: Vec<(usize, usize)>,
-) -> Result<EvalResult, String> {
+fn eval_with_handlers(mut result: Eval, handlers: Vec<(usize, usize)>) -> EvalResult {
     loop {
         match result {
-            EvalResult::Val(val) => return Ok(EvalResult::Val(val)),
-            EvalResult::Pending(Resumable(cont, env), Handler { name, args, m }) => {
+            Eval::Val(val) => return Ok(Eval::Val(val)),
+            Eval::Pending(Resumable(cont, env), Handler { name, args, m }) => {
                 if let Some((h, arity)) = handlers.iter().find(|(h, _)| *h == name) {
                     if *arity > args.len() {
-                        result = cont.resume(Val::Eff(*h, args, m), &env);
+                        result = cont.resume(Val::Eff(*h, args, m), &env)?;
                     } else {
-                        return Ok(EvalResult::Pending(
+                        return Ok(Eval::Pending(
                             Resumable(cont, env),
                             Handler { name, args, m },
                         ));
@@ -957,128 +945,33 @@ fn eval_with_handlers(
 }
 
 impl Expr {
-    fn check(&self, env: &Arc<Env<V>>, stack: &[&Expr]) -> Result<Vec<V>, String> {
-        // Possible recursion: an expr whose set of possible functions contains `f` is called as a
-        // function inside of `f` (in other words while the call stack contains `f`) with arg `f`
-        fn stacktrace(stack: &[&Expr]) -> String {
-            let mut msg = format!("Implicit recursion detected!");
-            for expr in stack {
-                if !expr.is_sugared_as_let_or_loop() {
-                    let pos = expr.1.pos;
-                    msg += &format!("\n\n...at {pos}:\n{expr}");
-                }
-            }
-            msg
-        }
-        let Expr(inner, meta) = self;
-        match inner {
-            ExprEnum::Var(var) => match env.get(*var) {
-                Some(expr) => Ok(vec![expr.clone()]),
-                None => Err(format!("No binding for {self} at {}", meta.pos)),
-            },
-            ExprEnum::Eff(_) => Ok(vec![V::Any]),
-            ExprEnum::Tag(t) => Ok(vec![V::Tag(*t, vec![], meta.clone())]),
-            ExprEnum::Abs(body) => {
-                body.check(&env.push(V::Any), stack)?;
-                Ok(vec![V::Fn(*body.clone(), Arc::clone(env), meta.clone())])
-            }
-            ExprEnum::Rec(body) => body.check(&env.push(V::Any), stack),
-            ExprEnum::App(f, arg) => {
-                let fs = f.check(env, stack)?;
-                let args = arg.check(env, stack)?;
-                let mut results = vec![];
-                for v in fs {
-                    for arg in args.iter() {
-                        match &v {
-                            V::Any => {
-                                results.push(V::Any);
-                            }
-                            V::Tag(t, values, meta) => {
-                                let vs = values.iter().cloned().chain([arg.clone()]).collect();
-                                results.push(V::Tag(*t, vs, meta.clone()))
-                            }
-                            V::Fn(body, fn_env, f_meta) => {
-                                let mut stack = stack.to_vec();
-                                for caller in stack.iter() {
-                                    if caller.1.pos == meta.pos {
-                                        if let V::Fn(_, _, arg_meta) = arg {
-                                            if arg_meta.pos == f_meta.pos {
-                                                return Err(stacktrace(&stack));
-                                            }
-                                        }
-                                    }
-                                }
-                                stack.push(self);
-                                let env = fn_env.push(arg.clone());
-                                results.extend(body.check(&env, &stack)?);
-                            }
-                        }
-                    }
-                }
-                Ok(results)
-            }
-            ExprEnum::Cnd {
-                value,
-                pattern: (tag, vars),
-                then_expr,
-                else_expr,
-            } => {
-                let values = value.check(env, stack)?;
-                let mut results = vec![];
-                for value in values {
-                    let bound = match value {
-                        V::Tag(t, values, _) if t == *tag && values.len() == *vars => values,
-                        V::Any | V::Tag(_, _, _) | V::Fn(_, _, _) => vec![V::Any; *vars],
-                    };
-                    results.extend(then_expr.check(&env.extend(bound), stack)?);
-                    results.extend(else_expr.check(env, stack)?);
-                }
-                Ok(results)
-            }
-            ExprEnum::Try { expr, handlers } => {
-                let mut results = expr.check(env, stack)?;
-                for (_, vars, handler) in handlers {
-                    results.extend(handler.check(&env.extend(vec![V::Any; vars + 1]), stack)?);
-                }
-                Ok(results)
-            }
-        }
-    }
-
     fn _eval(self, env: &Arc<Env<Val>>) -> EvalResult {
         let pos = self.1.pos;
-        match self.0 {
-            ExprEnum::Var(var) => EvalResult::Val(
-                env.get(var)
-                    .cloned()
-                    .unwrap_or_else(|| panic!("No binding for {self} at {pos}")),
-            ),
-            ExprEnum::Tag(t) => EvalResult::Val(Val::Tag(t, vec![], self.1.clone())),
-            ExprEnum::Eff(e) => EvalResult::Val(Val::Eff(e, vec![], self.1.clone())),
-            ExprEnum::Abs(body) => EvalResult::Val(Val::Fn(*body, Arc::clone(env), self.1.clone())),
-            ExprEnum::Rec(body) => {
-                EvalResult::Val(Val::Rec(*body, Arc::clone(env), self.1.clone()))
-            }
-            ExprEnum::App(f, arg) => eval_app(f._eval(env), arg, env),
+        Ok(match self.0 {
+            ExprEnum::Var(var) => match env.get(var) {
+                Some(val) => Eval::Val(val.clone()),
+                None => return Err(format!("No binding for {self} at {pos}")),
+            },
+            ExprEnum::Tag(t) => Eval::Val(Val::Tag(t, vec![], self.1.clone())),
+            ExprEnum::Eff(e) => Eval::Val(Val::Eff(e, vec![], self.1.clone())),
+            ExprEnum::Abs(body) => Eval::Val(Val::Fn(*body, Arc::clone(env), self.1.clone())),
+            ExprEnum::Rec(body) => Eval::Val(Val::Rec(*body, Arc::clone(env), self.1.clone())),
+            ExprEnum::App(f, arg) => eval_app(f._eval(env)?, arg, env)?,
             ExprEnum::Cnd {
                 value,
                 pattern,
                 then_expr,
                 else_expr,
-            } => eval_cnd(value._eval(env), pattern, then_expr, else_expr, env),
-            ExprEnum::Try { expr, handlers } => eval_try(expr._eval(env), handlers, env),
-        }
+            } => eval_cnd(value._eval(env)?, pattern, then_expr, else_expr, env)?,
+            ExprEnum::Try { expr, handlers } => eval_try(expr._eval(env)?, handlers, env)?,
+        })
     }
 }
 
 impl Resumable {
-    pub fn resume(
-        self,
-        value: Val,
-        handlers: &Arc<HashMap<String, usize>>,
-    ) -> Result<EvalResult, String> {
+    pub fn resume(self, value: Val, handlers: &Arc<HashMap<String, usize>>) -> EvalResult {
         let Resumable(cont, cont_env) = self;
-        let result = cont.resume(value, &cont_env);
+        let result = cont.resume(value, &cont_env)?;
         let pool = cont_env.root();
         let mut resolved_handlers = vec![];
         for (name, arity) in handlers.iter() {
@@ -1148,35 +1041,33 @@ impl Cont {
     }
 
     fn resume(self, value: Val, env: &Arc<Env<Val>>) -> EvalResult {
-        match self {
-            Cont::Effect(_) => EvalResult::Val(value),
-            Cont::App(cont, expr) => match cont.resume(value, env) {
-                EvalResult::Val(f) => eval_app(EvalResult::Val(f), expr, env),
-                EvalResult::Pending(Resumable(cont, _), args) => EvalResult::Pending(
+        Ok(match self {
+            Cont::Effect(_) => Eval::Val(value),
+            Cont::App(cont, expr) => match cont.resume(value, env)? {
+                Eval::Val(f) => eval_app(Eval::Val(f), expr, env)?,
+                Eval::Pending(Resumable(cont, _), args) => Eval::Pending(
                     Resumable(Cont::App(Box::new(cont), expr), Arc::clone(&env)),
                     args,
                 ),
             },
             Cont::AppFn(body, fn_env, m, cont) => {
-                eval_app_fn(body, fn_env.with_tags(env), m, cont.resume(value, env))
+                eval_app_fn(body, fn_env.with_tags(env), m, cont.resume(value, env)?)?
             }
-            Cont::AppTag(t, args, m, cont) => eval_app_tag(t, args, m, cont.resume(value, env)),
+            Cont::AppTag(t, args, m, cont) => eval_app_tag(t, args, m, cont.resume(value, env)?)?,
             Cont::AppEff(e, args, m, cont) => {
-                eval_app_eff(e, args, m, cont.resume(value, env), env)
+                eval_app_eff(e, args, m, cont.resume(value, env)?, env)?
             }
             Cont::AppRes(res, res_env, cont_arg) => {
-                eval_res(res, res_env.with_tags(env), cont_arg.resume(value, env))
+                eval_res(res, res_env.with_tags(env), cont_arg.resume(value, env)?)?
             }
             Cont::Cnd {
                 value: cont,
                 pattern,
                 then_expr,
                 else_expr,
-            } => match cont.resume(value, env) {
-                EvalResult::Val(v) => {
-                    eval_cnd(EvalResult::Val(v), pattern, then_expr, else_expr, env)
-                }
-                EvalResult::Pending(Resumable(cont, _), args) => EvalResult::Pending(
+            } => match cont.resume(value, env)? {
+                Eval::Val(v) => eval_cnd(Eval::Val(v), pattern, then_expr, else_expr, env)?,
+                Eval::Pending(Resumable(cont, _), args) => Eval::Pending(
                     Resumable(
                         Cont::Cnd {
                             value: Box::new(cont),
@@ -1192,9 +1083,9 @@ impl Cont {
             Cont::Try {
                 expr: cont,
                 handlers,
-            } => match cont.resume(value, env) {
-                EvalResult::Val(v) => eval_try(EvalResult::Val(v), handlers, env),
-                EvalResult::Pending(Resumable(cont, _), args) => EvalResult::Pending(
+            } => match cont.resume(value, env)? {
+                Eval::Val(v) => eval_try(Eval::Val(v), handlers, env)?,
+                Eval::Pending(Resumable(cont, _), args) => Eval::Pending(
                     Resumable(
                         Cont::Try {
                             expr: Box::new(cont),
@@ -1205,59 +1096,59 @@ impl Cont {
                     args,
                 ),
             },
-        }
+        })
     }
 }
 
-fn eval_app(mut f: EvalResult, arg: Box<Expr>, env: &Arc<Env<Val>>) -> EvalResult {
+fn eval_app(mut f: Eval, arg: Box<Expr>, env: &Arc<Env<Val>>) -> EvalResult {
     loop {
         match f {
-            EvalResult::Val(Val::Rec(body, env, m)) => {
+            Eval::Val(Val::Rec(body, env, m)) => {
                 let env = env.push(Val::Rec(body.clone(), Arc::clone(&env), m));
-                f = body._eval(&env);
+                f = body._eval(&env)?;
             }
-            EvalResult::Val(Val::Fn(body, fn_env, m)) => {
-                break eval_app_fn(body, fn_env.with_tags(env), m, arg._eval(env));
+            Eval::Val(Val::Fn(body, fn_env, m)) => {
+                break eval_app_fn(body, fn_env.with_tags(env), m, arg._eval(env)?);
             }
-            EvalResult::Val(Val::Tag(t, args, m)) => {
-                break eval_app_tag(t, args, m, arg._eval(env));
+            Eval::Val(Val::Tag(t, args, m)) => {
+                break eval_app_tag(t, args, m, arg._eval(env)?);
             }
-            EvalResult::Val(Val::Eff(e, args, m)) => {
-                break eval_app_eff(e, args, m, arg._eval(env), env);
+            Eval::Val(Val::Eff(e, args, m)) => {
+                break eval_app_eff(e, args, m, arg._eval(env)?, env);
             }
-            EvalResult::Val(Val::Res(cont, cont_env)) => {
-                break eval_res(Box::new(cont), cont_env.with_tags(env), arg._eval(env));
+            Eval::Val(Val::Res(cont, cont_env)) => {
+                break eval_res(Box::new(cont), cont_env.with_tags(env), arg._eval(env)?);
             }
-            EvalResult::Pending(Resumable(cont, _), args) => {
-                break EvalResult::Pending(
+            Eval::Pending(Resumable(cont, _), args) => {
+                break Ok(Eval::Pending(
                     Resumable(Cont::App(Box::new(cont), arg), Arc::clone(&env)),
                     args,
-                );
+                ));
             }
         }
     }
 }
 
-fn eval_app_fn(body: Expr, fn_env: Arc<Env<Val>>, m: Meta, arg: EvalResult) -> EvalResult {
+fn eval_app_fn(body: Expr, fn_env: Arc<Env<Val>>, m: Meta, arg: Eval) -> EvalResult {
     match arg {
-        EvalResult::Val(arg) => body._eval(&fn_env.push(arg)),
-        EvalResult::Pending(Resumable(cont, env), args) => EvalResult::Pending(
+        Eval::Val(arg) => body._eval(&fn_env.push(arg)),
+        Eval::Pending(Resumable(cont, env), args) => Ok(Eval::Pending(
             Resumable(Cont::AppFn(body, fn_env, m, Box::new(cont)), env),
             args,
-        ),
+        )),
     }
 }
 
-fn eval_app_tag(t: usize, mut args: Vec<Val>, m: Meta, arg: EvalResult) -> EvalResult {
+fn eval_app_tag(t: usize, mut args: Vec<Val>, m: Meta, arg: Eval) -> EvalResult {
     match arg {
-        EvalResult::Val(arg) => {
+        Eval::Val(arg) => {
             args.push(arg);
-            EvalResult::Val(Val::Tag(t, args, m))
+            Ok(Eval::Val(Val::Tag(t, args, m)))
         }
-        EvalResult::Pending(Resumable(cont, env), eff_args) => EvalResult::Pending(
+        Eval::Pending(Resumable(cont, env), eff_args) => Ok(Eval::Pending(
             Resumable(Cont::AppTag(t, args, m, Box::new(cont)), env),
             eff_args,
-        ),
+        )),
     }
 }
 
@@ -1265,39 +1156,39 @@ fn eval_app_eff(
     e: usize,
     mut args: Vec<Val>,
     m: Meta,
-    arg: EvalResult,
+    arg: Eval,
     env: &Arc<Env<Val>>,
 ) -> EvalResult {
     match arg {
-        EvalResult::Val(arg) => {
+        Eval::Val(arg) => {
             args.push(arg);
-            EvalResult::Pending(
+            Ok(Eval::Pending(
                 Resumable(Cont::Effect(m.pos), Arc::clone(env)),
                 Handler { name: e, args, m },
-            )
+            ))
         }
-        EvalResult::Pending(Resumable(cont, env), eff_args) => EvalResult::Pending(
+        Eval::Pending(Resumable(cont, env), eff_args) => Ok(Eval::Pending(
             Resumable(Cont::AppEff(e, args, m, Box::new(cont)), env),
             eff_args,
-        ),
+        )),
     }
 }
 
-fn eval_res(cont: Box<Cont>, cont_env: Arc<Env<Val>>, arg: EvalResult) -> EvalResult {
+fn eval_res(cont: Box<Cont>, cont_env: Arc<Env<Val>>, arg: Eval) -> EvalResult {
     match arg {
-        EvalResult::Val(arg) => cont.resume(arg, &cont_env),
-        EvalResult::Pending(Resumable(cont_arg, cont_arg_env), args) => EvalResult::Pending(
+        Eval::Val(arg) => cont.resume(arg, &cont_env),
+        Eval::Pending(Resumable(cont_arg, cont_arg_env), args) => Ok(Eval::Pending(
             Resumable(
                 Cont::AppRes(cont, cont_env, Box::new(cont_arg)),
                 cont_arg_env,
             ),
             args,
-        ),
+        )),
     }
 }
 
 fn eval_cnd(
-    mut value: EvalResult,
+    mut value: Eval,
     (tag, vars): (usize, usize),
     then_expr: Box<Expr>,
     else_expr: Box<Expr>,
@@ -1305,20 +1196,18 @@ fn eval_cnd(
 ) -> EvalResult {
     loop {
         match value {
-            EvalResult::Val(Val::Rec(body, env, m)) => {
+            Eval::Val(Val::Rec(body, env, m)) => {
                 let env = env.push(Val::Rec(body.clone(), Arc::clone(&env), m));
-                value = body._eval(&env);
+                value = body._eval(&env)?;
             }
-            EvalResult::Val(Val::Tag(t, vals, _)) if t == tag && vals.len() == vars => {
+            Eval::Val(Val::Tag(t, vals, _)) if t == tag && vals.len() == vars => {
                 break then_expr._eval(&env.extend(vals));
             }
-            EvalResult::Val(
-                Val::Tag(_, _, _) | Val::Fn(_, _, _) | Val::Eff { .. } | Val::Res(_, _),
-            ) => {
+            Eval::Val(Val::Tag(_, _, _) | Val::Fn(_, _, _) | Val::Eff { .. } | Val::Res(_, _)) => {
                 break else_expr._eval(env);
             }
-            EvalResult::Pending(Resumable(cont, _), args) => {
-                break EvalResult::Pending(
+            Eval::Pending(Resumable(cont, _), args) => {
+                break Ok(Eval::Pending(
                     Resumable(
                         Cont::Cnd {
                             value: Box::new(cont),
@@ -1329,35 +1218,35 @@ fn eval_cnd(
                         Arc::clone(&env),
                     ),
                     args,
-                );
+                ));
             }
         }
     }
 }
 
 fn eval_try(
-    mut expr: EvalResult,
+    mut expr: Eval,
     handlers: Vec<(usize, usize, Expr)>,
     env: &Arc<Env<Val>>,
 ) -> EvalResult {
     loop {
         match expr {
-            EvalResult::Val(Val::Rec(body, env, m)) => {
+            Eval::Val(Val::Rec(body, env, m)) => {
                 let env = env.push(Val::Rec(body.clone(), Arc::clone(&env), m));
-                expr = body._eval(&env);
+                expr = body._eval(&env)?;
             }
-            EvalResult::Val(v) => return EvalResult::Val(v),
-            EvalResult::Pending(Resumable(cont, cont_env), Handler { name, args, m }) => {
+            Eval::Val(v) => return Ok(Eval::Val(v)),
+            Eval::Pending(Resumable(cont, cont_env), Handler { name, args, m }) => {
                 if let Some((h, arity, handler)) = handlers.iter().find(|(h, _, _)| *h == name) {
                     if *arity > args.len() {
-                        expr = cont.resume(Val::Eff(*h, args, m), &cont_env);
+                        expr = cont.resume(Val::Eff(*h, args, m), &cont_env)?;
                     } else {
                         expr = handler
                             .clone()
-                            ._eval(&env.extend(args).push(Val::Res(cont, cont_env)));
+                            ._eval(&env.extend(args).push(Val::Res(cont, cont_env)))?;
                     }
                 } else {
-                    return EvalResult::Pending(
+                    return Ok(Eval::Pending(
                         Resumable(
                             Cont::Try {
                                 expr: Box::new(cont),
@@ -1366,7 +1255,7 @@ fn eval_try(
                             cont_env,
                         ),
                         Handler { name, args, m },
-                    );
+                    ));
                 }
             }
         }
@@ -1529,187 +1418,6 @@ apply(x => apply(identity, x), Foo(Foo(Bar)))";
     }
 
     #[test]
-    fn reject_twice_twice() {
-        let code = "let twice = f => f(f)
-
-twice(twice)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 3, col 1:
-twice(twice)
-
-...at line 1, col 18:
-f(f)"
-        );
-    }
-
-    #[test]
-    fn reject_twice1_twice2() {
-        let code = "let twice1 = f => f(f)
-
-let twice2 = f => f(f)
-
-twice1(twice2)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 5, col 1:
-twice1(twice2)
-
-...at line 1, col 19:
-f(f)
-
-...at line 3, col 19:
-f(f)"
-        );
-    }
-
-    #[test]
-    fn reject_twice1_twice2_branch() {
-        let code = "let twice1 = f => f(f)
-
-let twice2 = f => f(f)
-
-if Foo(twice2) is Foo(f)
-  twice1(f)
-else
-  Nothing";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 6, col 3:
-twice1(f)
-
-...at line 1, col 19:
-f(f)
-
-...at line 3, col 19:
-f(f)"
-        );
-    }
-
-    #[test]
-    fn reject_fixed_point_combinator() {
-        let code = "let fix = f =>
-  let x = x => f(x(x))
-  f(x(x))
-
-let add' = f => x => y =>
-  if x is Suc(x)
-    f(x, Suc(y))
-  else
-    y
-
-let add = x => y => fix(add', x, y)
-
-add(Suc(Suc(Zero)), Suc(Zero))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 3, col 5:
-x(x)
-
-...at line 2, col 18:
-x(x)"
-        );
-    }
-
-    #[test]
-    fn reject_fixed_point_combinator_without_app() {
-        let code = "f =>
-  let x = x => f(x(x))
-  f(x(x))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 3, col 5:
-x(x)
-
-...at line 2, col 18:
-x(x)"
-        );
-    }
-
-    #[test]
-    fn reject_dependent_on_rec1() {
-        let code = "let twice = f => f(f)
-
-loop add = x => y =>
-  if x is Suc(x)
-    add(x, Suc(y))
-  else
-    y
-
-if add(Suc(Zero), Zero) is Zero
-  Zero
-else
-  twice(twice)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 12, col 3:
-twice(twice)
-
-...at line 1, col 18:
-f(f)"
-        );
-    }
-
-    #[test]
-    fn reject_dependent_on_rec2() {
-        let code = "let twice = f => f(f)
-
-loop add = x => y =>
-  if x is Suc(x)
-    add(x, Suc(y))
-  else
-    y
-
-if add(Zero, Zero) is Zero
-  twice(twice)
-else
-  Zero";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 10, col 3:
-twice(twice)
-
-...at line 1, col 18:
-f(f)"
-        );
-    }
-
-    #[test]
     fn eval_print_effect() {
         let code = "print!(Hello)";
         let parsed = parse(code).unwrap();
@@ -1719,13 +1427,13 @@ f(f)"
         let mut printed = vec![];
         loop {
             match result {
-                EvalResult::Pending(mut cont, mut handler) => {
+                Eval::Pending(mut cont, mut handler) => {
                     let v = handler.args.pop().unwrap();
                     printed.push(v.to_string());
                     let none = cont.intern("None".to_string());
                     result = cont.resume(none, &handlers).unwrap();
                 }
-                EvalResult::Val(evaled) => {
+                Eval::Val(evaled) => {
                     assert_eq!(format!("{evaled}"), "None");
                     break;
                 }
@@ -1745,7 +1453,7 @@ f(f)"
         let mut error = vec![];
         loop {
             match result {
-                EvalResult::Pending(cont, mut handler) => {
+                Eval::Pending(cont, mut handler) => {
                     let msg = handler.args.pop().unwrap();
                     let lvl = handler.args.pop().unwrap();
                     if lvl.to_string() == "Debug" {
@@ -1758,7 +1466,7 @@ f(f)"
                     let unit = cont.unit();
                     result = cont.resume(unit, &handlers).unwrap();
                 }
-                EvalResult::Val(evaled) => {
+                Eval::Val(evaled) => {
                     assert_eq!(format!("{evaled}"), "List((), (), ())");
                     break;
                 }

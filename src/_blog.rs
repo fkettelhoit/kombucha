@@ -8,7 +8,7 @@ use std::{
     sync::Arc,
 };
 
-use vorpal::{EvalResult, Resumable, Val, parse};
+use vorpal::{Eval, Resumable, Val, parse};
 
 fn main() -> ExitCode {
     let mut args = args();
@@ -40,7 +40,7 @@ fn main() -> ExitCode {
                 };
                 loop {
                     match result {
-                        EvalResult::Pending(mut cont, handler) => match cont.name(&handler) {
+                        Eval::Pending(mut cont, handler) => match cont.name(&handler) {
                             Ok("read-char!") => {
                                 let c = match chars.next() {
                                     Some(c) => c.to_string(),
@@ -138,7 +138,7 @@ fn main() -> ExitCode {
                                 return ExitCode::FAILURE;
                             }
                         },
-                        EvalResult::Val(val) => {
+                        Eval::Val(val) => {
                             println!("{val}");
                             return ExitCode::SUCCESS;
                         }
