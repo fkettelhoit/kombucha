@@ -104,7 +104,7 @@ loop md-to-html = ls => style =>
   if ls is Cons(l, ls)
     if style is Code
       if is-code-block(l) is True
-        Cons(Cons("</code></pre>\n", Nil), md-to-html(ls, None))
+        Cons(Cons("\n</code></pre>\n", Nil), md-to-html(ls, None))
       else
         Cons(Cons("\n", l), md-to-html(ls, style))
     else if is-code-block(l) is True
@@ -120,6 +120,31 @@ loop flatten = xs =>
   else
     xs
 
-let body = flatten(md-to-html(read-lines(), None))
+let html5 = title => body =>
+  let pre =
+    wrap(
+      "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\" />\n<title>",
+      title,
+      "</title>\n<link rel=\"stylesheet\" href=\"styles/style.css\" />\n</head>\n"
+    )
+  let body = wrap("<body>\n", flatten(body), "</body>\n")
+  append(pre, append(body, Cons("</html>", Nil)))
 
-write-strs!(body)
+let lines = read-lines()
+
+loop title = ls =>
+  if ls is Cons(l, ls)
+    if is-heading(l) is Heading(l)
+      l
+    else
+      title(ls)
+  else
+    Cons((), Nil)
+
+let title = title(lines)
+
+let body = md-to-html(lines, None)
+
+let html = html5(title, body)
+
+write-strs!(html)

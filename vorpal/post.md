@@ -1,13 +1,7 @@
-# Blog
+# Blog Post
 
-A paragraph with some text.
+This is a paragraph with _emphasized_ text.
 
 ```
-t = var
-  | "=>" t
-  | "(" t ")(" t ")"
+foo(bar, baz) // some code
 ```
-
-Another paragraph with some _emphasis_.
-
-And another paragraph, _emphasized_ and again _emphasized_!

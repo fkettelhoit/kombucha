@@ -510,7 +510,10 @@ impl Expr {
             return false;
         }
         match &self.0 {
-            ExprEnum::Var(_) | ExprEnum::Tag(_) | ExprEnum::Eff(_) => true,
+            ExprEnum::Var(_) | ExprEnum::Eff(_) | ExprEnum::Tag(_) => match &self.1.alias {
+                Some(alias) => alias.len() < 20,
+                None => true,
+            },
             ExprEnum::Cnd { .. } | ExprEnum::Try { .. } => false,
             ExprEnum::Abs(body) | ExprEnum::Rec(body) => body.is_simple(),
             ExprEnum::App(f, arg) => f.is_simple() && arg.is_simple(),
