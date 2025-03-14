@@ -948,26 +948,76 @@ fn eval_with_handlers(mut result: Eval, handlers: Vec<(usize, usize)>) -> EvalRe
 }
 
 impl Expr {
-    fn _eval(self, env: &Arc<Env<Val>>) -> EvalResult {
-        let pos = self.1.pos;
-        Ok(match self.0 {
-            ExprEnum::Var(var) => match env.get(var) {
-                Some(val) => Eval::Val(val.clone()),
-                None => return Err(format!("No binding for {self} at {pos}")),
-            },
-            ExprEnum::Tag(t) => Eval::Val(Val::Tag(t, vec![], self.1.clone())),
-            ExprEnum::Eff(e) => Eval::Val(Val::Eff(e, vec![], self.1.clone())),
-            ExprEnum::Abs(body) => Eval::Val(Val::Fn(*body, Arc::clone(env), self.1.clone())),
-            ExprEnum::Rec(body) => Eval::Val(Val::Rec(*body, Arc::clone(env), self.1.clone())),
-            ExprEnum::App(f, arg) => eval_app(f._eval(env)?, arg, env)?,
-            ExprEnum::Cnd {
-                value,
-                pattern,
-                then_expr,
-                else_expr,
-            } => eval_cnd(value._eval(env)?, pattern, then_expr, else_expr, env)?,
-            ExprEnum::Try { expr, handlers } => eval_try(expr._eval(env)?, handlers, env)?,
-        })
+    fn _eval(self: Expr, env: &Arc<Env<Val>>) -> EvalResult {
+        let mut expr = self;
+        let mut env = Arc::clone(&env);
+        'outer: loop {
+            let pos = expr.1.pos;
+            break Ok(match expr.0 {
+                ExprEnum::Var(var) => match env.get(var) {
+                    Some(val) => Eval::Val(val.clone()),
+                    None => return Err(format!("No binding for {expr} at {pos}")),
+                },
+                ExprEnum::Tag(t) => Eval::Val(Val::Tag(t, vec![], expr.1.clone())),
+                ExprEnum::Eff(e) => Eval::Val(Val::Eff(e, vec![], expr.1.clone())),
+                ExprEnum::Abs(body) => Eval::Val(Val::Fn(*body, Arc::clone(&env), expr.1.clone())),
+                ExprEnum::Rec(body) => Eval::Val(Val::Rec(*body, Arc::clone(&env), expr.1.clone())),
+                ExprEnum::App(f, arg) => {
+                    let mut f = f._eval(&env)?;
+                    loop {
+                        match f {
+                            Eval::Val(Val::Rec(body, env, m)) => {
+                                let env = env.push(Val::Rec(body.clone(), Arc::clone(&env), m));
+                                f = body._eval(&env)?;
+                            }
+                            Eval::Val(Val::Fn(body, fn_env, m)) => {
+                                let fn_env = fn_env.with_tags(&env);
+                                break match arg._eval(&env)? {
+                                    Eval::Val(arg) => {
+                                        expr = body;
+                                        env = fn_env.push(arg);
+                                        continue 'outer;
+                                    }
+                                    Eval::Pending(Resumable(cont, env), args) => Eval::Pending(
+                                        Resumable(
+                                            Cont::AppFn(body, fn_env, m, Box::new(cont)),
+                                            env,
+                                        ),
+                                        args,
+                                    ),
+                                };
+                            }
+                            Eval::Val(Val::Tag(t, args, m)) => {
+                                break eval_app_tag(t, args, m, arg._eval(&env)?)?;
+                            }
+                            Eval::Val(Val::Eff(e, args, m)) => {
+                                break eval_app_eff(e, args, m, arg._eval(&env)?, &env)?;
+                            }
+                            Eval::Val(Val::Res(cont, cont_env)) => {
+                                break eval_res(
+                                    Box::new(cont),
+                                    cont_env.with_tags(&env),
+                                    arg._eval(&env)?,
+                                )?;
+                            }
+                            Eval::Pending(Resumable(cont, _), args) => {
+                                break Eval::Pending(
+                                    Resumable(Cont::App(Box::new(cont), arg), Arc::clone(&env)),
+                                    args,
+                                );
+                            }
+                        }
+                    }
+                }
+                ExprEnum::Cnd {
+                    value,
+                    pattern,
+                    then_expr,
+                    else_expr,
+                } => eval_cnd(value._eval(&env)?, pattern, then_expr, else_expr, &env)?,
+                ExprEnum::Try { expr, handlers } => eval_try(expr._eval(&env)?, handlers, &env)?,
+            });
+        }
     }
 }
 
