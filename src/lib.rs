@@ -1,26 +1,35 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     iter::{Peekable, once},
     slice::Iter,
     sync::Arc,
 };
 
+//
+// SCANNER
+//
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Token {
-    Comma,
-    ParenOpenApp,
-    ParenOpenGroup,
+    Separator,
+    ParenOpen,
     ParenClose,
+    BraceOpen,
+    BraceClose,
+    Tag(String),
     Symbol(String),
+    Binding(String),
 }
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::Comma => f.write_str(","),
-            Token::ParenOpenApp | Token::ParenOpenGroup => f.write_str("("),
+            Token::Separator => f.write_str(","),
+            Token::ParenOpen => f.write_str("("),
             Token::ParenClose => f.write_str(")"),
-            Token::Symbol(s) => write!(f, "{s}"),
+            Token::BraceOpen => f.write_str("{"),
+            Token::BraceClose => f.write_str("}"),
+            Token::Tag(s) | Token::Symbol(s) | Token::Binding(s) => write!(f, "{s}"),
         }
     }
 }
@@ -43,12 +52,17 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
     let mut col = 1;
     let mut line = 1;
     let mut start = Pos { col, line };
-    let mut could_open_app = false;
     for char in code.chars().chain(once(' ')) {
         match char {
-            ' ' | '\n' | '(' | ')' | ',' => {
-                if !curr.is_empty() {
-                    tokens.push((Token::Symbol(curr), start));
+            ' ' | '\n' | '(' | ')' | '{' | '}' | ',' => {
+                if let Some(first) = curr.chars().next() {
+                    if first.is_uppercase() {
+                        tokens.push((Token::Tag(curr), start));
+                    } else if first == '\'' {
+                        tokens.push((Token::Binding(curr[1..].to_string()), start));
+                    } else {
+                        tokens.push((Token::Symbol(curr), start));
+                    }
                     curr = String::new();
                 }
                 match char {
@@ -56,252 +70,283 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
                         col = 0;
                         line += 1;
                     }
-                    ',' => tokens.push((Token::Comma, Pos { col, line })),
-                    '(' if could_open_app => tokens.push((Token::ParenOpenApp, Pos { col, line })),
-                    '(' => tokens.push((Token::ParenOpenGroup, Pos { col, line })),
+                    ',' => tokens.push((Token::Separator, Pos { col, line })),
+                    '(' => tokens.push((Token::ParenOpen, Pos { col, line })),
                     ')' => tokens.push((Token::ParenClose, Pos { col, line })),
+                    '{' => tokens.push((Token::BraceOpen, Pos { col, line })),
+                    '}' => tokens.push((Token::BraceClose, Pos { col, line })),
 
                     _ => {}
                 }
                 col += 1;
                 start = Pos { col, line };
-                could_open_app = char == ')';
             }
             c => {
                 col += 1;
                 curr.push(c);
-                could_open_app = true;
             }
         }
     }
     tokens
 }
 
-#[derive(Debug, Clone)]
-pub struct Meta {
-    alias: Option<String>,
-    pos: Pos,
-}
+//
+// PARSER
+//
 
 #[derive(Debug, Clone)]
-pub struct Expr(ExprEnum, Meta);
+pub struct Expr(_Expr, Pool);
 
-impl Expr {
-    fn new(inner: ExprEnum, alias: Option<String>, pos: Pos) -> Self {
-        Self(inner, Meta { alias, pos })
-    }
-}
+#[derive(Debug, Clone)]
+struct _Expr(ExprEnum, Id);
 
 #[derive(Debug, Clone)]
 enum ExprEnum {
     Var(usize),
     Tag(usize),
-    Abs(Box<Expr>),
-    Rec(Box<Expr>),
-    App(Box<Expr>, Box<Expr>),
+    Abs(Box<_Expr>),
+    Rec(Box<_Expr>),
+    App(Box<_Expr>, Box<_Expr>),
     Cnd {
-        value: Box<Expr>,
+        value: Box<_Expr>,
         pattern: (usize, usize),
-        then_expr: Box<Expr>,
-        else_expr: Box<Expr>,
+        then_expr: Box<_Expr>,
+        else_expr: Box<_Expr>,
     },
 }
 
-pub fn parse(code: &str) -> Result<Expr, String> {
-    fn parse_expr(
-        tokens: &mut Peekable<Iter<(Token, Pos)>>,
-        vars: &mut Vec<String>,
-        tags: &mut HashMap<String, usize>,
-    ) -> Result<Expr, String> {
-        let Some((token, pos)) = tokens.next() else {
-            return Err("Expected an expression, but found nothing".into());
-        };
-        let mut expr = match token {
-            Token::Symbol(s) if is_tag(s) => {
-                Expr::new(ExprEnum::Tag(resolve_tag(tags, s)), Some(s.clone()), *pos)
-            }
-            Token::Symbol(s) if s.as_str() == "if" => {
-                let v = parse_expr(tokens, vars, tags)?;
-                expect(tokens, Token::Symbol("is".into()))?;
-                let (tag, mut alias) = match tokens.next() {
-                    Some((Token::Symbol(t), _)) if is_tag(t) => (resolve_tag(tags, t), t.clone()),
-                    Some((t, pos)) => {
-                        return Err(format!(
-                            "Expected the pattern to start with a tag, but found {t} at {pos}"
-                        ));
-                    }
-                    None => return Err("Expected a pattern, but found nothing".into()),
-                };
-                let mut bindings = 0;
-                if let Some((Token::ParenOpenApp, _)) = tokens.peek() {
-                    tokens.next();
-                    let mut bound_vars = HashSet::new();
-                    alias += "(";
-                    loop {
-                        let (binding, pos) = expect_var(tokens)?;
-                        if bound_vars.contains(&binding) {
-                            return Err(format!(
-                                "All variables in a pattern must be unique, but '{binding} is used twice at {pos}"
-                            ));
-                        }
-                        alias += &binding;
-                        bound_vars.insert(binding.clone());
-                        vars.push(binding.clone());
-                        bindings += 1;
-                        match tokens.next() {
-                            Some((Token::ParenClose, _)) => {
-                                alias += ")";
-                                break;
-                            }
-                            Some((Token::Comma, _)) => alias += ", ",
-                            Some((t, pos)) => {
-                                return Err(format!(
-                                    "Expected ',' or ')', but found '{t}' at {pos}"
-                                ));
-                            }
-                            None => return Err("Expected a pattern, but found nothing".into()),
-                        }
-                    }
-                }
-                let then_expr = parse_expr(tokens, vars, tags)?;
-                expect(tokens, Token::Symbol("else".into()))?;
-                for _ in 0..bindings {
-                    vars.pop();
-                }
-                let else_expr = parse_expr(tokens, vars, tags)?;
-                let cnd = ExprEnum::Cnd {
-                    value: Box::new(v),
-                    pattern: (tag, bindings),
-                    then_expr: Box::new(then_expr),
-                    else_expr: Box::new(else_expr),
-                };
-                Expr::new(cnd, Some(alias), *pos)
-            }
-            Token::Symbol(s) if s.as_str() == "let" => {
-                let (name, _) = expect_var(tokens)?;
-                expect(tokens, Token::Symbol("=".into()))?;
-                let binding = parse_expr(tokens, vars, tags)?;
-                vars.push(name.clone());
-                let body = parse_expr(tokens, vars, tags)?;
-                vars.pop();
-                let abs = Expr::new(ExprEnum::Abs(Box::new(body)), Some(name.clone()), *pos);
-                Expr::new(ExprEnum::App(Box::new(abs), Box::new(binding)), None, *pos)
-            }
-            Token::Symbol(s) if s.as_str() == "loop" => {
-                let (name, _) = expect_var(tokens)?;
-                expect(tokens, Token::Symbol("=".into()))?;
-                vars.push(name.clone());
-                let binding = parse_expr(tokens, vars, tags)?;
-                let body = parse_expr(tokens, vars, tags)?;
-                vars.pop();
-                let abs = Expr::new(ExprEnum::Abs(Box::new(body)), Some(name.clone()), *pos);
-                let rec = Expr::new(ExprEnum::Rec(Box::new(binding)), Some(name.clone()), *pos);
-                Expr::new(ExprEnum::App(Box::new(abs), Box::new(rec)), None, *pos)
-            }
-            Token::Symbol(s) => match tokens.peek() {
-                Some((Token::Symbol(t), pos)) if t.as_str() == "=>" => {
-                    tokens.next();
-                    vars.push(s.clone());
-                    let body = parse_expr(tokens, vars, tags)?;
-                    vars.pop();
-                    Expr::new(ExprEnum::Abs(Box::new(body)), Some(s.clone()), *pos)
-                }
-                Some((Token::Symbol(t), _)) if t.as_str() == "~>" => {
-                    tokens.next();
-                    vars.push(s.clone());
-                    let body = parse_expr(tokens, vars, tags)?;
-                    vars.pop();
-                    Expr::new(ExprEnum::Rec(Box::new(body)), Some(s.clone()), *pos)
-                }
-                _ => Expr::new(ExprEnum::Var(resolve_var(vars, s)?), Some(s.clone()), *pos),
-            },
-            Token::ParenOpenGroup => {
-                let expr = parse_expr(tokens, vars, tags)?;
-                expect(tokens, Token::ParenClose)?;
-                expr
-            }
-            t => return Err(format!("Unexpected token '{t}' at {pos}",)),
-        };
-        let expr = match tokens.peek() {
-            Some((Token::ParenOpenApp, _)) => {
-                tokens.next();
-                loop {
-                    let arg = parse_expr(tokens, vars, tags)?;
-                    expr = Expr::new(ExprEnum::App(Box::new(expr), Box::new(arg)), None, *pos);
-                    if let Some((Token::ParenClose, _)) = tokens.peek() {
-                        tokens.next();
-                        break expr;
-                    }
-                    expect(tokens, Token::Comma)?;
-                }
-            }
-            _ => expr,
-        };
-        Ok(expr)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct Id(u32);
+
+impl Id {
+    fn internal() -> Self {
+        Self(0)
     }
-    fn expect(tokens: &mut Peekable<Iter<(Token, Pos)>>, tok: Token) -> Result<(), String> {
+}
+
+impl std::fmt::Display for Id {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+pub fn parse(code: &str) -> Result<Expr, String> {
+    let tokens = scan(code);
+    let mut tokens = tokens.iter().peekable();
+    let Some((t, pos)) = tokens.next() else {
+        return Err(format!("Could not parse anything as the input is empty"));
+    };
+    let mut pool = Pool {
+        tags: HashMap::new(),
+        bindings: HashMap::new(),
+        nodes: HashMap::new(),
+    };
+    let mut stack = vec!["let".to_string()];
+    let expr = parse_expr(t, pos, &mut tokens, &mut pool, &mut stack, &mut vec![])?;
+    if let Some((token, pos)) = tokens.next() {
+        return Err(format!("Unexpected token {token} at {pos}"));
+    } else {
+        return Ok(Expr(expr, pool));
+    };
+    fn parse_expr(
+        t: &Token,
+        pos: &Pos,
+        tokens: &mut Peekable<Iter<(Token, Pos)>>,
+        pool: &mut Pool,
+        stack: &mut Vec<String>,
+        bindings: &mut Vec<String>,
+    ) -> Result<_Expr, String> {
+        let mut expr = match t {
+            Token::Tag(t) => _Expr(
+                ExprEnum::Tag(pool.intern_tag(t)),
+                pool.register(*pos, Parsed::Tag(t.clone())),
+            ),
+            Token::Symbol(s) => {
+                if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| s == *var) {
+                    _Expr(
+                        ExprEnum::Var(i),
+                        pool.register(*pos, Parsed::Var(s.clone())),
+                    )
+                } else {
+                    return Err(format!("Could not find binding for '{s}' at {pos}"));
+                }
+            }
+            Token::Binding(b) => {
+                bindings.push(b.clone());
+                _Expr(
+                    ExprEnum::Tag(pool.intern_binding(b)),
+                    pool.register(*pos, Parsed::Binding(b.clone())),
+                )
+            }
+            Token::BraceOpen => {
+                let Some((t, pos)) = tokens.next() else {
+                    return Err(format!(
+                        "Expected a block to start after '{{' at {pos}, but found nothing"
+                    ));
+                };
+                // `{ a('x), b('y), c }`
+                // desugars to `a('x, { b('y), c })`
+                // desugars to `a('x, { b('y, { c }) })`
+                let n_bindings = bindings.len();
+                stack.extend(bindings.drain(..));
+                let mut expr = parse_expr(t, pos, tokens, pool, stack, bindings)?;
+                for i in 0..n_bindings {
+                    let info = if i == 0 {
+                        Parsed::Block
+                    } else {
+                        Parsed::InnerBlock
+                    };
+                    expr = _Expr(ExprEnum::Abs(Box::new(expr)), pool.register(*pos, info));
+                    stack.pop();
+                }
+                loop {
+                    match tokens.peek() {
+                        Some((Token::BraceClose, _)) => {
+                            tokens.next();
+                            break expr;
+                        }
+                        Some((Token::Separator, _)) => {
+                            tokens.next();
+                            stack.extend(bindings.clone());
+                            let Some((t, pos)) = tokens.next() else {
+                                return Err(format!(
+                                    "Expected another expression in the block after ',' at {pos}, but found nothing"
+                                ));
+                            };
+                            let mut block = parse_expr(t, pos, tokens, pool, stack, bindings)?;
+                            for i in 0..bindings.len() {
+                                let info = if i == 0 {
+                                    Parsed::Block
+                                } else {
+                                    Parsed::InnerBlock
+                                };
+                                block = _Expr(
+                                    ExprEnum::Abs(Box::new(block)),
+                                    pool.register(*pos, info),
+                                );
+                                stack.pop();
+                            }
+                            expr = _Expr(
+                                ExprEnum::App(Box::new(expr), Box::new(block)),
+                                pool.register(*pos, Parsed::App),
+                            )
+                        }
+                        t => todo!("unexpected {t:?}"),
+                    }
+                }
+            }
+            t => return Err(format!("Unexpected token '{t}' at {pos}")),
+        };
+        loop {
+            match tokens.peek() {
+                Some((Token::ParenOpen, pos)) => {
+                    tokens.next();
+                    let (mut prev_t, mut prev_pos) = (Token::ParenOpen, *pos);
+                    expr = loop {
+                        let Some((t, pos)) = tokens.next() else {
+                            return Err(format!(
+                                "Expected a function argument after '{prev_t}' at {prev_pos}, but found nothing"
+                            ));
+                        };
+                        let arg = parse_expr(&t, &pos, tokens, pool, stack, bindings)?;
+                        expr = _Expr(
+                            ExprEnum::App(Box::new(expr), Box::new(arg)),
+                            pool.register(*pos, Parsed::App),
+                        );
+                        if let Some((Token::ParenClose, _)) = tokens.peek() {
+                            tokens.next();
+                            break expr;
+                        }
+                        (prev_t, prev_pos) = (Token::Separator, expect(tokens, Token::Separator)?);
+                    }
+                }
+                _ => break Ok(expr),
+            }
+        }
+    }
+    fn expect(tokens: &mut Peekable<Iter<(Token, Pos)>>, tok: Token) -> Result<Pos, String> {
         match tokens.next() {
-            Some((t, _)) if t == &tok => Ok(()),
+            Some((t, pos)) if t == &tok => Ok(*pos),
             Some((t, pos)) => Err(format!("Expected '{tok}', found '{t}' at {pos}")),
             None => Err(format!("Expected '{tok}', but found nothing")),
         }
     }
-    fn expect_var(tokens: &mut Peekable<Iter<(Token, Pos)>>) -> Result<(String, Pos), String> {
-        match tokens.next() {
-            Some((Token::Symbol(s), pos)) if !is_tag(s) => Ok((s.clone(), *pos)),
-            Some((t, pos)) => Err(format!("Expected a variable, found {t} at {pos}")),
-            None => Err("Expected a variable, but found nothing".into()),
-        }
+}
+
+#[derive(Debug, Clone)]
+struct Pool {
+    tags: HashMap<String, usize>,
+    bindings: HashMap<String, usize>,
+    nodes: HashMap<Id, (Pos, Parsed)>,
+}
+
+#[derive(Debug, Clone)]
+enum Parsed {
+    Var(String),
+    Tag(String),
+    Binding(String),
+    Block,
+    App,
+    InnerBlock,
+}
+
+impl Pool {
+    fn next_interned(&self) -> usize {
+        self.tags.len() + self.bindings.len()
     }
-    fn resolve_var(vars: &[String], s: &str) -> Result<usize, String> {
-        for (i, t) in vars.iter().rev().enumerate() {
-            if &s == t {
-                return Ok(i);
-            }
-        }
-        Err(format!("Could not find binding for symbol '{s}'"))
+
+    fn intern_tag(&mut self, s: &String) -> usize {
+        self.tags.get(s).copied().unwrap_or_else(|| {
+            let id = self.next_interned();
+            self.tags.insert(s.clone(), id);
+            id
+        })
     }
-    fn resolve_tag(tags: &mut HashMap<String, usize>, t: &str) -> usize {
-        match tags.get(t) {
-            Some(t) => *t,
-            None => {
-                let n = tags.len();
-                tags.insert(t.to_string(), n);
-                n
-            }
-        }
+
+    fn intern_binding(&mut self, s: &String) -> usize {
+        self.bindings.get(s).copied().unwrap_or_else(|| {
+            let id = self.next_interned();
+            self.bindings.insert(s.clone(), id);
+            id
+        })
     }
-    fn is_tag(s: &str) -> bool {
-        s.chars().next().unwrap_or_default().is_uppercase()
+
+    fn register(&mut self, pos: Pos, info: Parsed) -> Id {
+        let id = Id(self.nodes.len() as u32 + 1);
+        self.nodes.insert(id, (pos, info));
+        id
     }
-    let tokens = scan(code);
-    let mut tokens = tokens.iter().peekable();
-    let expr = parse_expr(&mut tokens, &mut vec![], &mut HashMap::new())?;
-    if let Some((token, pos)) = tokens.next() {
-        Err(format!("Unexpected token {token} at {pos}"))
-    } else {
-        Ok(expr)
+
+    fn resolve(&self, id: Id) -> Result<&Parsed, Id> {
+        self.nodes.get(&id).map(|(_, info)| info).ok_or(id)
     }
 }
 
+//
+// PRINT
+//
+
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.pretty(f, false, 0)
+        match self.sugared() {
+            Ok(s) => f.write_str(&s),
+            Err(id) => write!(f, "<unprintable_id_{id}>"),
+        }
     }
 }
 
 impl Expr {
-    fn is_sugared_as_let_or_loop(&self) -> bool {
-        match &self.0 {
-            ExprEnum::App(f, _) if matches!(f.as_ref(), Expr(ExprEnum::Abs(_), _)) => true,
-            _ => false,
-        }
+    fn sugared(&self) -> Result<String, Id> {
+        self.0.sugar(&self.1)
     }
 
+    fn desugared(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+impl _Expr {
     fn is_simple(&self) -> bool {
-        if self.is_sugared_as_let_or_loop() {
-            return false;
-        }
         match &self.0 {
             ExprEnum::Var(_) | ExprEnum::Tag(_) => true,
             ExprEnum::Cnd { .. } => false,
@@ -310,127 +355,84 @@ impl Expr {
         }
     }
 
-    fn is_kept_inline(&self) -> bool {
-        matches!(&self.0, ExprEnum::Abs(_) | ExprEnum::Rec(_))
+    fn sugar(&self, pool: &Pool) -> Result<String, Id> {
+        let mut buf = String::new();
+        self.pretty(&mut buf, &pool, false, 0)?;
+        Ok(buf)
     }
 
-    fn pretty(&self, f: &mut std::fmt::Formatter<'_>, group: bool, lvl: usize) -> std::fmt::Result {
-        fn indent(f: &mut std::fmt::Formatter<'_>, level: usize) -> std::fmt::Result {
-            for _ in 0..level {
-                f.write_str("  ")?;
+    fn pretty(&self, buf: &mut String, pool: &Pool, wrap: bool, lvl: usize) -> Result<(), Id> {
+        let id = self.1;
+        fn indent(s: &mut String, lvl: usize) {
+            for _ in 0..lvl {
+                s.push_str("  ");
             }
-            Ok(())
         }
         match &self.0 {
-            ExprEnum::Var(s) | ExprEnum::Tag(s) => match &self.1.alias {
-                Some(alias) => f.write_str(alias),
-                None => write!(f, "'{s}"),
-            },
-            ExprEnum::App(expr, arg) => {
-                if let Expr(ExprEnum::Abs(body), _) = expr.as_ref() {
-                    if let Expr(ExprEnum::Rec(b), _) = arg.as_ref() {
-                        // loop
-                        match (&expr.1.alias, &arg.1.alias) {
-                            (Some(abs_name), Some(rec_name)) if abs_name == rec_name => {
-                                write!(f, "loop {abs_name} =")?;
-                                if b.is_simple() || b.is_kept_inline() {
-                                    f.write_str(" ")?;
-                                    b.pretty(f, false, lvl)?;
-                                } else {
-                                    f.write_str("\n")?;
-                                    indent(f, lvl + 1)?;
-                                    b.pretty(f, false, lvl + 1)?;
-                                }
-                                if lvl == 0 {
-                                    f.write_str("\n")?;
-                                }
-                                f.write_str("\n")?;
-                                indent(f, lvl)?;
-                                return body.pretty(f, false, lvl);
-                            }
-                            _ => {}
-                        }
-                    }
-                    // let
-                    if let Some(name) = &expr.1.alias {
-                        write!(f, "let {name} =")?;
-                        if arg.is_simple() || arg.is_kept_inline() {
-                            f.write_str(" ")?;
-                            arg.pretty(f, false, lvl)?;
-                        } else {
-                            f.write_str("\n")?;
-                            indent(f, lvl + 1)?;
-                            arg.pretty(f, false, lvl + 1)?;
-                        }
-                        if lvl == 0 {
-                            f.write_str("\n")?;
-                        }
-                        f.write_str("\n")?;
-                        indent(f, lvl)?;
-                        return body.pretty(f, false, lvl);
-                    }
+            ExprEnum::Var(_) => match pool.resolve(id)? {
+                Parsed::Var(var) => {
+                    buf.push_str(var);
+                    Ok(())
                 }
+                _ => Err(id),
+            },
+            ExprEnum::Tag(_) => match pool.resolve(id)? {
+                Parsed::Tag(t) => {
+                    buf.push_str(t);
+                    Ok(())
+                }
+                Parsed::Binding(b) => {
+                    buf.push('\'');
+                    buf.push_str(b);
+                    Ok(())
+                }
+                _ => Err(id),
+            },
+            ExprEnum::Abs(body) => match pool.resolve(id)? {
+                Parsed::Block => {
+                    buf.push_str("{ ");
+                    body.pretty(buf, pool, wrap, lvl)?;
+                    buf.push_str(" }");
+                    Ok(())
+                }
+                Parsed::InnerBlock => body.pretty(buf, pool, wrap, lvl),
+                _ => Err(id),
+            },
+            ExprEnum::Rec(_expr) => todo!(),
+            ExprEnum::App(f, arg) => {
                 let mut args = vec![arg];
-                let mut inner = expr;
-                while let Expr(ExprEnum::App(expr, arg), _) = inner.as_ref() {
+                let mut inner = f;
+                while let _Expr(ExprEnum::App(expr, arg), _) = inner.as_ref() {
                     inner = expr;
                     args.push(arg);
                 }
-                inner.pretty(f, true, lvl)?;
-                f.write_str("(")?;
+                inner.pretty(buf, &pool, true, lvl)?;
+                buf.push_str("(");
                 let is_simple = args.iter().all(|arg| arg.is_simple());
                 if !is_simple {
-                    f.write_str("\n")?;
-                    indent(f, lvl + 1)?;
+                    buf.push_str("\n");
+                    indent(buf, lvl + 1);
                 }
                 for (i, arg) in args.iter().rev().enumerate() {
                     if i != 0 {
                         if is_simple {
-                            f.write_str(", ")?;
+                            buf.push_str(", ");
                         } else {
-                            f.write_str(",\n")?;
-                            indent(f, lvl + 1)?;
+                            buf.push_str(",\n");
+                            indent(buf, lvl + 1);
                         }
                     }
                     if is_simple {
-                        arg.pretty(f, false, lvl)?;
+                        arg.pretty(buf, &pool, false, lvl)?;
                     } else {
-                        arg.pretty(f, false, lvl + 1)?;
+                        arg.pretty(buf, &pool, false, lvl + 1)?;
                     }
                 }
                 if !is_simple {
-                    f.write_str("\n")?;
-                    indent(f, lvl)?;
+                    buf.push_str("\n");
+                    indent(buf, lvl);
                 }
-                write!(f, ")")
-            }
-            ExprEnum::Abs(body) | ExprEnum::Rec(body) => {
-                if group {
-                    f.write_str("(")?;
-                }
-                let arrow = match self.0 {
-                    ExprEnum::Abs(_) => "=>",
-                    _ => "~>",
-                };
-                let var_arrow = match &self.1.alias {
-                    Some(var) => format!("{var} {arrow}"),
-                    _ => arrow.to_string(),
-                };
-                if body.is_simple() || body.is_kept_inline() {
-                    write!(f, "{var_arrow} ")?;
-                    body.pretty(f, false, lvl)?;
-                } else {
-                    write!(f, "{var_arrow}\n")?;
-                    indent(f, lvl + 1)?;
-                    body.pretty(f, false, lvl + 1)?;
-                }
-                if group {
-                    if !body.is_simple() {
-                        f.write_str("\n")?;
-                        indent(f, lvl)?;
-                    }
-                    f.write_str(")")?;
-                }
+                buf.push_str(")");
                 Ok(())
             }
             ExprEnum::Cnd {
@@ -438,69 +440,123 @@ impl Expr {
                 pattern,
                 then_expr,
                 else_expr,
+            } => todo!(),
+        }
+    }
+}
+
+impl std::fmt::Display for _Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.0 {
+            ExprEnum::Var(s) => write!(f, "{s}"),
+            ExprEnum::Tag(t) => write!(f, "_{t}"),
+            ExprEnum::Abs(expr) => {
+                f.write_str("(=> ")?;
+                expr.fmt(f)?;
+                f.write_str(")")
+            }
+            ExprEnum::Rec(expr) => {
+                f.write_str("(~> ")?;
+                expr.fmt(f)?;
+                f.write_str(")")
+            }
+            ExprEnum::App(fun, arg) => {
+                fun.fmt(f)?;
+                f.write_str("(")?;
+                arg.fmt(f)?;
+                f.write_str(")")
+            }
+            ExprEnum::Cnd {
+                value,
+                pattern: (t, vars),
+                then_expr,
+                else_expr,
             } => {
-                if group {
-                    f.write_str("(")?;
-                }
-                f.write_str("if ")?;
-                value.pretty(f, false, lvl)?;
-                f.write_str(" is ")?;
-                if let Some(alias) = &self.1.alias {
-                    f.write_str(alias)?;
-                } else {
-                    let (tag, bindings) = pattern;
-                    write!(f, "'{tag} {bindings}")?;
-                }
-                f.write_str("\n")?;
-                indent(f, lvl + 1)?;
-                then_expr.pretty(f, false, lvl + 1)?;
-                f.write_str("\n")?;
-                indent(f, lvl)?;
-                f.write_str("else\n")?;
-                indent(f, lvl + 1)?;
-                else_expr.pretty(f, false, lvl + 1)?;
-                if group {
-                    f.write_str("\n")?;
-                    indent(f, lvl)?;
-                    f.write_str(")")?;
-                }
-                Ok(())
+                f.write_str("(if ")?;
+                value.fmt(f)?;
+                write!(f, " is {t}/{vars} then ")?;
+                then_expr.fmt(f)?;
+                f.write_str(" else ")?;
+                else_expr.fmt(f)?;
+                f.write_str(")")
             }
         }
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum Value {
-    Fn(Expr, Arc<Env<Value>>, Meta),
-    Rec(Expr, Arc<Env<Value>>, Meta),
-    Tag(usize, Vec<Value>, Meta),
+//
+// EVAL
+//
+
+impl Expr {
+    pub fn eval(self) -> Result<String, String> {
+        let empty = Arc::new(Env::Empty);
+        let null_id = Id(0);
+        // let = (_, x, f) => f(x)
+        // desugared: (=> (=> (=> 0(1))))
+        let builtin_let = _Value::Fn(
+            _Expr(
+                ExprEnum::Abs(Box::new(_Expr(
+                    ExprEnum::Abs(Box::new(_Expr(
+                        ExprEnum::App(
+                            Box::new(_Expr(ExprEnum::Var(0), null_id)),
+                            Box::new(_Expr(ExprEnum::Var(1), null_id)),
+                        ),
+                        null_id,
+                    ))),
+                    null_id,
+                ))),
+                null_id,
+            ),
+            Arc::clone(&empty),
+            null_id,
+        );
+        let env = empty.push(builtin_let);
+        match self.0.eval(&env) {
+            Ok(v) => _Expr::from(v)
+                .sugar(&self.1)
+                .map_err(|id| format!("Could not print node with id {id}")),
+            Err(expr) => Err(format!("Could not eval {expr}")),
+        }
+    }
 }
 
-impl std::fmt::Display for Value {
+#[derive(Debug, Clone)]
+enum _Value {
+    Fn(_Expr, Arc<Env<_Value>>, Id),
+    Rec(_Expr, Arc<Env<_Value>>, Id),
+    Tag(usize, Vec<_Value>, Id),
+}
+
+impl From<_Value> for _Expr {
+    fn from(value: _Value) -> Self {
+        match value {
+            _Value::Fn(body, _, id) => _Expr(ExprEnum::Abs(Box::new(body)), id),
+            _Value::Rec(body, _, id) => _Expr(ExprEnum::Rec(Box::new(body)), id),
+            _Value::Tag(t, values, id) => {
+                let mut expr = _Expr(ExprEnum::Tag(t), id);
+                for v in values {
+                    expr = _Expr(
+                        ExprEnum::App(Box::new(expr), Box::new(_Expr::from(v))),
+                        Id::internal(),
+                    )
+                }
+                expr
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for _Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Fn(body, _, meta) => match &meta.alias {
-                Some(alias) => write!(f, "{alias} => {body}"),
-                None => write!(f, "=> {body}"),
-            },
-            Value::Rec(body, _, meta) => match &meta.alias {
-                Some(alias) => write!(f, "{alias} ~> {body}"),
-                None => write!(f, "~> {body}"),
-            },
-            Value::Tag(t, values, meta) => {
-                match &meta.alias {
-                    Some(alias) => f.write_str(alias)?,
-                    None => write!(f, "'{t}")?,
-                }
-                if !values.is_empty() {
+            _Value::Fn(body, _, _) => body.fmt(f),
+            _Value::Rec(body, _, _) => body.fmt(f),
+            _Value::Tag(t, values, id) => {
+                _Expr(ExprEnum::Tag(*t), *id).fmt(f)?;
+                for arg in values {
                     f.write_str("(")?;
-                    for (i, v) in values.iter().enumerate() {
-                        if i > 0 {
-                            f.write_str(", ")?;
-                        }
-                        v.fmt(f)?;
-                    }
+                    arg.fmt(f)?;
                     f.write_str(")")?;
                 }
                 Ok(())
@@ -537,123 +593,27 @@ impl<T> Env<T> {
     }
 }
 
-#[derive(Clone)]
-enum V {
-    Fn(Expr, Arc<Env<V>>, Meta),
-    Tag(usize, Vec<V>, Meta),
-    Any,
-}
-
-impl Expr {
-    pub fn eval(self) -> Result<Value, String> {
-        self.check(&Arc::new(Env::Empty), &[]).map(|_| ())?;
-        self._eval(&Arc::new(Env::Empty))
-    }
-
-    fn check(&self, env: &Arc<Env<V>>, stack: &[&Expr]) -> Result<Vec<V>, String> {
-        // Possible recursion: an expr whose set of possible functions contains `f` is called as a
-        // function inside of `f` (in other words while the call stack contains `f`) with arg `f`
-        fn stacktrace(stack: &[&Expr]) -> String {
-            let mut msg = format!("Implicit recursion detected!");
-            for expr in stack {
-                if !expr.is_sugared_as_let_or_loop() {
-                    let pos = expr.1.pos;
-                    msg += &format!("\n\n...at {pos}:\n{expr}");
-                }
-            }
-            msg
-        }
-        let Expr(inner, meta) = self;
-        match inner {
-            ExprEnum::Var(var) => match env.get(*var) {
-                Some(expr) => Ok(vec![expr.clone()]),
-                None => Err(format!("No binding for {self} at {}", meta.pos)),
-            },
-            ExprEnum::Tag(t) => Ok(vec![V::Tag(*t, vec![], meta.clone())]),
-            ExprEnum::Abs(body) => {
-                body.check(&env.push(V::Any), stack)?;
-                Ok(vec![V::Fn(*body.clone(), Arc::clone(env), meta.clone())])
-            }
-            ExprEnum::Rec(body) => body.check(&env.push(V::Any), stack),
-            ExprEnum::App(f, arg) => {
-                let fs = f.check(env, stack)?;
-                let args = arg.check(env, stack)?;
-                let mut results = vec![];
-                for v in fs {
-                    for arg in args.iter() {
-                        match &v {
-                            V::Any => {
-                                results.push(V::Any);
-                            }
-                            V::Tag(t, values, meta) => {
-                                let vs = values.iter().cloned().chain([arg.clone()]).collect();
-                                results.push(V::Tag(*t, vs, meta.clone()))
-                            }
-                            V::Fn(body, fn_env, f_meta) => {
-                                let mut stack = stack.to_vec();
-                                for caller in stack.iter() {
-                                    if caller.1.pos == meta.pos {
-                                        if let V::Fn(_, _, arg_meta) = arg {
-                                            if arg_meta.pos == f_meta.pos {
-                                                return Err(stacktrace(&stack));
-                                            }
-                                        }
-                                    }
-                                }
-                                stack.push(self);
-                                let env = fn_env.push(arg.clone());
-                                results.extend(body.check(&env, &stack)?);
-                            }
-                        }
-                    }
-                }
-                Ok(results)
-            }
-            ExprEnum::Cnd {
-                value,
-                pattern: (tag, vars),
-                then_expr,
-                else_expr,
-            } => {
-                let values = value.check(env, stack)?;
-                let mut results = vec![];
-                for value in values {
-                    let bound = match value {
-                        V::Tag(t, values, _) if t == *tag && values.len() == *vars => values,
-                        V::Any | V::Tag(_, _, _) | V::Fn(_, _, _) => vec![V::Any; *vars],
-                    };
-                    results.extend(then_expr.check(&env.extend(bound), stack)?);
-                    results.extend(else_expr.check(env, stack)?);
-                }
-                Ok(results)
-            }
-        }
-    }
-
-    pub fn _eval(self, env: &Arc<Env<Value>>) -> Result<Value, String> {
-        let pos = self.1.pos;
+impl _Expr {
+    fn eval(self, env: &Arc<Env<_Value>>) -> Result<_Value, _Expr> {
         match self.0 {
-            ExprEnum::Var(var) => env
-                .get(var)
-                .cloned()
-                .ok_or_else(|| format!("No binding for {self} at {pos}")),
-            ExprEnum::Tag(t) => Ok(Value::Tag(t, vec![], self.1.clone())),
-            ExprEnum::Abs(body) => Ok(Value::Fn(*body, Arc::clone(env), self.1.clone())),
-            ExprEnum::Rec(body) => Ok(Value::Rec(*body, Arc::clone(env), self.1.clone())),
+            ExprEnum::Var(var) => env.get(var).cloned().ok_or_else(|| self),
+            ExprEnum::Tag(t) => Ok(_Value::Tag(t, vec![], self.1)),
+            ExprEnum::Abs(body) => Ok(_Value::Fn(*body, Arc::clone(env), self.1)),
+            ExprEnum::Rec(body) => Ok(_Value::Rec(*body, Arc::clone(env), self.1)),
             ExprEnum::App(f, arg) => {
-                let mut f = f._eval(env)?;
+                let mut f = f.eval(env)?;
                 loop {
                     match f {
-                        Value::Rec(body, env, meta) => {
-                            let env = env.push(Value::Rec(body.clone(), Arc::clone(&env), meta));
-                            f = body._eval(&env)?;
+                        _Value::Rec(body, env, meta) => {
+                            let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), meta));
+                            f = body.eval(&env)?;
                         }
-                        Value::Tag(t, mut values, meta) => {
-                            values.push(arg._eval(env)?);
-                            break Ok(Value::Tag(t, values, meta));
+                        _Value::Tag(t, mut values, meta) => {
+                            values.push(arg.eval(env)?);
+                            break Ok(_Value::Tag(t, values, meta));
                         }
-                        Value::Fn(body, fn_env, _) => {
-                            break body._eval(&fn_env.push(arg._eval(env)?));
+                        _Value::Fn(body, fn_env, _) => {
+                            break body.eval(&fn_env.push(arg.eval(env)?));
                         }
                     }
                 }
@@ -664,17 +624,17 @@ impl Expr {
                 then_expr,
                 else_expr,
             } => {
-                let mut value = value._eval(env)?;
+                let mut value = value.eval(env)?;
                 loop {
                     match value {
-                        Value::Rec(body, env, meta) => {
-                            let env = env.push(Value::Rec(body.clone(), Arc::clone(&env), meta));
-                            value = body._eval(&env)?;
+                        _Value::Rec(body, env, meta) => {
+                            let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), meta));
+                            value = body.eval(&env)?;
                         }
-                        Value::Tag(t, values, _) if t == tag && values.len() == vars => {
-                            break then_expr._eval(&env.extend(values));
+                        _Value::Tag(t, values, _) if t == tag && values.len() == vars => {
+                            break then_expr.eval(&env.extend(values));
                         }
-                        Value::Tag(_, _, _) | Value::Fn(_, _, _) => break else_expr._eval(env),
+                        _Value::Tag(_, _, _) | _Value::Fn(_, _, _) => break else_expr.eval(env),
                     }
                 }
             }
@@ -687,317 +647,41 @@ mod tests {
     use super::*;
 
     #[test]
-    fn eval_fn_app() {
-        let code = "let f = x => Foo(x)
-
-f(Bar)";
+    fn eval_let() {
+        let code = "let('x, Foo, { x })";
         let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.desugared(), "0(_0)(_1)((=> 0))");
+        let evaled = parsed.eval().unwrap();
+        assert_eq!(format!("{evaled}"), "Foo");
+    }
+
+    #[test]
+    fn eval_let_in_block() {
+        let code = "{ let('bar, Bar), Foo(bar) }";
+        let parsed = parse(code).unwrap();
+        assert_eq!("let('bar, Bar, { Foo(bar) })", parsed.to_string());
+        assert_eq!(parsed.desugared(), "0(_0)(_1)((=> _2(0)))");
         let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "Foo(Bar)");
     }
 
     #[test]
-    fn eval_fn_closure() {
-        let code = "let f = x => y => Pair(x, y)
-
-let foo = f(Foo)
-
-foo(Bar)";
+    fn eval_multiple_let_in_block() {
+        let code = "{ let('x, Foo), let('y, Bar), Pair(x, y) }";
         let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Pair(Foo, Bar)");
-    }
-
-    #[test]
-    fn eval_rec_fn_app() {
-        let code = "loop map = f => xs =>
-  if xs is Cons(x, xs)
-    Cons(f(x), map(f, xs))
-  else
-    xs
-
-map(x => Foo(x), Cons(Bar, Cons(Baz, Nil)))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Cons(Foo(Bar), Cons(Foo(Baz), Nil))");
-    }
-
-    #[test]
-    fn eval_tag_followed_by_group() {
-        let code = "let x = Foo
-
-if x is Foo
-  (if x is Foo
-    x => x
-  else
-    Nil
-  )(x)
-else
-  Bar";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
+        assert_eq!(
+            "let('x, Foo, { let('y, Bar, { Pair(x, y) }) })",
+            parsed.to_string()
+        );
+        assert_eq!(parsed.desugared(), "0(_0)(_1)((=> 0))");
         let evaled = parsed.eval().unwrap();
         assert_eq!(format!("{evaled}"), "Foo");
     }
 
-    #[test]
-    fn eval_rec_value_cond() {
-        let code = "loop r = Cons(Foo, r)
-
-let head = l =>
-  if l is Cons(x, xs)
-    x
-  else
-    Nil
-
-let tail = l =>
-  if l is Cons(x, xs)
-    xs
-  else
-    Nil
-
-head(tail(tail(r)))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Foo");
-    }
-
-    #[test]
-    fn eval_normal_recursion() {
-        let code = "loop add = x => y =>
-  if x is Suc(x)
-    add(x, Suc(y))
-  else
-    y
-
-add(Suc(Suc(Zero)), Suc(Zero))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Suc(Suc(Suc(Zero)))");
-    }
-
-    #[test]
-    fn eval_identity_identity() {
-        let code = "let identity1 = x => x
-
-let identity2 = x => identity1(x)
-
-identity2(identity2)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "x => identity1(x)");
-    }
-
-    #[test]
-    fn eval_twice_identity() {
-        let code = "let twice = f => f(f)
-
-let identity = x => x
-
-twice(identity)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "x => x");
-    }
-
-    #[test]
-    fn eval_nested_app() {
-        let code = "let apply = f => x => f(x)
-
-let identity = x => x
-
-apply(x => apply(identity, x), Foo(Foo(Bar)))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Foo(Foo(Bar))");
-    }
-
-    #[test]
-    fn reject_twice_twice() {
-        let code = "let twice = f => f(f)
-
-twice(twice)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 3, col 1:
-twice(twice)
-
-...at line 1, col 18:
-f(f)"
-        );
-    }
-
-    #[test]
-    fn reject_twice1_twice2() {
-        let code = "let twice1 = f => f(f)
-
-let twice2 = f => f(f)
-
-twice1(twice2)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 5, col 1:
-twice1(twice2)
-
-...at line 1, col 19:
-f(f)
-
-...at line 3, col 19:
-f(f)"
-        );
-    }
-
-    #[test]
-    fn reject_twice1_twice2_branch() {
-        let code = "let twice1 = f => f(f)
-
-let twice2 = f => f(f)
-
-if Foo(twice2) is Foo(f)
-  twice1(f)
-else
-  Nothing";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 6, col 3:
-twice1(f)
-
-...at line 1, col 19:
-f(f)
-
-...at line 3, col 19:
-f(f)"
-        );
-    }
-
-    #[test]
-    fn reject_fixed_point_combinator() {
-        let code = "let fix = f =>
-  let x = x => f(x(x))
-  f(x(x))
-
-let add' = f => x => y =>
-  if x is Suc(x)
-    f(x, Suc(y))
-  else
-    y
-
-let add = x => y => fix(add', x, y)
-
-add(Suc(Suc(Zero)), Suc(Zero))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 3, col 5:
-x(x)
-
-...at line 2, col 18:
-x(x)"
-        );
-    }
-
-    #[test]
-    fn reject_fixed_point_combinator_without_app() {
-        let code = "f =>
-  let x = x => f(x(x))
-  f(x(x))";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 3, col 5:
-x(x)
-
-...at line 2, col 18:
-x(x)"
-        );
-    }
-
-    #[test]
-    fn reject_dependent_on_rec1() {
-        let code = "let twice = f => f(f)
-
-loop add = x => y =>
-  if x is Suc(x)
-    add(x, Suc(y))
-  else
-    y
-
-if add(Suc(Zero), Zero) is Zero
-  Zero
-else
-  twice(twice)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 12, col 3:
-twice(twice)
-
-...at line 1, col 18:
-f(f)"
-        );
-    }
-
-    #[test]
-    fn reject_dependent_on_rec2() {
-        let code = "let twice = f => f(f)
-
-loop add = x => y =>
-  if x is Suc(x)
-    add(x, Suc(y))
-  else
-    y
-
-if add(Zero, Zero) is Zero
-  twice(twice)
-else
-  Zero";
-        let parsed = parse(code).unwrap();
-        assert_eq!(parsed.to_string(), code);
-        let err = parsed.eval().unwrap_err();
-        assert_eq!(
-            err,
-            "Implicit recursion detected!
-
-...at line 10, col 3:
-twice(twice)
-
-...at line 1, col 18:
-f(f)"
-        );
-    }
+    // #[test]
+    // fn eval_multiple_let_and_side_effect_in_block() {
+    //     let code = "{ let('x, Foo), Nil, let('y, Bar), Pair(x, y) }";
+    //     todo!()
+    // }
 }
