@@ -1,9 +1,3 @@
-loop map = f => xs =>
-  if xs is Cons(x, xs)
-    Cons(f(x), map(f, xs))
-  else
-    xs
-
 let reverse = xs =>
   loop reverse = xs => rest =>
     if xs is Cons(x, xs)
@@ -11,6 +5,14 @@ let reverse = xs =>
     else
       rest
   reverse(xs, Nil)
+
+let map = f => xs =>
+  loop map = f => xs => acc =>
+    if xs is Cons(x, xs)
+      map(f, xs, Cons(f(x), acc))
+    else
+      reverse(acc)
+  map(f, xs, Nil)
 
 let read-lines = _ =>
   loop split-lines = curr => lines =>
@@ -21,14 +23,15 @@ let read-lines = _ =>
       split-lines(Nil, Cons(curr, lines))
     else
       split-lines(Cons(c, curr), lines)
-  let lines = map(reverse, split-lines(Nil, Nil))
-  reverse(lines)
+  reverse(map(reverse, split-lines(Nil, Nil)))
 
-loop append = xs => ys =>
-  if xs is Cons(x, xs)
-    Cons(x, append(xs, ys))
-  else
-    ys
+let append = xs => ys =>
+  loop append = xs => ys =>
+    if ys is Cons(y, ys)
+      append(Cons(y, xs), ys)
+    else
+      xs
+  reverse(append(reverse(xs), ys))
 
 loop wrap = pre => l => post =>
   let pre = Cons(pre, Nil)
@@ -80,17 +83,19 @@ let is-code-block = l =>
   else
     False
 
-loop inline-to-html = l => style =>
-  if l is Cons(c, l)
-    if c is "_"
-      if style is Em
-        Cons("</em>", inline-to-html(l, None))
+let inline-to-html = l =>
+  loop inline-to-html = l => style => acc =>
+    if l is Cons(c, l)
+      if c is "_"
+        if style is Em
+          inline-to-html(l, None, Cons("</em>", acc))
+        else
+          inline-to-html(l, Em, Cons("<em>", acc))
       else
-        Cons("<em>", inline-to-html(l, Em))
+        inline-to-html(l, style, Cons(c, acc))
     else
-      Cons(c, inline-to-html(l, style))
-  else
-    l
+      reverse(acc)
+  inline-to-html(l, None, Nil)
 
 let line-to-html = l =>
   if is-empty(l) is True
@@ -98,21 +103,23 @@ let line-to-html = l =>
   else if is-heading(l) is Heading(l)
     wrap("<h1>", l, "</h1>\n")
   else
-    wrap("<p>", inline-to-html(l, None), "</p>\n")
+    wrap("<p>", inline-to-html(l), "</p>\n")
 
-loop md-to-html = ls => style =>
-  if ls is Cons(l, ls)
-    if style is Code
-      if is-code-block(l) is True
-        Cons(Cons("\n</code></pre>\n", Nil), md-to-html(ls, None))
+let md-to-html = ls =>
+  loop md-to-html = ls => style => acc =>
+    if ls is Cons(l, ls)
+      if style is Code
+        if is-code-block(l) is True
+          md-to-html(ls, None, Cons(Cons("\n</code></pre>\n", Nil), acc))
+        else
+          md-to-html(ls, style, Cons(Cons("\n", l), acc))
+      else if is-code-block(l) is True
+        md-to-html(ls, Code, Cons(Cons("<pre><code>", Nil), acc))
       else
-        Cons(Cons("\n", l), md-to-html(ls, style))
-    else if is-code-block(l) is True
-      Cons(Cons("<pre><code>", Nil), md-to-html(ls, Code))
+        md-to-html(ls, style, Cons(line-to-html(l), acc))
     else
-      Cons(line-to-html(l), md-to-html(ls, style))
-  else
-    ls
+      reverse(acc)
+  md-to-html(ls, None, Nil)
 
 loop flatten = xs =>
   if xs is Cons(x, xs)
@@ -143,7 +150,7 @@ loop title = ls =>
 
 let title = title(lines)
 
-let body = md-to-html(lines, None)
+let body = md-to-html(lines)
 
 let html = html5(title, body)
 
