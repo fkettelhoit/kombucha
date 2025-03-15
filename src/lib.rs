@@ -125,21 +125,14 @@ impl std::fmt::Display for Id {
     }
 }
 
+type Tokens<'a> = Peekable<Iter<'a, (Token, Pos)>>;
+
 pub fn parse(code: &str) -> Result<Expr, String> {
     let tokens = scan(code);
     let mut tokens = tokens.iter().peekable();
-    let mut pool = Pool {
-        tags: HashMap::new(),
-        bindings: HashMap::new(),
-        nodes: HashMap::new(),
-    };
-    let mut stack = vec!["let".to_string()];
-    let block = parse_block(
-        &mut tokens,
-        &mut pool,
-        &mut stack,
-        &mut vec!["let".to_string()],
-    )?;
+    let mut pool = Pool::new();
+    let mut stack = vec![];
+    let block = parse_block(&mut tokens, &mut pool, &mut stack, &mut vec![])?;
     if let Some((token, pos)) = tokens.next() {
         return Err(format!(
             "Expected the code to end, but found {token} at {pos}"
@@ -150,7 +143,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
         unreachable!("Expected the code to be parsed as a block.");
     };
     fn parse_expr(
-        tokens: &mut Peekable<Iter<(Token, Pos)>>,
+        tokens: &mut Tokens,
         pool: &mut Pool,
         stack: &mut Vec<String>,
         bindings: &mut Vec<String>,
@@ -158,6 +151,13 @@ pub fn parse(code: &str) -> Result<Expr, String> {
         let Some((t, pos)) = tokens.next() else {
             return Err("Expected an expression, but the code just ended".to_string());
         };
+        fn expect(ts: &mut Tokens, msg: &str, exp: Token) -> Result<(), String> {
+            match ts.next() {
+                Some((t, _)) if t == &exp => Ok(()),
+                Some((t, pos)) => Err(format!("{msg}, expected '{exp}', found '{t}' at {pos}")),
+                None => return Err(format!("{msg}, but the code just ended")),
+            }
+        }
         let mut pos = *pos;
         let mut expr = match t {
             Token::Tag(t) => _Expr(
@@ -167,6 +167,177 @@ pub fn parse(code: &str) -> Result<Expr, String> {
             Token::Symbol(s) => {
                 if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| s == *var) {
                     _Expr(ExprEnum::Var(i), pool.register(pos, Parsed::Var(s.clone())))
+                } else if s == "let" {
+                    // let('binding, arg, { f })
+                    let msg = "The built-in 'let' function must be called correctly";
+                    expect(tokens, msg, Token::ParenOpen)?;
+                    let (binding, _) = match tokens.next() {
+                        Some((Token::Binding(b), _)) => (b, pool.intern_binding(b)),
+                        Some((t, pos)) => {
+                            return Err(format!("{msg}, expected a binding, found '{t}' at {pos}"));
+                        }
+                        None => return Err(format!("{msg}, but the code just ended")),
+                    };
+                    bindings.push(binding.clone());
+                    expect(tokens, msg, Token::Separator)?;
+                    let (value, _) = parse_expr(tokens, pool, stack, bindings)?;
+                    match tokens.next() {
+                        Some((Token::ParenClose, _)) => _Expr(
+                            ExprEnum::Abs(Box::new(_Expr(
+                                ExprEnum::App(
+                                    Box::new(_Expr(
+                                        ExprEnum::Var(0),
+                                        pool.register(pos, Parsed::Hidden),
+                                    )),
+                                    Box::new(value),
+                                ),
+                                pool.register(pos, Parsed::AppHiddenFun),
+                            ))),
+                            pool.register(pos, Parsed::PrimitiveLet(binding.clone())),
+                        ),
+                        Some((Token::Separator, _)) => {
+                            expect(tokens, msg, Token::BraceOpen)?;
+                            let f = parse_block(tokens, pool, stack, bindings)?;
+                            expect(tokens, msg, Token::BraceClose)?;
+                            expect(tokens, msg, Token::ParenClose)?;
+                            _Expr(
+                                ExprEnum::App(Box::new(f), Box::new(value)),
+                                pool.register(pos, Parsed::PrimitiveLet(binding.clone())),
+                            )
+                        }
+                        Some((t, pos)) => {
+                            return Err(format!(
+                                "{msg}, expected ',' or ')', found '{t}' at {pos}"
+                            ));
+                        }
+                        None => return Err(format!("{msg}, but the code just ended")),
+                    }
+                } else if s == "rec" {
+                    // rec('binding, { arg })
+                    let msg = "The built-in 'rec' function must be called correctly";
+                    expect(tokens, msg, Token::ParenOpen)?;
+                    let (binding, _) = match tokens.next() {
+                        Some((Token::Binding(b), _)) => (b, pool.intern_binding(b)),
+                        Some((t, pos)) => {
+                            return Err(format!("{msg}, expected a binding, found '{t}' at {pos}"));
+                        }
+                        None => return Err(format!("{msg}, but the code just ended")),
+                    };
+                    bindings.push(binding.clone());
+                    expect(tokens, msg, Token::Separator)?;
+                    expect(tokens, msg, Token::BraceOpen)?;
+                    let body = parse_block(tokens, pool, stack, bindings)?;
+                    expect(tokens, msg, Token::BraceClose)?;
+                    expect(tokens, msg, Token::ParenClose)?;
+                    _Expr(
+                        ExprEnum::Rec(Box::new(body)),
+                        pool.register(pos, Parsed::PrimitiveRec(binding.clone())),
+                    )
+                } else if s == "if" {
+                    // if(v, Tag, { then }, { else })
+                    let msg = "The built-in 'if' function must be called correctly";
+                    expect(tokens, msg, Token::ParenOpen)?;
+                    let (value, _) = parse_expr(tokens, pool, stack, bindings)?;
+                    expect(tokens, msg, Token::Separator)?;
+                    let (tag, tag_id) = match tokens.next() {
+                        Some((Token::Tag(t), _)) => (t, pool.intern_tag(t)),
+                        Some((t, pos)) => {
+                            return Err(format!("{msg}, expected a tag, found '{t}' at {pos}"));
+                        }
+                        None => return Err(format!("{msg}, but the code just ended")),
+                    };
+                    let mut pattern_vars = vec![];
+                    match tokens.next() {
+                        Some((Token::Separator, _)) => {}
+                        Some((Token::ParenOpen, _)) => loop {
+                            let (binding, _) = match tokens.next() {
+                                Some((Token::Binding(b), _)) => (b, pool.intern_binding(b)),
+                                Some((t, pos)) => {
+                                    return Err(format!(
+                                        "{msg}, expected a binding, found '{t}' at {pos}"
+                                    ));
+                                }
+                                None => return Err(format!("{msg}, but the code just ended")),
+                            };
+                            if pattern_vars.contains(binding) {
+                                return Err(format!(
+                                    "All variables in a pattern must be unique, but '{binding} is used twice at {pos}"
+                                ));
+                            }
+                            pattern_vars.push(binding.clone());
+                            match tokens.next() {
+                                Some((Token::ParenClose, _)) => {
+                                    expect(tokens, msg, Token::Separator)?;
+                                    break;
+                                }
+                                Some((Token::Separator, _)) => {}
+                                Some((t, pos)) => {
+                                    return Err(format!(
+                                        "{msg}, expected ',' or ')', found '{t}' at {pos}"
+                                    ));
+                                }
+                                None => return Err(format!("{msg}, but the code just ended")),
+                            }
+                        },
+                        Some((t, pos)) => {
+                            return Err(format!("{msg}, expected a tag, found '{t}' at {pos}"));
+                        }
+                        None => return Err(format!("{msg}, but the code just ended")),
+                    }
+                    expect(tokens, msg, Token::BraceOpen)?;
+                    let vars = pattern_vars.len();
+                    bindings.extend(pattern_vars.clone());
+                    let mut then_expr = parse_block(tokens, pool, stack, bindings)?;
+                    for _ in 0..vars {
+                        bindings.pop();
+                    }
+                    if vars == 0 {
+                        then_expr = _Expr(
+                            ExprEnum::App(
+                                Box::new(then_expr),
+                                Box::new(_Expr(
+                                    ExprEnum::Tag(Pool::nil()),
+                                    pool.register(pos, Parsed::Hidden),
+                                )),
+                            ),
+                            pool.register(pos, Parsed::AppHiddenArg),
+                        );
+                    } else {
+                        for i in (0..vars).rev() {
+                            then_expr = _Expr(
+                                ExprEnum::App(
+                                    Box::new(then_expr),
+                                    Box::new(_Expr(
+                                        ExprEnum::Var(i),
+                                        pool.register(pos, Parsed::Hidden),
+                                    )),
+                                ),
+                                pool.register(pos, Parsed::AppHiddenArg),
+                            );
+                        }
+                    }
+                    expect(tokens, msg, Token::BraceClose)?;
+                    expect(tokens, msg, Token::Separator)?;
+                    expect(tokens, msg, Token::BraceOpen)?;
+                    let mut else_expr = parse_block(tokens, pool, stack, bindings)?;
+                    else_expr = _Expr(
+                        ExprEnum::App(
+                            Box::new(else_expr),
+                            Box::new(_Expr(ExprEnum::Tag(0), pool.register(pos, Parsed::Hidden))),
+                        ),
+                        pool.register(pos, Parsed::AppHiddenArg),
+                    );
+                    expect(tokens, msg, Token::BraceClose)?;
+                    expect(tokens, msg, Token::ParenClose)?;
+                    _Expr(
+                        ExprEnum::Cnd {
+                            value: Box::new(value),
+                            pattern: (tag_id, vars),
+                            then_expr: Box::new(then_expr),
+                            else_expr: Box::new(else_expr),
+                        },
+                        pool.register(pos, Parsed::PrimitiveIf(tag.clone(), pattern_vars)),
+                    )
                 } else {
                     return Err(format!("Could not find binding for '{s}' at {pos}"));
                 }
@@ -227,7 +398,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
         }
     }
     fn parse_block(
-        tokens: &mut Peekable<Iter<(Token, Pos)>>,
+        tokens: &mut Tokens,
         pool: &mut Pool,
         stack: &mut Vec<String>,
         bindings: &mut Vec<String>,
@@ -274,7 +445,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                             let info = if i == 0 && j == 0 {
                                 Parsed::Block
                             } else {
-                                Parsed::InnerBlock
+                                Parsed::Hidden
                             };
                             expr = _Expr(ExprEnum::Abs(Box::new(expr)), pool.register(pos, info));
                             for _ in 0..args {
@@ -309,12 +480,29 @@ enum Parsed {
     Binding(String),
     Block,
     App,
-    InnerBlock,
+    Hidden,
     BindingAppInBlock,
     ValueAppInBlock,
+    PrimitiveLet(String),
+    PrimitiveIf(String, Vec<String>),
+    AppHiddenArg,
+    AppHiddenFun,
+    PrimitiveRec(String),
 }
 
 impl Pool {
+    fn new() -> Self {
+        Self {
+            tags: HashMap::from_iter(vec![("Nil".to_string(), 0)]),
+            bindings: HashMap::new(),
+            nodes: HashMap::new(),
+        }
+    }
+
+    fn nil() -> usize {
+        0
+    }
+
     fn next_interned(&self) -> usize {
         self.tags.len() + self.bindings.len()
     }
@@ -411,29 +599,57 @@ impl _Expr {
                 _ => Err(self),
             },
             ExprEnum::Abs(body) => match info {
+                Parsed::PrimitiveLet(binding) => {
+                    buf.push_str("let('");
+                    buf.push_str(binding);
+                    buf.push_str(", ");
+                    body.pretty(buf, pool, wrap, lvl)?;
+                    buf.push_str(")");
+                    Ok(())
+                }
                 Parsed::Block => {
                     buf.push_str("{ ");
                     body.pretty(buf, pool, wrap, lvl)?;
                     buf.push_str(" }");
                     Ok(())
                 }
-                Parsed::InnerBlock => body.pretty(buf, pool, wrap, lvl),
+                Parsed::Hidden => body.pretty(buf, pool, wrap, lvl),
                 _ => Err(self),
             },
-            ExprEnum::Rec(_expr) => todo!(),
+            ExprEnum::Rec(body) => match info {
+                Parsed::PrimitiveRec(binding) => {
+                    buf.push_str("rec('");
+                    buf.push_str(binding);
+                    buf.push_str(", ");
+                    body.pretty(buf, pool, wrap, lvl)?;
+                    buf.push_str(")");
+                    Ok(())
+                }
+                _ => Err(self),
+            },
             ExprEnum::App(f, arg) => match info {
+                Parsed::PrimitiveLet(binding) => {
+                    buf.push_str("let('");
+                    buf.push_str(binding);
+                    buf.push_str(", ");
+                    arg.pretty(buf, pool, wrap, lvl)?;
+                    buf.push_str(", ");
+                    f.pretty(buf, pool, wrap, lvl)?;
+                    buf.push_str(")");
+                    Ok(())
+                }
                 Parsed::BindingAppInBlock => {
                     f.pretty(buf, pool, wrap, lvl)?;
                     buf.push_str(", ");
-                    arg.pretty(buf, pool, wrap, lvl)?;
-                    Ok(())
+                    arg.pretty(buf, pool, wrap, lvl)
                 }
                 Parsed::ValueAppInBlock => {
                     arg.pretty(buf, pool, wrap, lvl)?;
                     buf.push_str(", ");
-                    f.pretty(buf, pool, wrap, lvl)?;
-                    Ok(())
+                    f.pretty(buf, pool, wrap, lvl)
                 }
+                Parsed::AppHiddenArg => f.pretty(buf, pool, wrap, lvl),
+                Parsed::AppHiddenFun => arg.pretty(buf, pool, wrap, lvl),
                 Parsed::App | Parsed::Tag(_) => {
                     let mut args = vec![arg];
                     let mut inner = f;
@@ -474,10 +690,35 @@ impl _Expr {
             },
             ExprEnum::Cnd {
                 value,
-                pattern,
+                pattern: _,
                 then_expr,
                 else_expr,
-            } => todo!(),
+            } => match info {
+                Parsed::PrimitiveIf(tag, vars) => {
+                    buf.push_str("if(");
+                    value.pretty(buf, pool, false, lvl)?;
+                    buf.push_str(", ");
+                    buf.push_str(tag);
+                    if !vars.is_empty() {
+                        buf.push_str("(");
+                        for (i, var) in vars.iter().enumerate() {
+                            if i != 0 {
+                                buf.push_str(", ")
+                            }
+                            buf.push_str("'");
+                            buf.push_str(var);
+                        }
+                        buf.push_str(")");
+                    }
+                    buf.push_str(", ");
+                    then_expr.pretty(buf, pool, false, lvl)?;
+                    buf.push_str(", ");
+                    else_expr.pretty(buf, pool, false, lvl)?;
+                    buf.push_str(")");
+                    Ok(())
+                }
+                _ => Err(self),
+            },
         }
     }
 }
@@ -527,29 +768,7 @@ impl std::fmt::Display for _Expr {
 
 impl Expr {
     pub fn eval(self) -> Result<String, String> {
-        let empty = Arc::new(Env::Empty);
-        let builtin_id = Id(u32::MAX);
-        // let = (_, x, f) => f(x)
-        // desugared: (=> (=> (=> 0(1))))
-        let builtin_let = _Value::Fn(
-            _Expr(
-                ExprEnum::Abs(Box::new(_Expr(
-                    ExprEnum::Abs(Box::new(_Expr(
-                        ExprEnum::App(
-                            Box::new(_Expr(ExprEnum::Var(0), builtin_id)),
-                            Box::new(_Expr(ExprEnum::Var(1), builtin_id)),
-                        ),
-                        builtin_id,
-                    ))),
-                    builtin_id,
-                ))),
-                builtin_id,
-            ),
-            Arc::clone(&empty),
-            builtin_id,
-        );
-        let env = empty.push(builtin_let);
-        match self.0.eval(&env) {
+        match self.0.eval(&Arc::new(Env::Empty)) {
             Ok(v) => _Expr::from(v)
                 .sugar(&self.1)
                 .map_err(|node| format!("Could not print node with id {}: {node}", node.1)),
@@ -580,24 +799,6 @@ impl From<_Value> for _Expr {
         }
     }
 }
-
-// impl std::fmt::Display for _Value {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             _Value::Fn(body, _, _) => body.fmt(f),
-//             _Value::Rec(body, _, _) => body.fmt(f),
-//             _Value::Tag(t, values, id) => {
-//                 _Expr(ExprEnum::Tag(*t), *id).fmt(f)?;
-//                 for arg in values {
-//                     f.write_str("(")?;
-//                     arg.fmt(f)?;
-//                     f.write_str(")")?;
-//                 }
-//                 Ok(())
-//             }
-//         }
-//     }
-// }
 
 #[derive(Debug, Clone)]
 pub enum Env<T> {
@@ -685,7 +886,7 @@ mod tests {
         let code = "let('x, Foo, { x })";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.0.to_string(), "0(_0)(_1)((=> 0))");
+        assert_eq!(parsed.0.to_string(), "(=> 0)(_2)");
         assert_eq!(parsed.eval().unwrap(), "Foo");
     }
 
@@ -694,7 +895,7 @@ mod tests {
         let code = "{ Foo }";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.0.to_string(), "(=> _0)");
+        assert_eq!(parsed.0.to_string(), "(=> _1)");
         assert_eq!(parsed.eval().unwrap(), "{ Foo }");
     }
 
@@ -703,7 +904,7 @@ mod tests {
         let code = "let('bar, Bar), Foo(bar)";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.0.to_string(), "0(_0)(_1)((=> _2(0)))");
+        assert_eq!(parsed.0.to_string(), "(=> 0(_2))((=> _3(0)))");
         assert_eq!(parsed.eval().unwrap(), "Foo(Bar)");
     }
 
@@ -721,5 +922,29 @@ mod tests {
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "Pair(X, Y)");
+    }
+
+    #[test]
+    fn eval_simple_if_else() {
+        let code = "if(Foo, Foo, { True }, { False })";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "True");
+    }
+
+    #[test]
+    fn eval_complex_if_else() {
+        let code = "if(Pair(Foo, Bar), Pair('x, 'y), { x }, { Nil })";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "Foo");
+    }
+
+    #[test]
+    fn eval_rec() {
+        let code = "rec('r, { Cons(Foo, r) })";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "rec('r, { Cons(Foo, r) })");
     }
 }
