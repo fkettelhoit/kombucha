@@ -128,9 +128,6 @@ impl std::fmt::Display for Id {
 pub fn parse(code: &str) -> Result<Expr, String> {
     let tokens = scan(code);
     let mut tokens = tokens.iter().peekable();
-    let Some((t, pos)) = tokens.next() else {
-        return Err(format!("Could not parse anything as the input is empty"));
-    };
     let mut pool = Pool {
         tags: HashMap::new(),
         bindings: HashMap::new(),
@@ -138,8 +135,6 @@ pub fn parse(code: &str) -> Result<Expr, String> {
     };
     let mut stack = vec!["let".to_string()];
     let block = parse_block(
-        t,
-        pos,
         &mut tokens,
         &mut pool,
         &mut stack,
@@ -155,24 +150,23 @@ pub fn parse(code: &str) -> Result<Expr, String> {
         unreachable!("Expected the code to be parsed as a block.");
     };
     fn parse_expr(
-        t: &Token,
-        pos: &Pos,
         tokens: &mut Peekable<Iter<(Token, Pos)>>,
         pool: &mut Pool,
         stack: &mut Vec<String>,
         bindings: &mut Vec<String>,
-    ) -> Result<_Expr, String> {
+    ) -> Result<(_Expr, Pos), String> {
+        let Some((t, pos)) = tokens.next() else {
+            return Err("Expected an expression, but the code just ended".to_string());
+        };
+        let mut pos = *pos;
         let mut expr = match t {
             Token::Tag(t) => _Expr(
                 ExprEnum::Tag(pool.intern_tag(t)),
-                pool.register(*pos, Parsed::Tag(t.clone())),
+                pool.register(pos, Parsed::Tag(t.clone())),
             ),
             Token::Symbol(s) => {
                 if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| s == *var) {
-                    _Expr(
-                        ExprEnum::Var(i),
-                        pool.register(*pos, Parsed::Var(s.clone())),
-                    )
+                    _Expr(ExprEnum::Var(i), pool.register(pos, Parsed::Var(s.clone())))
                 } else {
                     return Err(format!("Could not find binding for '{s}' at {pos}"));
                 }
@@ -181,16 +175,11 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                 bindings.push(b.clone());
                 _Expr(
                     ExprEnum::Tag(pool.intern_binding(b)),
-                    pool.register(*pos, Parsed::Binding(b.clone())),
+                    pool.register(pos, Parsed::Binding(b.clone())),
                 )
             }
             Token::BraceOpen => {
-                let Some((t, pos)) = tokens.next() else {
-                    return Err(format!(
-                        "Expected a block to start after '{{' at {pos}, but found nothing"
-                    ));
-                };
-                let block = parse_block(t, pos, tokens, pool, stack, bindings)?;
+                let block = parse_block(tokens, pool, stack, bindings)?;
                 match tokens.next() {
                     Some(_) => block,
                     None => {
@@ -204,117 +193,97 @@ pub fn parse(code: &str) -> Result<Expr, String> {
         };
         loop {
             match tokens.peek() {
-                Some((Token::ParenOpen, pos)) => {
+                Some((Token::ParenOpen, _)) => {
                     tokens.next();
-                    let (mut prev_t, mut prev_pos) = (Token::ParenOpen, *pos);
-                    expr = loop {
-                        let Some((t, pos)) = tokens.next() else {
-                            return Err(format!(
-                                "Expected a function argument after '{prev_t}' at {prev_pos}, but found nothing"
-                            ));
-                        };
-                        let arg = parse_expr(&t, &pos, tokens, pool, stack, bindings)?;
+                    (expr, pos) = loop {
+                        let (arg, pos) = parse_expr(tokens, pool, stack, bindings)?;
                         expr = _Expr(
                             ExprEnum::App(Box::new(expr), Box::new(arg)),
-                            pool.register(*pos, Parsed::App),
+                            pool.register(pos, Parsed::App),
                         );
-                        if let Some((Token::ParenClose, _)) = tokens.peek() {
-                            tokens.next();
-                            break expr;
+                        match tokens.peek() {
+                            Some((Token::ParenClose, _)) => {
+                                tokens.next();
+                                break (expr, pos);
+                            }
+                            Some((Token::Separator, _)) => {
+                                tokens.next();
+                            }
+                            Some((t, pos)) => {
+                                return Err(format!(
+                                    "Expected ',' or ')', but found '{t}' at {pos}"
+                                ));
+                            }
+                            None => {
+                                return Err(format!(
+                                    "Expected ',' or ')', but the code just ended"
+                                ));
+                            }
                         }
-                        (prev_t, prev_pos) = (Token::Separator, expect(tokens, Token::Separator)?);
                     }
                 }
-                _ => break Ok(expr),
+                _ => break Ok((expr, pos)),
             }
         }
     }
     fn parse_block(
-        t: &Token,
-        pos: &Pos,
         tokens: &mut Peekable<Iter<(Token, Pos)>>,
         pool: &mut Pool,
         stack: &mut Vec<String>,
         bindings: &mut Vec<String>,
     ) -> Result<_Expr, String> {
-        // `{ a('x), b('y), c }`
-        // desugars to `a('x, { b('y), c })`
-        // desugars to `a('x, { b('y, { c }) })`
-        let mut bindings_len = bindings.len();
-        if bindings_len == 0 {
-            bindings_len += 1;
-            stack.push("".to_string());
-        } else {
-            stack.extend(bindings.drain(..));
-        }
-        let expr = parse_expr(t, pos, tokens, pool, stack, bindings)?;
-        for _ in 0..bindings_len {
-            stack.pop();
-        }
-        let mut exprs = vec![(bindings_len, expr, bindings.len())];
+        let mut exprs = vec![];
         loop {
+            let mut args = bindings.len();
+            if args == 0 {
+                args += 1;
+                stack.push("".to_string());
+            } else {
+                stack.extend(bindings.drain(..));
+            }
+            let (block, pos) = parse_expr(tokens, pool, stack, bindings)?;
+            exprs.push((args, block, bindings.len()));
             match tokens.peek() {
                 Some((Token::Separator, _)) => {
                     tokens.next();
-                    let Some((t, pos)) = tokens.next() else {
-                        return Err(format!(
-                            "Expected another expression in the block after ',' at {pos}, but found nothing"
-                        ));
-                    };
-                    let mut bindings_len = bindings.len();
-                    if bindings_len == 0 {
-                        bindings_len += 1;
-                        stack.push("".to_string());
-                    } else {
-                        stack.extend(bindings.drain(..));
-                    }
-                    let block = parse_expr(t, pos, tokens, pool, stack, bindings)?;
-                    exprs.push((bindings_len, block, bindings.len()));
                 }
                 Some((Token::BraceClose, _)) | None => {
-                    let (bindings, mut block, _) = exprs.pop().unwrap();
-                    for i in 0..bindings {
-                        let info = if i == 0 && exprs.is_empty() {
-                            Parsed::Block
-                        } else {
-                            Parsed::InnerBlock
-                        };
-                        block = _Expr(ExprEnum::Abs(Box::new(block)), pool.register(*pos, info));
-                        for _ in 0..bindings {
-                            stack.pop();
+                    // `{ a('x), b('y), c }`
+                    // desugars to `a('x, { b('y), c })`
+                    // desugars to `a('x, { b('y, { c }) })`
+                    let mut next = None;
+                    for (j, (args, mut expr, args_next)) in exprs.into_iter().enumerate().rev() {
+                        if let Some(block) = next {
+                            if args_next == 0 {
+                                // { f(), ... }
+                                // <==> (_ => ...)(f())
+                                expr = _Expr(
+                                    ExprEnum::App(Box::new(block), Box::new(expr)),
+                                    pool.register(pos, Parsed::ValueAppInBlock),
+                                )
+                            } else {
+                                // { let('x, Foo), ... }
+                                // <==> let('x, Foo)(x => ...)
+                                expr = _Expr(
+                                    ExprEnum::App(Box::new(expr), Box::new(block)),
+                                    pool.register(pos, Parsed::BindingAppInBlock),
+                                )
+                            }
                         }
-                    }
-                    for (j, (bindings, expr, next_bindings)) in exprs.into_iter().enumerate().rev()
-                    {
-                        if next_bindings == 0 {
-                            // { f(), ... }
-                            // <==> (_ => ...)(f())
-                            block = _Expr(
-                                ExprEnum::App(Box::new(block), Box::new(expr)),
-                                pool.register(*pos, Parsed::ValueAppInBlock),
-                            )
-                        } else {
-                            // { let('x, Foo), ... }
-                            // <==> let('x, Foo)(x => ...)
-                            block = _Expr(
-                                ExprEnum::App(Box::new(expr), Box::new(block)),
-                                pool.register(*pos, Parsed::BindingAppInBlock),
-                            )
-                        }
-                        for i in 0..bindings {
+                        for i in 0..args {
                             let info = if i == 0 && j == 0 {
                                 Parsed::Block
                             } else {
                                 Parsed::InnerBlock
                             };
-                            block =
-                                _Expr(ExprEnum::Abs(Box::new(block)), pool.register(*pos, info));
-                            for _ in 0..bindings {
+                            expr = _Expr(ExprEnum::Abs(Box::new(expr)), pool.register(pos, info));
+                            for _ in 0..args {
                                 stack.pop();
                             }
                         }
+                        next = Some(expr)
                     }
-                    break Ok(block);
+                    break Ok(next.unwrap());
                 }
                 Some((t, pos)) => {
                     return Err(format!(
@@ -322,13 +291,6 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                     ));
                 }
             }
-        }
-    }
-    fn expect(tokens: &mut Peekable<Iter<(Token, Pos)>>, tok: Token) -> Result<Pos, String> {
-        match tokens.next() {
-            Some((t, pos)) if t == &tok => Ok(*pos),
-            Some((t, pos)) => Err(format!("Expected '{tok}', found '{t}' at {pos}")),
-            None => Err(format!("Expected '{tok}', but found nothing")),
         }
     }
 }
