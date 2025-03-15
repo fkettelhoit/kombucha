@@ -3,6 +3,7 @@ use std::{
     iter::{Peekable, once},
     slice::Iter,
     sync::Arc,
+    u32,
 };
 
 //
@@ -118,12 +119,6 @@ enum ExprEnum {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Id(u32);
 
-impl Id {
-    fn internal() -> Self {
-        Self(0)
-    }
-}
-
 impl std::fmt::Display for Id {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
@@ -142,11 +137,22 @@ pub fn parse(code: &str) -> Result<Expr, String> {
         nodes: HashMap::new(),
     };
     let mut stack = vec!["let".to_string()];
-    let expr = parse_expr(t, pos, &mut tokens, &mut pool, &mut stack, &mut vec![])?;
+    let block = parse_block(
+        t,
+        pos,
+        &mut tokens,
+        &mut pool,
+        &mut stack,
+        &mut vec!["let".to_string()],
+    )?;
     if let Some((token, pos)) = tokens.next() {
-        return Err(format!("Unexpected token {token} at {pos}"));
+        return Err(format!(
+            "Expected the code to end, but found {token} at {pos}"
+        ));
+    } else if let _Expr(ExprEnum::Abs(block), _) = block {
+        return Ok(Expr(*block, pool));
     } else {
-        return Ok(Expr(expr, pool));
+        unreachable!("Expected the code to be parsed as a block.");
     };
     fn parse_expr(
         t: &Token,
@@ -184,67 +190,13 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                         "Expected a block to start after '{{' at {pos}, but found nothing"
                     ));
                 };
-                // `{ a('x), b('y), c }`
-                // desugars to `a('x, { b('y), c })`
-                // desugars to `a('x, { b('y, { c }) })`
-                let bindings_len = bindings.len();
-                stack.extend(bindings.drain(..));
-                let expr = parse_expr(t, pos, tokens, pool, stack, bindings)?;
-                for _ in 0..bindings_len {
-                    stack.pop();
-                }
-                let mut exprs = vec![(bindings_len, expr)];
-                loop {
-                    match tokens.peek() {
-                        Some((Token::BraceClose, _)) => {
-                            tokens.next();
-                            let (bindings, mut block) = exprs.pop().unwrap();
-                            for i in 0..bindings {
-                                let info = if i == 0 {
-                                    Parsed::Block
-                                } else {
-                                    Parsed::InnerBlock
-                                };
-                                block = _Expr(
-                                    ExprEnum::Abs(Box::new(block)),
-                                    pool.register(*pos, info),
-                                );
-                            }
-                            for (bindings, expr) in exprs.into_iter().rev() {
-                                block = _Expr(
-                                    ExprEnum::App(Box::new(expr), Box::new(block)),
-                                    pool.register(*pos, Parsed::App),
-                                );
-                                for i in 0..bindings {
-                                    let info = if i == 0 {
-                                        Parsed::Block
-                                    } else {
-                                        Parsed::InnerBlock
-                                    };
-                                    block = _Expr(
-                                        ExprEnum::Abs(Box::new(block)),
-                                        pool.register(*pos, info),
-                                    );
-                                    for _ in 0..bindings {
-                                        stack.pop();
-                                    }
-                                }
-                            }
-                            break block;
-                        }
-                        Some((Token::Separator, _)) => {
-                            tokens.next();
-                            let bindings_len = bindings.len();
-                            stack.extend(bindings.drain(..));
-                            let Some((t, pos)) = tokens.next() else {
-                                return Err(format!(
-                                    "Expected another expression in the block after ',' at {pos}, but found nothing"
-                                ));
-                            };
-                            let block = parse_expr(t, pos, tokens, pool, stack, bindings)?;
-                            exprs.push((bindings_len, block));
-                        }
-                        t => todo!("unexpected {t:?}"),
+                let block = parse_block(t, pos, tokens, pool, stack, bindings)?;
+                match tokens.next() {
+                    Some(_) => block,
+                    None => {
+                        return Err(format!(
+                            "Expected the block starting at {pos} to be closed with '}}', but found nothing"
+                        ));
                     }
                 }
             }
@@ -277,6 +229,101 @@ pub fn parse(code: &str) -> Result<Expr, String> {
             }
         }
     }
+    fn parse_block(
+        t: &Token,
+        pos: &Pos,
+        tokens: &mut Peekable<Iter<(Token, Pos)>>,
+        pool: &mut Pool,
+        stack: &mut Vec<String>,
+        bindings: &mut Vec<String>,
+    ) -> Result<_Expr, String> {
+        // `{ a('x), b('y), c }`
+        // desugars to `a('x, { b('y), c })`
+        // desugars to `a('x, { b('y, { c }) })`
+        let mut bindings_len = bindings.len();
+        if bindings_len == 0 {
+            bindings_len += 1;
+            stack.push("".to_string());
+        } else {
+            stack.extend(bindings.drain(..));
+        }
+        let expr = parse_expr(t, pos, tokens, pool, stack, bindings)?;
+        for _ in 0..bindings_len {
+            stack.pop();
+        }
+        let mut exprs = vec![(bindings_len, expr, bindings.len())];
+        loop {
+            match tokens.peek() {
+                Some((Token::Separator, _)) => {
+                    tokens.next();
+                    let Some((t, pos)) = tokens.next() else {
+                        return Err(format!(
+                            "Expected another expression in the block after ',' at {pos}, but found nothing"
+                        ));
+                    };
+                    let mut bindings_len = bindings.len();
+                    if bindings_len == 0 {
+                        bindings_len += 1;
+                        stack.push("".to_string());
+                    } else {
+                        stack.extend(bindings.drain(..));
+                    }
+                    let block = parse_expr(t, pos, tokens, pool, stack, bindings)?;
+                    exprs.push((bindings_len, block, bindings.len()));
+                }
+                Some((Token::BraceClose, _)) | None => {
+                    let (bindings, mut block, _) = exprs.pop().unwrap();
+                    for i in 0..bindings {
+                        let info = if i == 0 && exprs.is_empty() {
+                            Parsed::Block
+                        } else {
+                            Parsed::InnerBlock
+                        };
+                        block = _Expr(ExprEnum::Abs(Box::new(block)), pool.register(*pos, info));
+                        for _ in 0..bindings {
+                            stack.pop();
+                        }
+                    }
+                    for (j, (bindings, expr, next_bindings)) in exprs.into_iter().enumerate().rev()
+                    {
+                        if next_bindings == 0 {
+                            // { f(), ... }
+                            // <==> (_ => ...)(f())
+                            block = _Expr(
+                                ExprEnum::App(Box::new(block), Box::new(expr)),
+                                pool.register(*pos, Parsed::ValueAppInBlock),
+                            )
+                        } else {
+                            // { let('x, Foo), ... }
+                            // <==> let('x, Foo)(x => ...)
+                            block = _Expr(
+                                ExprEnum::App(Box::new(expr), Box::new(block)),
+                                pool.register(*pos, Parsed::BindingAppInBlock),
+                            )
+                        }
+                        for i in 0..bindings {
+                            let info = if i == 0 && j == 0 {
+                                Parsed::Block
+                            } else {
+                                Parsed::InnerBlock
+                            };
+                            block =
+                                _Expr(ExprEnum::Abs(Box::new(block)), pool.register(*pos, info));
+                            for _ in 0..bindings {
+                                stack.pop();
+                            }
+                        }
+                    }
+                    break Ok(block);
+                }
+                Some((t, pos)) => {
+                    return Err(format!(
+                        "Expected block to continue with ',' or '}}', but found {t} at {pos}"
+                    ));
+                }
+            }
+        }
+    }
     fn expect(tokens: &mut Peekable<Iter<(Token, Pos)>>, tok: Token) -> Result<Pos, String> {
         match tokens.next() {
             Some((t, pos)) if t == &tok => Ok(*pos),
@@ -301,6 +348,8 @@ enum Parsed {
     Block,
     App,
     InnerBlock,
+    BindingAppInBlock,
+    ValueAppInBlock,
 }
 
 impl Pool {
@@ -349,12 +398,8 @@ impl std::fmt::Display for Expr {
 }
 
 impl Expr {
-    fn sugared(&self) -> Result<String, Id> {
+    fn sugared(&self) -> Result<String, &_Expr> {
         self.0.sugar(&self.1)
-    }
-
-    fn desugared(&self) -> String {
-        self.0.to_string()
     }
 }
 
@@ -368,28 +413,30 @@ impl _Expr {
         }
     }
 
-    fn sugar(&self, pool: &Pool) -> Result<String, Id> {
+    fn sugar(&self, pool: &Pool) -> Result<String, &_Expr> {
         let mut buf = String::new();
         self.pretty(&mut buf, &pool, false, 0)?;
         Ok(buf)
     }
 
-    fn pretty(&self, buf: &mut String, pool: &Pool, wrap: bool, lvl: usize) -> Result<(), Id> {
-        let id = self.1;
+    fn pretty(&self, buf: &mut String, pool: &Pool, wrap: bool, lvl: usize) -> Result<(), &_Expr> {
         fn indent(s: &mut String, lvl: usize) {
             for _ in 0..lvl {
                 s.push_str("  ");
             }
         }
+        let Ok(info) = pool.resolve(self.1) else {
+            return Err(self);
+        };
         match &self.0 {
-            ExprEnum::Var(_) => match pool.resolve(id)? {
+            ExprEnum::Var(_) => match info {
                 Parsed::Var(var) => {
                     buf.push_str(var);
                     Ok(())
                 }
-                _ => Err(id),
+                _ => Err(self),
             },
-            ExprEnum::Tag(_) => match pool.resolve(id)? {
+            ExprEnum::Tag(_) => match info {
                 Parsed::Tag(t) => {
                     buf.push_str(t);
                     Ok(())
@@ -399,9 +446,9 @@ impl _Expr {
                     buf.push_str(b);
                     Ok(())
                 }
-                _ => Err(id),
+                _ => Err(self),
             },
-            ExprEnum::Abs(body) => match pool.resolve(id)? {
+            ExprEnum::Abs(body) => match info {
                 Parsed::Block => {
                     buf.push_str("{ ");
                     body.pretty(buf, pool, wrap, lvl)?;
@@ -409,45 +456,60 @@ impl _Expr {
                     Ok(())
                 }
                 Parsed::InnerBlock => body.pretty(buf, pool, wrap, lvl),
-                _ => Err(id),
+                _ => Err(self),
             },
             ExprEnum::Rec(_expr) => todo!(),
-            ExprEnum::App(f, arg) => {
-                let mut args = vec![arg];
-                let mut inner = f;
-                while let _Expr(ExprEnum::App(expr, arg), _) = inner.as_ref() {
-                    inner = expr;
-                    args.push(arg);
+            ExprEnum::App(f, arg) => match info {
+                Parsed::BindingAppInBlock => {
+                    f.pretty(buf, pool, wrap, lvl)?;
+                    buf.push_str(", ");
+                    arg.pretty(buf, pool, wrap, lvl)?;
+                    Ok(())
                 }
-                inner.pretty(buf, &pool, true, lvl)?;
-                buf.push_str("(");
-                let is_simple = args.iter().all(|arg| arg.is_simple());
-                if !is_simple {
-                    buf.push_str("\n");
-                    indent(buf, lvl + 1);
+                Parsed::ValueAppInBlock => {
+                    arg.pretty(buf, pool, wrap, lvl)?;
+                    buf.push_str(", ");
+                    f.pretty(buf, pool, wrap, lvl)?;
+                    Ok(())
                 }
-                for (i, arg) in args.iter().rev().enumerate() {
-                    if i != 0 {
+                Parsed::App | Parsed::Tag(_) => {
+                    let mut args = vec![arg];
+                    let mut inner = f;
+                    while let _Expr(ExprEnum::App(expr, arg), _) = inner.as_ref() {
+                        inner = expr;
+                        args.push(arg);
+                    }
+                    inner.pretty(buf, &pool, true, lvl)?;
+                    buf.push_str("(");
+                    let is_simple = args.iter().all(|arg| arg.is_simple());
+                    if !is_simple {
+                        buf.push_str("\n");
+                        indent(buf, lvl + 1);
+                    }
+                    for (i, arg) in args.iter().rev().enumerate() {
+                        if i != 0 {
+                            if is_simple {
+                                buf.push_str(", ");
+                            } else {
+                                buf.push_str(",\n");
+                                indent(buf, lvl + 1);
+                            }
+                        }
                         if is_simple {
-                            buf.push_str(", ");
+                            arg.pretty(buf, &pool, false, lvl)?;
                         } else {
-                            buf.push_str(",\n");
-                            indent(buf, lvl + 1);
+                            arg.pretty(buf, &pool, false, lvl + 1)?;
                         }
                     }
-                    if is_simple {
-                        arg.pretty(buf, &pool, false, lvl)?;
-                    } else {
-                        arg.pretty(buf, &pool, false, lvl + 1)?;
+                    if !is_simple {
+                        buf.push_str("\n");
+                        indent(buf, lvl);
                     }
+                    buf.push_str(")");
+                    Ok(())
                 }
-                if !is_simple {
-                    buf.push_str("\n");
-                    indent(buf, lvl);
-                }
-                buf.push_str(")");
-                Ok(())
-            }
+                _ => Err(self),
+            },
             ExprEnum::Cnd {
                 value,
                 pattern,
@@ -504,7 +566,7 @@ impl std::fmt::Display for _Expr {
 impl Expr {
     pub fn eval(self) -> Result<String, String> {
         let empty = Arc::new(Env::Empty);
-        let null_id = Id(0);
+        let builtin_id = Id(u32::MAX);
         // let = (_, x, f) => f(x)
         // desugared: (=> (=> (=> 0(1))))
         let builtin_let = _Value::Fn(
@@ -512,23 +574,23 @@ impl Expr {
                 ExprEnum::Abs(Box::new(_Expr(
                     ExprEnum::Abs(Box::new(_Expr(
                         ExprEnum::App(
-                            Box::new(_Expr(ExprEnum::Var(0), null_id)),
-                            Box::new(_Expr(ExprEnum::Var(1), null_id)),
+                            Box::new(_Expr(ExprEnum::Var(0), builtin_id)),
+                            Box::new(_Expr(ExprEnum::Var(1), builtin_id)),
                         ),
-                        null_id,
+                        builtin_id,
                     ))),
-                    null_id,
+                    builtin_id,
                 ))),
-                null_id,
+                builtin_id,
             ),
             Arc::clone(&empty),
-            null_id,
+            builtin_id,
         );
         let env = empty.push(builtin_let);
         match self.0.eval(&env) {
             Ok(v) => _Expr::from(v)
                 .sugar(&self.1)
-                .map_err(|id| format!("Could not print node with id {id}")),
+                .map_err(|node| format!("Could not print node with id {}: {node}", node.1)),
             Err(expr) => Err(format!("Could not eval {expr}")),
         }
     }
@@ -549,10 +611,7 @@ impl From<_Value> for _Expr {
             _Value::Tag(t, values, id) => {
                 let mut expr = _Expr(ExprEnum::Tag(t), id);
                 for v in values {
-                    expr = _Expr(
-                        ExprEnum::App(Box::new(expr), Box::new(_Expr::from(v))),
-                        Id::internal(),
-                    )
+                    expr = _Expr(ExprEnum::App(Box::new(expr), Box::new(_Expr::from(v))), id)
                 }
                 expr
             }
@@ -560,23 +619,23 @@ impl From<_Value> for _Expr {
     }
 }
 
-impl std::fmt::Display for _Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            _Value::Fn(body, _, _) => body.fmt(f),
-            _Value::Rec(body, _, _) => body.fmt(f),
-            _Value::Tag(t, values, id) => {
-                _Expr(ExprEnum::Tag(*t), *id).fmt(f)?;
-                for arg in values {
-                    f.write_str("(")?;
-                    arg.fmt(f)?;
-                    f.write_str(")")?;
-                }
-                Ok(())
-            }
-        }
-    }
-}
+// impl std::fmt::Display for _Value {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             _Value::Fn(body, _, _) => body.fmt(f),
+//             _Value::Rec(body, _, _) => body.fmt(f),
+//             _Value::Tag(t, values, id) => {
+//                 _Expr(ExprEnum::Tag(*t), *id).fmt(f)?;
+//                 for arg in values {
+//                     f.write_str("(")?;
+//                     arg.fmt(f)?;
+//                     f.write_str(")")?;
+//                 }
+//                 Ok(())
+//             }
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone)]
 pub enum Env<T> {
@@ -617,13 +676,13 @@ impl _Expr {
                 let mut f = f.eval(env)?;
                 loop {
                     match f {
-                        _Value::Rec(body, env, meta) => {
-                            let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), meta));
+                        _Value::Rec(body, env, id) => {
+                            let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), id));
                             f = body.eval(&env)?;
                         }
-                        _Value::Tag(t, mut values, meta) => {
+                        _Value::Tag(t, mut values, id) => {
                             values.push(arg.eval(env)?);
-                            break Ok(_Value::Tag(t, values, meta));
+                            break Ok(_Value::Tag(t, values, id));
                         }
                         _Value::Fn(body, fn_env, _) => {
                             break body.eval(&fn_env.push(arg.eval(env)?));
@@ -640,8 +699,8 @@ impl _Expr {
                 let mut value = value.eval(env)?;
                 loop {
                     match value {
-                        _Value::Rec(body, env, meta) => {
-                            let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), meta));
+                        _Value::Rec(body, env, id) => {
+                            let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), id));
                             value = body.eval(&env)?;
                         }
                         _Value::Tag(t, values, _) if t == tag && values.len() == vars => {
@@ -664,36 +723,41 @@ mod tests {
         let code = "let('x, Foo, { x })";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.desugared(), "0(_0)(_1)((=> 0))");
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Foo");
+        assert_eq!(parsed.0.to_string(), "0(_0)(_1)((=> 0))");
+        assert_eq!(parsed.eval().unwrap(), "Foo");
+    }
+
+    #[test]
+    fn eval_block() {
+        let code = "{ Foo }";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.0.to_string(), "(=> _0)");
+        assert_eq!(parsed.eval().unwrap(), "{ Foo }");
     }
 
     #[test]
     fn eval_let_in_block() {
-        let code = "{ let('bar, Bar), Foo(bar) }";
+        let code = "let('bar, Bar), Foo(bar)";
         let parsed = parse(code).unwrap();
-        assert_eq!("let('bar, Bar, { Foo(bar) })", parsed.to_string());
-        assert_eq!(parsed.desugared(), "0(_0)(_1)((=> _2(0)))");
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Foo(Bar)");
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.0.to_string(), "0(_0)(_1)((=> _2(0)))");
+        assert_eq!(parsed.eval().unwrap(), "Foo(Bar)");
     }
 
     #[test]
     fn eval_multiple_let_in_block() {
-        let code = "{ let('x, Foo), let('y, Bar), Pair(x, y) }";
+        let code = "let('x, X), let('y, Y), Pair(x, y)";
         let parsed = parse(code).unwrap();
-        assert_eq!(
-            "let('x, Foo, { let('y, Bar, { Pair(x, y) }) })",
-            parsed.to_string()
-        );
-        let evaled = parsed.eval().unwrap();
-        assert_eq!(format!("{evaled}"), "Pair(Foo, Bar)");
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "Pair(X, Y)");
     }
 
-    // #[test]
-    // fn eval_multiple_let_and_side_effect_in_block() {
-    //     let code = "{ let('x, Foo), Nil, let('y, Bar), Pair(x, y) }";
-    //     todo!()
-    // }
+    #[test]
+    fn eval_multiple_let_and_side_effect_in_block() {
+        let code = "let('x, X), Nil, let('y, Y), Pair(x, y)";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "Pair(X, Y)");
+    }
 }
