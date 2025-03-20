@@ -3,7 +3,6 @@ use std::{
     iter::{Peekable, once},
     slice::Iter,
     sync::Arc,
-    u32,
 };
 
 //
@@ -11,18 +10,18 @@ use std::{
 //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Token {
+enum Token<'code> {
     Separator,
     ParenOpen,
     ParenClose,
     BraceOpen,
     BraceClose,
-    Tag(String),
-    Symbol(String),
-    Binding(String),
+    Tag(&'code str),
+    Symbol(&'code str),
+    Binding(&'code str),
 }
 
-impl std::fmt::Display for Token {
+impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Token::Separator => f.write_str(","),
@@ -49,23 +48,26 @@ impl std::fmt::Display for Pos {
 
 fn scan(code: &str) -> Vec<(Token, Pos)> {
     let mut tokens = vec![];
-    let mut curr = String::new();
     let mut col = 1;
     let mut line = 1;
     let mut start = Pos { col, line };
-    for char in code.chars().chain(once(' ')) {
+    let mut i = 0;
+    for (j, char) in code.chars().chain(once(' ')).enumerate() {
         match char {
             ' ' | '\n' | '(' | ')' | '{' | '}' | ',' => {
-                if let Some(first) = curr.chars().next() {
-                    if first.is_uppercase() {
-                        tokens.push((Token::Tag(curr), start));
-                    } else if first == '\'' {
-                        tokens.push((Token::Binding(curr[1..].to_string()), start));
-                    } else {
-                        tokens.push((Token::Symbol(curr), start));
+                if i < j {
+                    let curr = &code[i..j];
+                    if let Some(first) = curr.chars().next() {
+                        if first.is_uppercase() {
+                            tokens.push((Token::Tag(curr), start));
+                        } else if first == '\'' {
+                            tokens.push((Token::Binding(&curr[1..]), start));
+                        } else {
+                            tokens.push((Token::Symbol(curr), start));
+                        }
                     }
-                    curr = String::new();
                 }
+                i = j + 1;
                 match char {
                     '\n' => {
                         col = 0;
@@ -76,18 +78,17 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
                     ')' => tokens.push((Token::ParenClose, Pos { col, line })),
                     '{' => tokens.push((Token::BraceOpen, Pos { col, line })),
                     '}' => tokens.push((Token::BraceClose, Pos { col, line })),
-
                     _ => {}
                 }
                 col += 1;
                 start = Pos { col, line };
             }
-            c => {
+            _ => {
                 col += 1;
-                curr.push(c);
             }
         }
     }
+
     tokens
 }
 
@@ -96,7 +97,7 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
 //
 
 #[derive(Debug, Clone)]
-pub struct Expr(_Expr, Pool);
+pub struct Expr<'code>(_Expr, Pool<'code>);
 
 #[derive(Debug, Clone)]
 struct _Expr(ExprEnum, Id);
@@ -125,9 +126,9 @@ impl std::fmt::Display for Id {
     }
 }
 
-type Tokens<'a> = Peekable<Iter<'a, (Token, Pos)>>;
+type Tokens<'a, 'code> = Peekable<Iter<'a, (Token<'code>, Pos)>>;
 
-pub fn parse(code: &str) -> Result<Expr, String> {
+pub fn parse(code: &str) -> Result<Expr<'_>, String> {
     let tokens = scan(code);
     let mut tokens = tokens.iter().peekable();
     let mut pool = Pool::new();
@@ -142,32 +143,37 @@ pub fn parse(code: &str) -> Result<Expr, String> {
     } else {
         unreachable!("Expected the code to be parsed as a block.");
     };
-    fn parse_expr(
-        tokens: &mut Tokens,
-        pool: &mut Pool,
-        stack: &mut Vec<String>,
-        bindings: &mut Vec<String>,
+
+    fn parse_expr<'code>(
+        tokens: &mut Tokens<'_, 'code>,
+        pool: &mut Pool<'code>,
+        stack: &mut Vec<&'code str>,
+        bindings: &mut Vec<&'code str>,
     ) -> Result<(_Expr, Pos), String> {
         let Some((t, pos)) = tokens.next() else {
             return Err("Expected an expression, but the code just ended".to_string());
         };
-        fn expect(ts: &mut Tokens, msg: &str, exp: Token) -> Result<(), String> {
+        fn expect<'code>(
+            ts: &mut Tokens<'_, 'code>,
+            msg: &str,
+            exp: Token<'code>,
+        ) -> Result<(), String> {
             match ts.next() {
                 Some((t, _)) if t == &exp => Ok(()),
                 Some((t, pos)) => Err(format!("{msg}, expected '{exp}', found '{t}' at {pos}")),
-                None => return Err(format!("{msg}, but the code just ended")),
+                None => Err(format!("{msg}, but the code just ended")),
             }
         }
         let mut pos = *pos;
         let mut expr = match t {
             Token::Tag(t) => _Expr(
                 ExprEnum::Tag(pool.intern_tag(t)),
-                pool.register(pos, Parsed::Tag(t.clone())),
+                pool.register(pos, Parsed::Tag(t)),
             ),
             Token::Symbol(s) => {
                 if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| s == *var) {
-                    _Expr(ExprEnum::Var(i), pool.register(pos, Parsed::Var(s.clone())))
-                } else if s == "let" {
+                    _Expr(ExprEnum::Var(i), pool.register(pos, Parsed::Var(s)))
+                } else if *s == "let" {
                     // let('binding, arg, { f })
                     let msg = "The built-in 'let' function must be called correctly";
                     expect(tokens, msg, Token::ParenOpen)?;
@@ -178,7 +184,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                         }
                         None => return Err(format!("{msg}, but the code just ended")),
                     };
-                    bindings.push(binding.clone());
+                    bindings.push(binding);
                     expect(tokens, msg, Token::Separator)?;
                     let (value, _) = parse_expr(tokens, pool, stack, bindings)?;
                     match tokens.next() {
@@ -193,7 +199,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                                 ),
                                 pool.register(pos, Parsed::AppHiddenFun),
                             ))),
-                            pool.register(pos, Parsed::PrimitiveLet(binding.clone())),
+                            pool.register(pos, Parsed::PrimitiveLet(binding)),
                         ),
                         Some((Token::Separator, _)) => {
                             expect(tokens, msg, Token::BraceOpen)?;
@@ -202,7 +208,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                             expect(tokens, msg, Token::ParenClose)?;
                             _Expr(
                                 ExprEnum::App(Box::new(f), Box::new(value)),
-                                pool.register(pos, Parsed::PrimitiveLet(binding.clone())),
+                                pool.register(pos, Parsed::PrimitiveLet(binding)),
                             )
                         }
                         Some((t, pos)) => {
@@ -212,7 +218,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                         }
                         None => return Err(format!("{msg}, but the code just ended")),
                     }
-                } else if s == "rec" {
+                } else if *s == "rec" {
                     // rec('binding, { arg })
                     let msg = "The built-in 'rec' function must be called correctly";
                     expect(tokens, msg, Token::ParenOpen)?;
@@ -223,7 +229,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                         }
                         None => return Err(format!("{msg}, but the code just ended")),
                     };
-                    bindings.push(binding.clone());
+                    bindings.push(binding);
                     expect(tokens, msg, Token::Separator)?;
                     expect(tokens, msg, Token::BraceOpen)?;
                     let body = parse_block(tokens, pool, stack, bindings)?;
@@ -231,9 +237,9 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                     expect(tokens, msg, Token::ParenClose)?;
                     _Expr(
                         ExprEnum::Rec(Box::new(body)),
-                        pool.register(pos, Parsed::PrimitiveRec(binding.clone())),
+                        pool.register(pos, Parsed::PrimitiveRec(binding)),
                     )
-                } else if s == "if" {
+                } else if *s == "if" {
                     // if(v, Tag, { then }, { else })
                     let msg = "The built-in 'if' function must be called correctly";
                     expect(tokens, msg, Token::ParenOpen)?;
@@ -264,7 +270,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                                     "All variables in a pattern must be unique, but '{binding} is used twice at {pos}"
                                 ));
                             }
-                            pattern_vars.push(binding.clone());
+                            pattern_vars.push(*binding);
                             match tokens.next() {
                                 Some((Token::ParenClose, _)) => {
                                     expect(tokens, msg, Token::Separator)?;
@@ -286,7 +292,7 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                     }
                     expect(tokens, msg, Token::BraceOpen)?;
                     let vars = pattern_vars.len();
-                    bindings.extend(pattern_vars.clone());
+                    bindings.extend(pattern_vars.iter());
                     let mut then_expr = parse_block(tokens, pool, stack, bindings)?;
                     for _ in 0..vars {
                         bindings.pop();
@@ -336,17 +342,17 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                             then_expr: Box::new(then_expr),
                             else_expr: Box::new(else_expr),
                         },
-                        pool.register(pos, Parsed::PrimitiveIf(tag.clone(), pattern_vars)),
+                        pool.register(pos, Parsed::PrimitiveIf(tag, pattern_vars)),
                     )
                 } else {
                     return Err(format!("Could not find binding for '{s}' at {pos}"));
                 }
             }
             Token::Binding(b) => {
-                bindings.push(b.clone());
+                bindings.push(b);
                 _Expr(
                     ExprEnum::Tag(pool.intern_binding(b)),
-                    pool.register(pos, Parsed::Binding(b.clone())),
+                    pool.register(pos, Parsed::Binding(b)),
                 )
             }
             Token::BraceOpen => {
@@ -386,9 +392,9 @@ pub fn parse(code: &str) -> Result<Expr, String> {
                                 ));
                             }
                             None => {
-                                return Err(format!(
-                                    "Expected ',' or ')', but the code just ended"
-                                ));
+                                return Err(
+                                    "Expected ',' or ')', but the code just ended".to_string()
+                                );
                             }
                         }
                     }
@@ -397,20 +403,21 @@ pub fn parse(code: &str) -> Result<Expr, String> {
             }
         }
     }
-    fn parse_block(
-        tokens: &mut Tokens,
-        pool: &mut Pool,
-        stack: &mut Vec<String>,
-        bindings: &mut Vec<String>,
+
+    fn parse_block<'code>(
+        tokens: &mut Tokens<'_, 'code>,
+        pool: &mut Pool<'code>,
+        stack: &mut Vec<&'code str>,
+        bindings: &mut Vec<&'code str>,
     ) -> Result<_Expr, String> {
         let mut exprs = vec![];
         loop {
             let mut args = bindings.len();
             if args == 0 {
                 args += 1;
-                stack.push("".to_string());
+                stack.push("");
             } else {
-                stack.extend(bindings.drain(..));
+                stack.append(bindings);
             }
             let (block, pos) = parse_expr(tokens, pool, stack, bindings)?;
             exprs.push((args, block, bindings.len()));
@@ -467,33 +474,33 @@ pub fn parse(code: &str) -> Result<Expr, String> {
 }
 
 #[derive(Debug, Clone)]
-struct Pool {
-    tags: HashMap<String, usize>,
-    bindings: HashMap<String, usize>,
-    nodes: HashMap<Id, (Pos, Parsed)>,
+struct Pool<'code> {
+    tags: HashMap<&'code str, usize>,
+    bindings: HashMap<&'code str, usize>,
+    nodes: HashMap<Id, (Pos, Parsed<'code>)>,
 }
 
 #[derive(Debug, Clone)]
-enum Parsed {
-    Var(String),
-    Tag(String),
-    Binding(String),
+enum Parsed<'code> {
+    Var(&'code str),
+    Tag(&'code str),
+    Binding(&'code str),
     Block,
     App,
     Hidden,
     BindingAppInBlock,
     ValueAppInBlock,
-    PrimitiveLet(String),
-    PrimitiveIf(String, Vec<String>),
+    PrimitiveLet(&'code str),
+    PrimitiveIf(&'code str, Vec<&'code str>),
     AppHiddenArg,
     AppHiddenFun,
-    PrimitiveRec(String),
+    PrimitiveRec(&'code str),
 }
 
-impl Pool {
+impl<'code> Pool<'code> {
     fn new() -> Self {
         Self {
-            tags: HashMap::from_iter(vec![("Nil".to_string(), 0)]),
+            tags: HashMap::from_iter(vec![("Nil", 0)]),
             bindings: HashMap::new(),
             nodes: HashMap::new(),
         }
@@ -507,29 +514,29 @@ impl Pool {
         self.tags.len() + self.bindings.len()
     }
 
-    fn intern_tag(&mut self, s: &String) -> usize {
+    fn intern_tag(&mut self, s: &'code str) -> usize {
         self.tags.get(s).copied().unwrap_or_else(|| {
             let id = self.next_interned();
-            self.tags.insert(s.clone(), id);
+            self.tags.insert(s, id);
             id
         })
     }
 
-    fn intern_binding(&mut self, s: &String) -> usize {
+    fn intern_binding(&mut self, s: &'code str) -> usize {
         self.bindings.get(s).copied().unwrap_or_else(|| {
             let id = self.next_interned();
-            self.bindings.insert(s.clone(), id);
+            self.bindings.insert(s, id);
             id
         })
     }
 
-    fn register(&mut self, pos: Pos, info: Parsed) -> Id {
+    fn register(&mut self, pos: Pos, info: Parsed<'code>) -> Id {
         let id = Id(self.nodes.len() as u32 + 1);
         self.nodes.insert(id, (pos, info));
         id
     }
 
-    fn resolve(&self, id: Id) -> Result<&Parsed, Id> {
+    fn resolve(&self, id: Id) -> Result<&Parsed<'code>, Id> {
         self.nodes.get(&id).map(|(_, info)| info).ok_or(id)
     }
 }
@@ -538,7 +545,7 @@ impl Pool {
 // PRINT
 //
 
-impl std::fmt::Display for Expr {
+impl std::fmt::Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.sugared() {
             Ok(s) => f.write_str(&s),
@@ -547,13 +554,13 @@ impl std::fmt::Display for Expr {
     }
 }
 
-impl Expr {
+impl Expr<'_> {
     fn sugared(&self) -> Result<String, &_Expr> {
         self.0.sugar(&self.1)
     }
 }
 
-impl _Expr {
+impl<'code> _Expr {
     fn is_simple(&self) -> bool {
         match &self.0 {
             ExprEnum::Var(_) | ExprEnum::Tag(_) => true,
@@ -563,13 +570,19 @@ impl _Expr {
         }
     }
 
-    fn sugar(&self, pool: &Pool) -> Result<String, &_Expr> {
+    fn sugar(&self, pool: &Pool<'code>) -> Result<String, &_Expr> {
         let mut buf = String::new();
-        self.pretty(&mut buf, &pool, false, 0)?;
+        self.pretty(&mut buf, pool, false, 0)?;
         Ok(buf)
     }
 
-    fn pretty(&self, buf: &mut String, pool: &Pool, wrap: bool, lvl: usize) -> Result<(), &_Expr> {
+    fn pretty(
+        &self,
+        buf: &mut String,
+        pool: &Pool<'code>,
+        _wrap: bool,
+        lvl: usize,
+    ) -> Result<(), &_Expr> {
         fn indent(s: &mut String, lvl: usize) {
             for _ in 0..lvl {
                 s.push_str("  ");
@@ -603,17 +616,17 @@ impl _Expr {
                     buf.push_str("let('");
                     buf.push_str(binding);
                     buf.push_str(", ");
-                    body.pretty(buf, pool, wrap, lvl)?;
-                    buf.push_str(")");
+                    body.pretty(buf, pool, _wrap, lvl)?;
+                    buf.push(')');
                     Ok(())
                 }
                 Parsed::Block => {
                     buf.push_str("{ ");
-                    body.pretty(buf, pool, wrap, lvl)?;
+                    body.pretty(buf, pool, _wrap, lvl)?;
                     buf.push_str(" }");
                     Ok(())
                 }
-                Parsed::Hidden => body.pretty(buf, pool, wrap, lvl),
+                Parsed::Hidden => body.pretty(buf, pool, _wrap, lvl),
                 _ => Err(self),
             },
             ExprEnum::Rec(body) => match info {
@@ -621,8 +634,8 @@ impl _Expr {
                     buf.push_str("rec('");
                     buf.push_str(binding);
                     buf.push_str(", ");
-                    body.pretty(buf, pool, wrap, lvl)?;
-                    buf.push_str(")");
+                    body.pretty(buf, pool, _wrap, lvl)?;
+                    buf.push(')');
                     Ok(())
                 }
                 _ => Err(self),
@@ -632,24 +645,24 @@ impl _Expr {
                     buf.push_str("let('");
                     buf.push_str(binding);
                     buf.push_str(", ");
-                    arg.pretty(buf, pool, wrap, lvl)?;
+                    arg.pretty(buf, pool, _wrap, lvl)?;
                     buf.push_str(", ");
-                    f.pretty(buf, pool, wrap, lvl)?;
-                    buf.push_str(")");
+                    f.pretty(buf, pool, _wrap, lvl)?;
+                    buf.push(')');
                     Ok(())
                 }
                 Parsed::BindingAppInBlock => {
-                    f.pretty(buf, pool, wrap, lvl)?;
+                    f.pretty(buf, pool, _wrap, lvl)?;
                     buf.push_str(", ");
-                    arg.pretty(buf, pool, wrap, lvl)
+                    arg.pretty(buf, pool, _wrap, lvl)
                 }
                 Parsed::ValueAppInBlock => {
-                    arg.pretty(buf, pool, wrap, lvl)?;
+                    arg.pretty(buf, pool, _wrap, lvl)?;
                     buf.push_str(", ");
-                    f.pretty(buf, pool, wrap, lvl)
+                    f.pretty(buf, pool, _wrap, lvl)
                 }
-                Parsed::AppHiddenArg => f.pretty(buf, pool, wrap, lvl),
-                Parsed::AppHiddenFun => arg.pretty(buf, pool, wrap, lvl),
+                Parsed::AppHiddenArg => f.pretty(buf, pool, _wrap, lvl),
+                Parsed::AppHiddenFun => arg.pretty(buf, pool, _wrap, lvl),
                 Parsed::App | Parsed::Tag(_) => {
                     let mut args = vec![arg];
                     let mut inner = f;
@@ -657,11 +670,11 @@ impl _Expr {
                         inner = expr;
                         args.push(arg);
                     }
-                    inner.pretty(buf, &pool, true, lvl)?;
-                    buf.push_str("(");
+                    inner.pretty(buf, pool, true, lvl)?;
+                    buf.push('(');
                     let is_simple = args.iter().all(|arg| arg.is_simple());
                     if !is_simple {
-                        buf.push_str("\n");
+                        buf.push('\n');
                         indent(buf, lvl + 1);
                     }
                     for (i, arg) in args.iter().rev().enumerate() {
@@ -674,16 +687,16 @@ impl _Expr {
                             }
                         }
                         if is_simple {
-                            arg.pretty(buf, &pool, false, lvl)?;
+                            arg.pretty(buf, pool, false, lvl)?;
                         } else {
-                            arg.pretty(buf, &pool, false, lvl + 1)?;
+                            arg.pretty(buf, pool, false, lvl + 1)?;
                         }
                     }
                     if !is_simple {
-                        buf.push_str("\n");
+                        buf.push('\n');
                         indent(buf, lvl);
                     }
-                    buf.push_str(")");
+                    buf.push(')');
                     Ok(())
                 }
                 _ => Err(self),
@@ -700,21 +713,21 @@ impl _Expr {
                     buf.push_str(", ");
                     buf.push_str(tag);
                     if !vars.is_empty() {
-                        buf.push_str("(");
+                        buf.push('(');
                         for (i, var) in vars.iter().enumerate() {
                             if i != 0 {
                                 buf.push_str(", ")
                             }
-                            buf.push_str("'");
+                            buf.push('\'');
                             buf.push_str(var);
                         }
-                        buf.push_str(")");
+                        buf.push(')');
                     }
                     buf.push_str(", ");
                     then_expr.pretty(buf, pool, false, lvl)?;
                     buf.push_str(", ");
                     else_expr.pretty(buf, pool, false, lvl)?;
-                    buf.push_str(")");
+                    buf.push(')');
                     Ok(())
                 }
                 _ => Err(self),
@@ -766,7 +779,7 @@ impl std::fmt::Display for _Expr {
 // EVAL
 //
 
-impl Expr {
+impl Expr<'_> {
     pub fn eval(self) -> Result<String, String> {
         match self.0.eval(&Arc::new(Env::Empty)) {
             Ok(v) => _Expr::from(v)
@@ -831,7 +844,7 @@ impl<T> Env<T> {
 impl _Expr {
     fn eval(self, env: &Arc<Env<_Value>>) -> Result<_Value, _Expr> {
         match self.0 {
-            ExprEnum::Var(var) => env.get(var).cloned().ok_or_else(|| self),
+            ExprEnum::Var(var) => env.get(var).cloned().ok_or(self),
             ExprEnum::Tag(t) => Ok(_Value::Tag(t, vec![], self.1)),
             ExprEnum::Abs(body) => Ok(_Value::Fn(*body, Arc::clone(env), self.1)),
             ExprEnum::Rec(body) => Ok(_Value::Rec(*body, Arc::clone(env), self.1)),
