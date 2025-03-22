@@ -19,6 +19,7 @@ enum Token<'code> {
     Tag(&'code str),
     Symbol(&'code str),
     Binding(&'code str),
+    Reserved(&'code str),
 }
 
 impl std::fmt::Display for Token<'_> {
@@ -29,7 +30,9 @@ impl std::fmt::Display for Token<'_> {
             Token::ParenClose => f.write_str(")"),
             Token::BraceOpen => f.write_str("{"),
             Token::BraceClose => f.write_str("}"),
-            Token::Tag(s) | Token::Symbol(s) | Token::Binding(s) => write!(f, "{s}"),
+            Token::Tag(s) | Token::Symbol(s) => write!(f, "{s}"),
+            Token::Binding(s) => write!(f, "'{s}"),
+            Token::Reserved(s) => write!(f, "\\{s}"),
         }
     }
 }
@@ -62,6 +65,8 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
                             tokens.push((Token::Tag(curr), start));
                         } else if first == '\'' {
                             tokens.push((Token::Binding(&curr[1..]), start));
+                        } else if first == '\\' {
+                            tokens.push((Token::Reserved(&curr[1..]), start));
                         } else {
                             tokens.push((Token::Symbol(curr), start));
                         }
@@ -204,7 +209,7 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
             }
         }
         let pos = *pos;
-        let expr = match t {
+        let mut expr = match t {
             Token::Tag(t) => Ast(AstEnum::Tag(t), pos),
             Token::Binding(b) => {
                 bindings.push(b);
@@ -285,14 +290,20 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
                     expect(tokens, msg, Token::BraceClose)?;
                     expect(tokens, msg, Token::ParenClose)?;
                     Ast(AstEnum::BuiltInRec(var, Box::new(body)), pos)
-                } else if *s == "if" {
+                } else {
                     // if(val, Tag('x, 'y, ...), { then }, { else })
                     let msg = "The built-in 'if' must be called as if(val, Tag('x, 'y, ...), { then }, { else })";
                     expect(tokens, msg, Token::ParenOpen)?;
                     let val = parse_expr(tokens, stack, bindings)?;
                     expect(tokens, msg, Token::Separator)?;
-                    let tag = match tokens.next() {
-                        Some((Token::Tag(t), _)) => t,
+                    let (is_core_tag, tag) = match tokens.next() {
+                        Some((Token::Tag(t), _)) => (false, t),
+                        Some((Token::Reserved(t), _)) => match *t {
+                            Pool::T_APP | Pool::T_TAG | Pool::T_SYM | Pool::T_VAL | Pool::T_NIL => {
+                                (true, t)
+                            }
+                            _ => return Err(format!("Unknown reserved tag {t} at {pos}")),
+                        },
                         Some((t, pos)) => {
                             return Err(format!("{msg}, expected a tag, found '{t}' at {pos}"));
                         }
@@ -352,55 +363,9 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
                     Ast(
                         AstEnum::BuiltInIf {
                             val: Box::new(val),
-                            is_core_tag: false,
+                            is_core_tag,
                             tag,
                             vars,
-                            then_expr: Box::new(then_expr),
-                            else_expr: Box::new(else_expr),
-                        },
-                        pos,
-                    )
-                } else {
-                    let tag = match *s {
-                        "if-app" => Pool::T_APP,
-                        "if-tag" => Pool::T_TAG,
-                        "if-sym" => Pool::T_SYM,
-                        "if-val" => Pool::T_VAL,
-                        "if-nil" => Pool::T_NIL,
-                        _ => return Err(format!("Could not find binding for '{s}' at {pos}")),
-                    };
-                    // if-val(val, 'var, { then }, { else })
-                    let msg = &format!(
-                        "The built-in '{s}' must be called as {s}(val, 'var, {{ then }}, {{ else }})"
-                    );
-                    expect(tokens, msg, Token::ParenOpen)?;
-                    let val = parse_expr(tokens, stack, bindings)?;
-                    expect(tokens, msg, Token::Separator)?;
-                    let var = match tokens.next() {
-                        Some((Token::Binding(b), _)) => b,
-                        Some((t, pos)) => {
-                            return Err(format!("{msg}, expected a tag, found '{t}' at {pos}"));
-                        }
-                        None => return Err(format!("{msg}, but the code just ended")),
-                    };
-                    expect(tokens, msg, Token::Separator)?;
-                    let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                    stack.push(var);
-                    bindings.push(var);
-                    let then_expr = parse_block(block_pos, tokens, stack, bindings)?;
-                    stack.pop();
-                    expect(tokens, msg, Token::BraceClose)?;
-                    expect(tokens, msg, Token::Separator)?;
-                    let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                    let else_expr = parse_block(block_pos, tokens, stack, bindings)?;
-                    expect(tokens, msg, Token::BraceClose)?;
-                    expect(tokens, msg, Token::ParenClose)?;
-                    Ast(
-                        AstEnum::BuiltInIf {
-                            val: Box::new(val),
-                            is_core_tag: true,
-                            tag,
-                            vars: vec![var],
                             then_expr: Box::new(then_expr),
                             else_expr: Box::new(else_expr),
                         },
@@ -410,30 +375,36 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
             }
             t => return Err(format!("Unexpected token '{t}' at {pos}")),
         };
-        match tokens.peek() {
-            Some((Token::ParenOpen, _)) => {
-                tokens.next();
-                let mut args = vec![];
-                loop {
-                    args.push(parse_expr(tokens, stack, bindings)?);
-                    match tokens.peek() {
-                        Some((Token::ParenClose, _)) => {
-                            tokens.next();
-                            return Ok(Ast(AstEnum::Call(Box::new(expr), args), pos));
-                        }
-                        Some((Token::Separator, _)) => {
-                            tokens.next();
-                        }
-                        Some((t, pos)) => {
-                            return Err(format!("Expected ',' or ')', but found '{t}' at {pos}"));
-                        }
-                        None => {
-                            return Err("Expected ',' or ')', but the code just ended".to_string());
+        loop {
+            match tokens.peek() {
+                Some((Token::ParenOpen, _)) => {
+                    tokens.next();
+                    let mut args = vec![];
+                    expr = loop {
+                        args.push(parse_expr(tokens, stack, bindings)?);
+                        match tokens.peek() {
+                            Some((Token::ParenClose, _)) => {
+                                tokens.next();
+                                break Ast(AstEnum::Call(Box::new(expr), args), pos);
+                            }
+                            Some((Token::Separator, _)) => {
+                                tokens.next();
+                            }
+                            Some((t, pos)) => {
+                                return Err(format!(
+                                    "Expected ',' or ')', but found '{t}' at {pos}"
+                                ));
+                            }
+                            None => {
+                                return Err(
+                                    "Expected ',' or ')', but the code just ended".to_string()
+                                );
+                            }
                         }
                     }
                 }
+                _ => return Ok(expr),
             }
-            _ => return Ok(expr),
         }
     }
 }
@@ -1080,6 +1051,17 @@ mod tests {
     }
 
     #[test]
+    fn eval_std_lib() {
+        let code = "
+let('fn, { fn('var, { fn('body, { body }) }) }),
+fn('x, {x})(Foo)
+";
+        let parsed = parse(code).unwrap();
+        //assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "Foo");
+    }
+
+    #[test]
     fn eval_custom_let() {
         let code = "
 fn('let, {
@@ -1089,13 +1071,13 @@ fn('let, {
         fn('var, {
             fn('val, {
                 fn('body, {
-                    if-sym(var, 'var, { body(unwrap(val)) }, { ExpectedBinding(var) })
+                    if(var, \\sym('var), { body(unwrap(val)) }, { ExpectedBinding(var) })
                 })
             })
         })
     })(
         fn('x, {
-            if-tag(x, 't, { t }, {
+            if(x, \\tag('t), { t }, {
                 Error
             })
         })
