@@ -1,0 +1,12 @@
+let('if-bind, fn('v, {
+    fn('then, {
+        fn('else, {
+            if-app(v, 'tag, '_, {
+                if-bind(tag, { then(Nil) }, { else(Nil) })
+            }, {
+                else(Nil)
+            })
+        })
+    })
+})),
+if-bind('x, { Foo }, { Bar })

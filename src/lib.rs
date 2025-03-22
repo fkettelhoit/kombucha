@@ -115,16 +115,26 @@ enum AstEnum<'code> {
         Vec<(usize, Ast<'code>, usize)>,
     ),
     BuiltInFn(&'code str, Box<Ast<'code>>),
-    BuiltInLet(&'code str, Box<Ast<'code>>, Box<Ast<'code>>),
     BuiltInRec(&'code str, Box<Ast<'code>>),
-    BuiltInIf {
-        val: Box<Ast<'code>>,
-        is_core_tag: bool,
-        tag: &'code str,
-        vars: Vec<&'code str>,
+    BuiltInIfApp {
+        v: Box<Ast<'code>>,
+        vars: (&'code str, &'code str),
         then_expr: Box<Ast<'code>>,
         else_expr: Box<Ast<'code>>,
     },
+    BuiltInIfTagEq {
+        a: Box<Ast<'code>>,
+        b: Box<Ast<'code>>,
+        then_expr: Box<Ast<'code>>,
+        else_expr: Box<Ast<'code>>,
+    },
+    BuiltInIfTagEqType {
+        v: Box<Ast<'code>>,
+        tag: &'code str,
+        then_expr: Box<Ast<'code>>,
+        else_expr: Box<Ast<'code>>,
+    },
+    BuiltInLet(&'code str, Box<Ast<'code>>, Box<Ast<'code>>),
     BuiltInLet2(&'code str, Box<Ast<'code>>),
 }
 
@@ -197,14 +207,20 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
         let Some((t, pos)) = tokens.next() else {
             return Err("Expected an expression, but the code just ended".to_string());
         };
-        fn expect<'code>(
-            tokens: &mut Tokens<'_, 'code>,
+        fn expect(toks: &mut Tokens<'_, '_>, msg: &str, t: Token<'_>) -> Result<Pos, String> {
+            match toks.next() {
+                Some((tok, pos)) if tok == &t => Ok(*pos),
+                Some((tok, pos)) => Err(format!("{msg}, expected '{t}', found '{tok}' at {pos}")),
+                None => Err(format!("{msg}, but the code just ended")),
+            }
+        }
+        fn expect_binding<'code>(
+            toks: &mut Tokens<'_, 'code>,
             msg: &str,
-            exp: Token<'code>,
-        ) -> Result<Pos, String> {
-            match tokens.next() {
-                Some((t, pos)) if t == &exp => Ok(*pos),
-                Some((t, pos)) => Err(format!("{msg}, expected '{exp}', found '{t}' at {pos}")),
+        ) -> Result<(&'code str, Pos), String> {
+            match toks.next() {
+                Some((Token::Binding(b), pos)) => Ok((b, *pos)),
+                Some((tok, pos)) => Err(format!("{msg}, expected binding, found '{tok}' at {pos}")),
                 None => Err(format!("{msg}, but the code just ended")),
             }
         }
@@ -233,17 +249,10 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
                     // fn('var, { body })
                     let msg = "The built-in 'fn' must be called as fn('var, { body })";
                     expect(tokens, msg, Token::ParenOpen)?;
-                    let var = match tokens.next() {
-                        Some((Token::Binding(b), _)) => b,
-                        Some((t, pos)) => {
-                            return Err(format!("{msg}, expected a binding, found '{t}' at {pos}"));
-                        }
-                        None => return Err(format!("{msg}, but the code just ended")),
-                    };
-                    bindings.push(var);
+                    let (var, _) = expect_binding(tokens, msg)?;
                     expect(tokens, msg, Token::Separator)?;
                     let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                    let body = parse_block(block_pos, tokens, stack, bindings)?;
+                    let body = parse_block(block_pos, tokens, stack, &mut vec![var])?;
                     expect(tokens, msg, Token::BraceClose)?;
                     expect(tokens, msg, Token::ParenClose)?;
                     Ast(AstEnum::BuiltInFn(var, Box::new(body)), pos)
@@ -251,23 +260,17 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
                     // let('var, val, { body })
                     let msg = "The built-in 'let' must be called as let('var, val, { body })";
                     expect(tokens, msg, Token::ParenOpen)?;
-                    let var = match tokens.next() {
-                        Some((Token::Binding(b), _)) => b,
-                        Some((t, pos)) => {
-                            return Err(format!("{msg}, expected a binding, found '{t}' at {pos}"));
-                        }
-                        None => return Err(format!("{msg}, but the code just ended")),
-                    };
-                    bindings.push(var);
+                    let (var, _) = expect_binding(tokens, msg)?;
                     expect(tokens, msg, Token::Separator)?;
                     let val = parse_expr(tokens, stack, bindings)?;
                     if let Some((Token::ParenClose, _)) = tokens.peek() {
                         tokens.next();
+                        bindings.push(var);
                         Ast(AstEnum::BuiltInLet2(var, Box::new(val)), pos)
                     } else {
                         expect(tokens, msg, Token::Separator)?;
                         let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                        let body = parse_block(block_pos, tokens, stack, bindings)?;
+                        let body = parse_block(block_pos, tokens, stack, &mut vec![var])?;
                         expect(tokens, msg, Token::BraceClose)?;
                         expect(tokens, msg, Token::ParenClose)?;
                         Ast(AstEnum::BuiltInLet(var, Box::new(val), Box::new(body)), pos)
@@ -276,13 +279,7 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
                     // rec('var, { body })
                     let msg = "The built-in 'rec' must be called as rec('var, { body })";
                     expect(tokens, msg, Token::ParenOpen)?;
-                    let var = match tokens.next() {
-                        Some((Token::Binding(b), _)) => b,
-                        Some((t, pos)) => {
-                            return Err(format!("{msg}, expected a binding, found '{t}' at {pos}"));
-                        }
-                        None => return Err(format!("{msg}, but the code just ended")),
-                    };
+                    let (var, _) = expect_binding(tokens, msg)?;
                     bindings.push(var);
                     expect(tokens, msg, Token::Separator)?;
                     let block_pos = expect(tokens, msg, Token::BraceOpen)?;
@@ -290,70 +287,43 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
                     expect(tokens, msg, Token::BraceClose)?;
                     expect(tokens, msg, Token::ParenClose)?;
                     Ast(AstEnum::BuiltInRec(var, Box::new(body)), pos)
-                } else {
-                    // if(val, Tag('x, 'y, ...), { then }, { else })
-                    let msg = "The built-in 'if' must be called as if(val, Tag('x, 'y, ...), { then }, { else })";
+                } else if *s == "if-app" {
+                    // if-app(val, 'xs, 'x, { then }, { else })
+                    let msg = "The built-in 'if-app' must be called as if-app(val, 'xs, 'x, { then }, { else })";
                     expect(tokens, msg, Token::ParenOpen)?;
                     let val = parse_expr(tokens, stack, bindings)?;
                     expect(tokens, msg, Token::Separator)?;
-                    let (is_core_tag, tag) = match tokens.next() {
-                        Some((Token::Tag(t), _)) => (false, t),
-                        Some((Token::Reserved(t), _)) => match *t {
-                            Pool::T_APP | Pool::T_TAG | Pool::T_SYM | Pool::T_VAL | Pool::T_NIL => {
-                                (true, t)
-                            }
-                            _ => return Err(format!("Unknown reserved tag {t} at {pos}")),
-                        },
-                        Some((t, pos)) => {
-                            return Err(format!("{msg}, expected a tag, found '{t}' at {pos}"));
-                        }
-                        None => return Err(format!("{msg}, but the code just ended")),
-                    };
-                    let mut vars = vec![];
-                    match tokens.next() {
-                        Some((Token::Separator, _)) => {}
-                        Some((Token::ParenOpen, _)) => loop {
-                            let var = match tokens.next() {
-                                Some((Token::Binding(b), _)) => b,
-                                Some((t, pos)) => {
-                                    return Err(format!(
-                                        "{msg}, expected a binding, found '{t}' at {pos}"
-                                    ));
-                                }
-                                None => return Err(format!("{msg}, but the code just ended")),
-                            };
-                            if vars.contains(var) {
-                                return Err(format!(
-                                    "All variables in a pattern must be unique, but '{var} is used again at {pos}"
-                                ));
-                            }
-                            vars.push(*var);
-                            match tokens.next() {
-                                Some((Token::ParenClose, _)) => {
-                                    expect(tokens, msg, Token::Separator)?;
-                                    break;
-                                }
-                                Some((Token::Separator, _)) => {}
-                                Some((t, pos)) => {
-                                    return Err(format!(
-                                        "{msg}, expected ',' or ')', found '{t}' at {pos}"
-                                    ));
-                                }
-                                None => return Err(format!("{msg}, but the code just ended")),
-                            }
-                        },
-                        Some((t, pos)) => {
-                            return Err(format!("{msg}, expected a tag, found '{t}' at {pos}"));
-                        }
-                        None => return Err(format!("{msg}, but the code just ended")),
-                    }
+                    let (xs, _) = expect_binding(tokens, msg)?;
+                    expect(tokens, msg, Token::Separator)?;
+                    let (x, _) = expect_binding(tokens, msg)?;
+                    expect(tokens, msg, Token::Separator)?;
                     let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                    stack.extend(vars.iter());
-                    bindings.extend(vars.iter());
+                    let then_expr = parse_block(block_pos, tokens, stack, &mut vec![xs, x])?;
+                    expect(tokens, msg, Token::BraceClose)?;
+                    expect(tokens, msg, Token::Separator)?;
+                    let block_pos = expect(tokens, msg, Token::BraceOpen)?;
+                    let else_expr = parse_block(block_pos, tokens, stack, &mut vec![])?;
+                    expect(tokens, msg, Token::BraceClose)?;
+                    expect(tokens, msg, Token::ParenClose)?;
+                    Ast(
+                        AstEnum::BuiltInIfApp {
+                            v: Box::new(val),
+                            vars: (xs, x),
+                            then_expr: Box::new(then_expr),
+                            else_expr: Box::new(else_expr),
+                        },
+                        pos,
+                    )
+                } else if *s == "if-eq" {
+                    // if-eq(val1, val2, { then }, { else })
+                    let msg = "The built-in 'if-eq' must be called as if-eq(val1, val2, { then }, { else })";
+                    expect(tokens, msg, Token::ParenOpen)?;
+                    let val1 = parse_expr(tokens, stack, bindings)?;
+                    expect(tokens, msg, Token::Separator)?;
+                    let val2 = parse_expr(tokens, stack, bindings)?;
+                    expect(tokens, msg, Token::Separator)?;
+                    let block_pos = expect(tokens, msg, Token::BraceOpen)?;
                     let then_expr = parse_block(block_pos, tokens, stack, bindings)?;
-                    for _ in 0..vars.len() {
-                        stack.pop();
-                    }
                     expect(tokens, msg, Token::BraceClose)?;
                     expect(tokens, msg, Token::Separator)?;
                     let block_pos = expect(tokens, msg, Token::BraceOpen)?;
@@ -361,11 +331,39 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
                     expect(tokens, msg, Token::BraceClose)?;
                     expect(tokens, msg, Token::ParenClose)?;
                     Ast(
-                        AstEnum::BuiltInIf {
-                            val: Box::new(val),
-                            is_core_tag,
+                        AstEnum::BuiltInIfTagEq {
+                            a: Box::new(val1),
+                            b: Box::new(val2),
+                            then_expr: Box::new(then_expr),
+                            else_expr: Box::new(else_expr),
+                        },
+                        pos,
+                    )
+                } else {
+                    // if-*(val, { then }, { else })
+                    let tag = match *s {
+                        "if-tag" => Pool::T_TAG,
+                        "if-bind" => Pool::T_BIND,
+                        _ => return Err(format!("Could not find binding for '{s}' at {pos}")),
+                    };
+                    let msg = &format!(
+                        "The built-in '{s}' must be called as {s}(val, {{ then }}, {{ else }})"
+                    );
+                    expect(tokens, msg, Token::ParenOpen)?;
+                    let val = parse_expr(tokens, stack, bindings)?;
+                    expect(tokens, msg, Token::Separator)?;
+                    let block_pos = expect(tokens, msg, Token::BraceOpen)?;
+                    let then_expr = parse_block(block_pos, tokens, stack, &mut vec![])?;
+                    expect(tokens, msg, Token::BraceClose)?;
+                    expect(tokens, msg, Token::Separator)?;
+                    let block_pos = expect(tokens, msg, Token::BraceOpen)?;
+                    let else_expr = parse_block(block_pos, tokens, stack, &mut vec![])?;
+                    expect(tokens, msg, Token::BraceClose)?;
+                    expect(tokens, msg, Token::ParenClose)?;
+                    Ast(
+                        AstEnum::BuiltInIfTagEqType {
+                            v: Box::new(val),
                             tag,
-                            vars,
                             then_expr: Box::new(then_expr),
                             else_expr: Box::new(else_expr),
                         },
@@ -375,13 +373,14 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
             }
             t => return Err(format!("Unexpected token '{t}' at {pos}")),
         };
+        let mut arg_bindings = vec![];
         loop {
             match tokens.peek() {
                 Some((Token::ParenOpen, _)) => {
                     tokens.next();
                     let mut args = vec![];
                     expr = loop {
-                        args.push(parse_expr(tokens, stack, bindings)?);
+                        args.push(parse_expr(tokens, stack, &mut arg_bindings)?);
                         match tokens.peek() {
                             Some((Token::ParenClose, _)) => {
                                 tokens.next();
@@ -403,7 +402,10 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
                         }
                     }
                 }
-                _ => return Ok(expr),
+                _ => {
+                    bindings.append(&mut arg_bindings);
+                    return Ok(expr);
+                }
             }
         }
     }
@@ -412,21 +414,58 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
 impl<'code> Ast<'code> {
     fn to_expr(&self, pool: &mut Pool<'code>) -> _Expr {
         let pos = self.1;
+        fn unwrap_abs(n: usize, mut expr: _Expr) -> _Expr {
+            for _ in 0..n {
+                if let _Expr(ExprEnum::Abs(inner), _) = expr {
+                    expr = *inner;
+                } else {
+                    panic!("Expected block to be an abstraction");
+                }
+            }
+            expr
+        }
+        fn apply_abs_to_nil(pool: &mut Pool, pos: Pos, expr: _Expr) -> _Expr {
+            _Expr(
+                ExprEnum::App(
+                    Box::new(expr),
+                    Box::new(_Expr(
+                        ExprEnum::Tag(pool.intern_core(Pool::T_NIL)),
+                        pool.register(pos),
+                    )),
+                ),
+                pool.register(pos),
+            )
+        }
         match &self.0 {
-            AstEnum::Tag(t) => _Expr(ExprEnum::Tag(pool.intern_tag(t)), pool.register(pos)),
+            AstEnum::Tag(t) => _Expr(
+                ExprEnum::App(
+                    Box::new(_Expr(
+                        ExprEnum::Tag(pool.intern_core(Pool::T_TAG)),
+                        pool.register(pos),
+                    )),
+                    Box::new(_Expr(ExprEnum::Tag(pool.intern_tag(t)), pool.register(pos))),
+                ),
+                pool.register(pos),
+            ),
+            AstEnum::Binding(b) => _Expr(
+                ExprEnum::App(
+                    Box::new(_Expr(
+                        ExprEnum::Tag(pool.intern_core(Pool::T_BIND)),
+                        pool.register(pos),
+                    )),
+                    Box::new(_Expr(
+                        ExprEnum::Tag(pool.intern_binding(b)),
+                        pool.register(pos),
+                    )),
+                ),
+                pool.register(pos),
+            ),
             AstEnum::Symbol(_, i) => _Expr(ExprEnum::Var(*i), pool.register(pos)),
-            AstEnum::Binding(b) => _Expr(ExprEnum::Tag(pool.intern_binding(b)), pool.register(pos)),
             AstEnum::Call(f, args) => {
-                let has_blocks = args.iter().any(|arg| matches!(arg.0, AstEnum::Block(_, _)));
                 let mut expr = f.to_expr(pool);
                 for arg in args {
-                    let arg = if has_blocks {
-                        arg.to_deconstructed_expr(pool)
-                    } else {
-                        arg.to_expr(pool)
-                    };
                     expr = _Expr(
-                        ExprEnum::App(Box::new(expr), Box::new(arg)),
+                        ExprEnum::App(Box::new(expr), Box::new(arg.to_expr(pool))),
                         pool.register(pos),
                     );
                 }
@@ -486,98 +525,55 @@ impl<'code> Ast<'code> {
                 ExprEnum::Rec(Box::new(body.to_expr(pool))),
                 pool.register(pos),
             ),
-            AstEnum::BuiltInIf {
-                val,
-                is_core_tag,
-                tag,
-                vars,
+            AstEnum::BuiltInIfApp {
+                v,
+                vars: _,
                 then_expr,
                 else_expr,
             } => {
-                let tag_id = if *is_core_tag {
-                    pool.intern_core(tag)
-                } else {
-                    pool.intern_tag(tag)
-                };
-                let val = val.to_expr(pool);
-                let mut then_expr = then_expr.to_expr(pool);
-                for i in (0..vars.len()).rev() {
-                    then_expr = _Expr(
-                        ExprEnum::App(
-                            Box::new(then_expr),
-                            Box::new(_Expr(ExprEnum::Var(i), pool.register(pos))),
-                        ),
-                        pool.register(pos),
-                    );
-                }
-                if vars.is_empty() {
-                    then_expr = _Expr(
-                        ExprEnum::App(
-                            Box::new(then_expr),
-                            Box::new(_Expr(ExprEnum::Tag(pool.nil_tag()), pool.register(pos))),
-                        ),
-                        pool.register(pos),
-                    );
-                }
-                let else_expr = _Expr(
-                    ExprEnum::App(
-                        Box::new(else_expr.to_expr(pool)),
-                        Box::new(_Expr(ExprEnum::Tag(pool.nil_tag()), pool.register(pos))),
-                    ),
-                    pool.register(pos),
-                );
+                let v = v.to_expr(pool);
+                let then_expr = unwrap_abs(2, then_expr.to_expr(pool));
+                let else_expr = unwrap_abs(1, else_expr.to_expr(pool));
                 _Expr(
-                    ExprEnum::Cnd {
-                        value: Box::new(val),
-                        pattern: (tag_id, vars.len()),
-                        then_expr: Box::new(then_expr),
-                        else_expr: Box::new(else_expr),
-                    },
+                    ExprEnum::IfApp(Box::new(v), Box::new(then_expr), Box::new(else_expr)),
                     pool.register(pos),
                 )
             }
-        }
-    }
-
-    fn to_deconstructed_expr(&self, pool: &mut Pool<'code>) -> _Expr {
-        let pos = self.1;
-        let mut wrap = |t: &'static str, expr: &Ast<'code>| -> _Expr {
-            _Expr(
-                ExprEnum::App(
-                    Box::new(_Expr(
-                        ExprEnum::Tag(pool.intern_core(t)),
-                        pool.register(pos),
-                    )),
-                    Box::new(expr.to_expr(pool)),
-                ),
-                pool.register(pos),
-            )
-        };
-        match &self.0 {
-            AstEnum::Tag(_) => wrap(Pool::T_TAG, self),
-            AstEnum::Binding(_) => wrap(Pool::T_SYM, self),
-            AstEnum::Call(f, args) => {
-                let mut app = _Expr(ExprEnum::Tag(pool.nil_tag()), pool.register(pos));
-                for expr in args.iter().rev().chain(once(f.as_ref())) {
-                    let expr = expr.to_deconstructed_expr(pool);
-                    app = _Expr(
-                        ExprEnum::App(
-                            Box::new(_Expr(
-                                ExprEnum::Tag(pool.intern_core(Pool::T_APP)),
-                                pool.register(pos),
-                            )),
-                            Box::new(_Expr(
-                                ExprEnum::App(Box::new(expr), Box::new(app)),
-                                pool.register(pos),
-                            )),
-                        ),
-                        pool.register(pos),
-                    )
-                }
-                app
+            AstEnum::BuiltInIfTagEq {
+                a,
+                b,
+                then_expr,
+                else_expr,
+            } => {
+                let then_expr = then_expr.to_expr(pool);
+                let else_expr = else_expr.to_expr(pool);
+                _Expr(
+                    ExprEnum::IfTagEq(
+                        (Box::new(a.to_expr(pool)), Box::new(b.to_expr(pool))),
+                        Box::new(apply_abs_to_nil(pool, pos, then_expr)),
+                        Box::new(apply_abs_to_nil(pool, pos, else_expr)),
+                    ),
+                    pool.register(pos),
+                )
             }
-            AstEnum::Block(_, _) => self.to_expr(pool),
-            _ => wrap(Pool::T_VAL, self),
+            AstEnum::BuiltInIfTagEqType {
+                v,
+                tag,
+                then_expr,
+                else_expr,
+            } => {
+                let tag = _Expr(ExprEnum::Tag(pool.intern_core(tag)), pool.register(pos));
+                let then_expr = then_expr.to_expr(pool);
+                let else_expr = else_expr.to_expr(pool);
+                _Expr(
+                    ExprEnum::IfTagEq(
+                        (Box::new(v.to_expr(pool)), Box::new(tag)),
+                        Box::new(apply_abs_to_nil(pool, pos, then_expr)),
+                        Box::new(apply_abs_to_nil(pool, pos, else_expr)),
+                    ),
+                    pool.register(pos),
+                )
+            }
         }
     }
 }
@@ -592,12 +588,8 @@ enum ExprEnum {
     Abs(Box<_Expr>),
     Rec(Box<_Expr>),
     App(Box<_Expr>, Box<_Expr>),
-    Cnd {
-        value: Box<_Expr>,
-        pattern: (usize, usize),
-        then_expr: Box<_Expr>,
-        else_expr: Box<_Expr>,
-    },
+    IfApp(Box<_Expr>, Box<_Expr>, Box<_Expr>),
+    IfTagEq((Box<_Expr>, Box<_Expr>), Box<_Expr>, Box<_Expr>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -618,11 +610,9 @@ struct Pool<'code> {
 }
 
 impl<'code> Pool<'code> {
-    const T_APP: &'static str = "app";
-    const T_TAG: &'static str = "tag";
-    const T_SYM: &'static str = "sym";
-    const T_VAL: &'static str = "val";
     const T_NIL: &'static str = "nil";
+    const T_TAG: &'static str = "tag";
+    const T_BIND: &'static str = "bind";
 
     fn new() -> Self {
         Self {
@@ -631,10 +621,6 @@ impl<'code> Pool<'code> {
             bindings: HashMap::new(),
             nodes: HashMap::new(),
         }
-    }
-
-    fn nil_tag(&mut self) -> usize {
-        self.intern_core(Pool::T_NIL)
     }
 
     fn next_interned(&self) -> usize {
@@ -712,14 +698,9 @@ impl Ast<'_> {
             AstEnum::BuiltInLet(_, val, body) => 2 + val.size() + body.size(),
             AstEnum::BuiltInLet2(_, val) => 2 + val.size(),
             AstEnum::BuiltInFn(_, body) | AstEnum::BuiltInRec(_, body) => 1 + body.size(),
-            AstEnum::BuiltInIf {
-                val,
-                is_core_tag: _,
-                tag: _,
-                vars,
-                then_expr,
-                else_expr,
-            } => 1 + val.size() + 1 + vars.len() + then_expr.size() + else_expr.size(),
+            AstEnum::BuiltInIfApp { .. }
+            | AstEnum::BuiltInIfTagEq { .. }
+            | AstEnum::BuiltInIfTagEqType { .. } => 1,
         }
     }
 
@@ -808,32 +789,44 @@ impl Ast<'_> {
                 body.pretty(buf, _wrap, lvl);
                 buf.push(')');
             }
-            AstEnum::BuiltInIf {
-                val,
-                is_core_tag,
-                tag,
-                vars,
+            AstEnum::BuiltInIfApp {
+                v,
+                vars: (xs, x),
                 then_expr,
                 else_expr,
             } => {
-                buf.push_str("if(");
-                val.pretty(buf, false, lvl);
+                buf.push_str("if-app(");
+                v.pretty(buf, false, lvl);
+                buf.push_str(&format!(", '{xs}, '{x}, "));
+                then_expr.pretty(buf, false, lvl);
                 buf.push_str(", ");
-                if *is_core_tag {
-                    buf.push('\\');
-                }
-                buf.push_str(tag);
-                if !vars.is_empty() {
-                    buf.push('(');
-                    for (i, var) in vars.iter().enumerate() {
-                        if i != 0 {
-                            buf.push_str(", ")
-                        }
-                        buf.push('\'');
-                        buf.push_str(var);
-                    }
-                    buf.push(')');
-                }
+                else_expr.pretty(buf, false, lvl);
+                buf.push(')');
+            }
+            AstEnum::BuiltInIfTagEq {
+                a,
+                b,
+                then_expr,
+                else_expr,
+            } => {
+                buf.push_str("if-eq(");
+                a.pretty(buf, false, lvl);
+                buf.push_str(", ");
+                b.pretty(buf, false, lvl);
+                buf.push_str(", ");
+                then_expr.pretty(buf, false, lvl);
+                buf.push_str(", ");
+                else_expr.pretty(buf, false, lvl);
+                buf.push(')');
+            }
+            AstEnum::BuiltInIfTagEqType {
+                v,
+                tag,
+                then_expr,
+                else_expr,
+            } => {
+                buf.push_str(&format!("if-{tag}("));
+                v.pretty(buf, false, lvl);
                 buf.push_str(", ");
                 then_expr.pretty(buf, false, lvl);
                 buf.push_str(", ");
@@ -865,15 +858,21 @@ impl std::fmt::Display for _Expr {
                 arg.fmt(f)?;
                 f.write_str(")")
             }
-            ExprEnum::Cnd {
-                value,
-                pattern: (t, vars),
-                then_expr,
-                else_expr,
-            } => {
-                f.write_str("(if ")?;
+            ExprEnum::IfApp(value, then_expr, else_expr) => {
+                f.write_str("(if-app ")?;
                 value.fmt(f)?;
-                write!(f, " is _{t}/{vars} then ")?;
+                f.write_str(" then ")?;
+                then_expr.fmt(f)?;
+                f.write_str(" else ")?;
+                else_expr.fmt(f)?;
+                f.write_str(")")
+            }
+            ExprEnum::IfTagEq((a, b), then_expr, else_expr) => {
+                f.write_str("(if-tag-eq ")?;
+                a.fmt(f)?;
+                f.write_str(" is ")?;
+                b.fmt(f)?;
+                f.write_str(" then ")?;
                 then_expr.fmt(f)?;
                 f.write_str(" else ")?;
                 else_expr.fmt(f)?;
@@ -914,41 +913,35 @@ enum _Value {
     Tag(usize, Vec<_Value>, Id),
 }
 
-impl From<_Value> for _Expr {
-    fn from(value: _Value) -> Self {
-        match value {
-            _Value::Fn(body, _, id) => _Expr(ExprEnum::Abs(Box::new(body)), id),
-            _Value::Rec(body, _, id) => _Expr(ExprEnum::Rec(Box::new(body)), id),
-            _Value::Tag(t, values, id) => {
-                let mut expr = _Expr(ExprEnum::Tag(t), id);
-                for v in values {
-                    expr = _Expr(ExprEnum::App(Box::new(expr), Box::new(_Expr::from(v))), id)
-                }
-                expr
-            }
-        }
-    }
-}
-
 impl _Value {
     fn to_string(&self, buf: &mut String, pool: &Pool) {
         match self {
             _Value::Fn(_, _, id) => buf.push_str(&format!("<fn:{id}>")),
             _Value::Rec(_, _, id) => buf.push_str(&format!("<rec:{id}>")),
             _Value::Tag(t, vals, _) => {
-                match pool.tags.iter().find(|(_, id)| *id == t) {
+                let mut t = *t;
+                let mut skip = 0;
+                if pool.core.iter().any(|(_, id)| *id == t) {
+                    if let Some(_Value::Tag(tag, inner, _)) = vals.first() {
+                        if inner.is_empty() {
+                            t = *tag;
+                            skip = 1;
+                        }
+                    }
+                }
+                match pool.tags.iter().find(|(_, id)| **id == t) {
                     Some((tag, _)) => buf.push_str(tag),
-                    None => match pool.bindings.iter().find(|(_, id)| *id == t) {
+                    None => match pool.bindings.iter().find(|(_, id)| **id == t) {
                         Some((tag, _)) => buf.push_str(&format!("'{tag}")),
-                        None => match pool.core.iter().find(|(_, id)| *id == t) {
+                        None => match pool.core.iter().find(|(_, id)| **id == t) {
                             Some((tag, _)) => buf.push_str(&format!("\\{tag}")),
                             None => buf.push_str(&format!("<tag:{t}>")),
                         },
                     },
                 }
-                if !vals.is_empty() {
+                if vals.len() > skip {
                     buf.push('(');
-                    for (i, val) in vals.iter().enumerate() {
+                    for (i, val) in vals.iter().skip(skip).enumerate() {
                         if i != 0 {
                             buf.push_str(", ");
                         }
@@ -979,14 +972,6 @@ impl<T> Env<T> {
     fn push(self: &Arc<Self>, val: T) -> Arc<Env<T>> {
         Arc::new(Env::Some(val, Arc::clone(self)))
     }
-
-    fn extend(self: &Arc<Self>, vals: Vec<T>) -> Arc<Env<T>> {
-        let mut env = Arc::clone(self);
-        for v in vals {
-            env = env.push(v);
-        }
-        env
-    }
 }
 
 impl _Expr {
@@ -1014,24 +999,44 @@ impl _Expr {
                     }
                 }
             }
-            ExprEnum::Cnd {
-                value,
-                pattern: (tag, vars),
-                then_expr,
-                else_expr,
-            } => {
-                let mut value = value.eval(env)?;
+            ExprEnum::IfApp(v, then_expr, else_expr) => {
+                let mut v = v.eval(env)?;
                 loop {
-                    match value {
+                    match v {
                         _Value::Rec(body, env, id) => {
                             let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), id));
-                            value = body.eval(&env)?;
+                            v = body.eval(&env)?;
                         }
-                        _Value::Tag(t, values, _) if t == tag && values.len() == vars => {
-                            break then_expr.eval(&env.extend(values));
+                        _Value::Tag(t, mut values, id) => {
+                            if let Some(last) = values.pop() {
+                                let env = env.push(_Value::Tag(t, values, id)).push(last);
+                                break then_expr.eval(&env);
+                            } else {
+                                break else_expr.eval(env);
+                            }
                         }
-                        _Value::Tag(_, _, _) | _Value::Fn(_, _, _) => break else_expr.eval(env),
+                        _Value::Fn(_, _, _) => break else_expr.eval(env),
                     }
+                }
+            }
+            ExprEnum::IfTagEq((a, b), then_expr, else_expr) => {
+                let mut a = a.eval(env)?;
+                while let _Value::Rec(body, env, id) = a {
+                    let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), id));
+                    a = body.eval(&env)?;
+                }
+                let mut b = b.eval(env)?;
+                while let _Value::Rec(body, env, id) = b {
+                    let env = env.push(_Value::Rec(body.clone(), Arc::clone(&env), id));
+                    b = body.eval(&env)?;
+                }
+                match (a, b) {
+                    (_Value::Tag(a, rest_a, _), _Value::Tag(b, rest_b, _))
+                        if a == b && rest_a.is_empty() && rest_b.is_empty() =>
+                    {
+                        then_expr.eval(&env)
+                    }
+                    _ => else_expr.eval(&env),
                 }
             }
         }
@@ -1052,42 +1057,39 @@ mod tests {
 
     #[test]
     fn eval_std_lib() {
-        let code = "
-let('fn, { fn('var, { fn('body, { body }) }) }),
-fn('x, {x})(Foo)
-";
+        let code = include_str!("../examples/std.vo");
         let parsed = parse(code).unwrap();
         //assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "Foo");
     }
 
-    #[test]
-    fn eval_custom_let() {
-        let code = "
-fn('let, {
-    let('x, Foo, { x })
-})(
-    fn('unwrap, {
-        fn('var, {
-            fn('val, {
-                fn('body, {
-                    if(var, \\sym('var), { body(unwrap(val)) }, { ExpectedBinding(var) })
-                })
-            })
-        })
-    })(
-        fn('x, {
-            if(x, \\tag('t), { t }, {
-                Error
-            })
-        })
-    )
-)
-";
-        let parsed = parse(code).unwrap();
-        //assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().unwrap(), "Foo");
-    }
+    //     #[test]
+    //     fn eval_custom_let() {
+    //         let code = "
+    // fn('let, {
+    //     let('x, Foo, { x })
+    // })(
+    //     fn('unwrap, {
+    //         fn('var, {
+    //             fn('val, {
+    //                 fn('body, {
+    //                     if(var, \\sym('var), { body(unwrap(val)) }, { ExpectedBinding(var) })
+    //                 })
+    //             })
+    //         })
+    //     })(
+    //         fn('x, {
+    //             if(x, \\tag('t), { t }, {
+    //                 Error
+    //             })
+    //         })
+    //     )
+    // )
+    // ";
+    //         let parsed = parse(code).unwrap();
+    //         //assert_eq!(code, parsed.to_string());
+    //         assert_eq!(parsed.eval().unwrap(), "Foo");
+    //     }
 
     #[test]
     fn eval_let() {
@@ -1129,21 +1131,21 @@ fn('let, {
         assert_eq!(parsed.eval().unwrap(), "Pair(X, Y)");
     }
 
-    #[test]
-    fn eval_simple_if_else() {
-        let code = "if(Foo, Foo, { True }, { False })";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().unwrap(), "True");
-    }
+    // #[test]
+    // fn eval_simple_if_else() {
+    //     let code = "if(Foo, Foo, { True }, { False })";
+    //     let parsed = parse(code).unwrap();
+    //     assert_eq!(code, parsed.to_string());
+    //     assert_eq!(parsed.eval().unwrap(), "True");
+    // }
 
-    #[test]
-    fn eval_complex_if_else() {
-        let code = "if(Pair(Foo, Bar), Pair('x, 'y), { x }, { Nil })";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().unwrap(), "Foo");
-    }
+    // #[test]
+    // fn eval_complex_if_else() {
+    //     let code = "if(Pair(Foo, Bar), Pair('x, 'y), { x }, { Nil })";
+    //     let parsed = parse(code).unwrap();
+    //     assert_eq!(code, parsed.to_string());
+    //     assert_eq!(parsed.eval().unwrap(), "Foo");
+    // }
 
     #[test]
     fn eval_rec() {
