@@ -1,12 +1,21 @@
-let('if-bind, fn('v, {
-    fn('then, {
-        fn('else, {
-            if-app(v, 'tag, '_, {
-                if-bind(tag, { then(Nil) }, { else(Nil) })
-            }, {
-                else(Nil)
-            })
+fn('let, {
+    let('x, Foo),
+    let('if, fn(Pair('x, 'y, 'then, 'else), {
+        pop(x, fn(Pair('xx, 'x), {
+            pop(y, fn(Pair('yy, 'y), {
+                if-tag(xx, {
+                    if-tag(yy, {
+                        if(x, y, then, else)
+                    }, else)
+                }, else)
+            }), else)
+        }), else)
+    })),
+    if(x, Foo, { True }, { False })
+})(fn('binding, {
+    fn('val, {
+        fn('block, {
+            block(val)
         })
     })
-})),
-if-bind('x, { Foo }, { Bar })
+}))
