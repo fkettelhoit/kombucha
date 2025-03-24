@@ -322,50 +322,22 @@ fn parse_expr<'code>(
 impl<'code> Ast<'code> {
     fn to_expr(&self, pool: &mut Pool<'code>) -> Expr {
         let pos = self.1;
-        fn apply_abs_to_nil(pool: &mut Pool, pos: Pos, expr: Expr) -> Expr {
-            Expr(
-                ExprEnum::App(
-                    Box::new(expr),
-                    Box::new(Expr(
-                        ExprEnum::Tag(pool.intern_core(Pool::T_NIL)),
-                        pool.register(pos),
-                    )),
-                ),
-                pool.register(pos),
-            )
-        }
         match &self.0 {
-            AstEnum::Tag(t) => Expr(
-                ExprEnum::App(
-                    Box::new(Expr(
-                        ExprEnum::Tag(pool.intern_core(Pool::T_TAG)),
-                        pool.register(pos),
-                    )),
-                    Box::new(Expr(ExprEnum::Tag(pool.intern_tag(t)), pool.register(pos))),
-                ),
-                pool.register(pos),
+            AstEnum::Tag(t) => Expr::app(
+                pool.new_id(pos),
+                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_TAG)),
+                Expr::tag(pool.new_id(pos), pool.intern_tag(t)),
             ),
-            AstEnum::Binding(b) => Expr(
-                ExprEnum::App(
-                    Box::new(Expr(
-                        ExprEnum::Tag(pool.intern_core(Pool::T_BINDING)),
-                        pool.register(pos),
-                    )),
-                    Box::new(Expr(
-                        ExprEnum::Tag(pool.intern_binding(b)),
-                        pool.register(pos),
-                    )),
-                ),
-                pool.register(pos),
+            AstEnum::Binding(b) => Expr::app(
+                pool.new_id(pos),
+                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_BINDING)),
+                Expr::tag(pool.new_id(pos), pool.intern_binding(b)),
             ),
-            AstEnum::Symbol(_, i) => Expr(ExprEnum::Var(*i), pool.register(pos)),
+            AstEnum::Symbol(_, i) => Expr::var(pool.new_id(pos), *i),
             AstEnum::Call(f, args) => {
                 let mut expr = f.to_expr(pool);
                 for arg in args {
-                    expr = Expr(
-                        ExprEnum::App(Box::new(expr), Box::new(arg.to_expr(pool))),
-                        pool.register(pos),
-                    );
+                    expr = Expr::app(pool.new_id(pos), expr, arg.to_expr(pool));
                 }
                 expr
             }
@@ -384,96 +356,75 @@ impl<'code> Ast<'code> {
                         if args_next == 0 {
                             // { f(), ... }
                             // <==> (_ => ...)(f())
-                            expr = Expr(
-                                ExprEnum::App(Box::new(block), Box::new(expr)),
-                                pool.register(pos),
-                            )
+                            expr = Expr::app(pool.new_id(pos), block, expr);
                         } else {
                             // { let('x, Foo), ... }
                             // <==> let('x, Foo)(x => ...)
-                            expr = Expr(
-                                ExprEnum::App(Box::new(expr), Box::new(block)),
-                                pool.register(pos),
-                            )
+                            expr = Expr::app(pool.new_id(pos), expr, block);
                         }
                     }
                     for _ in 0..args {
-                        expr = Expr(ExprEnum::Abs(Box::new(expr)), pool.register(pos));
+                        expr = Expr::abs(pool.new_id(pos), expr);
                     }
                     next = Some(expr)
                 }
                 next.unwrap()
             }
-            AstEnum::BuiltInFn(_) => Expr(
-                ExprEnum::Abs(Box::new(Expr(
-                    ExprEnum::Abs(Box::new(Expr(ExprEnum::Var(0), pool.register(pos)))),
-                    pool.register(pos),
-                ))),
-                pool.register(pos),
+            AstEnum::BuiltInFn(_) => Expr::abs(
+                pool.new_id(pos),
+                Expr::abs(pool.new_id(pos), Expr::var(pool.new_id(pos), 0)),
             ),
-            AstEnum::BuiltInRec(_, body) => Expr(
-                ExprEnum::Rec(Box::new(body.to_expr(pool))),
-                pool.register(pos),
+            AstEnum::BuiltInRec(_, body) => Expr::rec(pool.new_id(pos), body.to_expr(pool)),
+            AstEnum::BuiltInPop(_) => Expr::abs(
+                pool.new_id(pos),
+                Expr::abs(
+                    pool.new_id(pos),
+                    Expr::abs(
+                        pool.new_id(pos),
+                        Expr::builtin_pop(
+                            pool.new_id(pos),
+                            Expr::var(pool.new_id(pos), 2),
+                            Expr::var(pool.new_id(pos), 1),
+                            Expr::app(
+                                pool.new_id(pos),
+                                Expr::var(pool.new_id(pos), 0),
+                                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL)),
+                            ),
+                        ),
+                    ),
+                ),
             ),
-            AstEnum::BuiltInPop(_) => {
-                let v = Expr(ExprEnum::Var(2), pool.register(pos));
-                let then_expr = Expr(ExprEnum::Var(1), pool.register(pos));
-                let else_expr = Expr(ExprEnum::Var(0), pool.register(pos));
-                let else_expr = apply_abs_to_nil(pool, pos, else_expr);
-                Expr(
-                    ExprEnum::Abs(Box::new(Expr(
-                        ExprEnum::Abs(Box::new(Expr(
-                            ExprEnum::Abs(Box::new(Expr(
-                                ExprEnum::Pop(
-                                    Box::new(v),
-                                    Box::new(then_expr),
-                                    Box::new(else_expr),
+            AstEnum::BuiltInIf(_) => Expr::abs(
+                pool.new_id(pos),
+                Expr::abs(
+                    pool.new_id(pos),
+                    Expr::abs(
+                        pool.new_id(pos),
+                        Expr::abs(
+                            pool.new_id(pos),
+                            Expr::builtin_if(
+                                pool.new_id(pos),
+                                Expr::var(pool.new_id(pos), 3),
+                                Expr::var(pool.new_id(pos), 2),
+                                Expr::app(
+                                    pool.new_id(pos),
+                                    Expr::var(pool.new_id(pos), 1),
+                                    Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL)),
                                 ),
-                                pool.register(pos),
-                            ))),
-                            pool.register(pos),
-                        ))),
-                        pool.register(pos),
-                    ))),
-                    pool.register(pos),
-                )
-            }
-            AstEnum::BuiltInIf(_) => {
-                let then_expr = Expr(ExprEnum::Var(1), pool.register(pos));
-                let then_expr = apply_abs_to_nil(pool, pos, then_expr);
-                let else_expr = Expr(ExprEnum::Var(0), pool.register(pos));
-                let else_expr = apply_abs_to_nil(pool, pos, else_expr);
-                Expr(
-                    ExprEnum::Abs(Box::new(Expr(
-                        ExprEnum::Abs(Box::new(Expr(
-                            ExprEnum::Abs(Box::new(Expr(
-                                ExprEnum::Abs(Box::new(Expr(
-                                    ExprEnum::If(
-                                        (
-                                            Box::new(Expr(ExprEnum::Var(3), pool.register(pos))),
-                                            Box::new(Expr(ExprEnum::Var(2), pool.register(pos))),
-                                        ),
-                                        Box::new(then_expr),
-                                        Box::new(else_expr),
-                                    ),
-                                    pool.register(pos),
-                                ))),
-                                pool.register(pos),
-                            ))),
-                            pool.register(pos),
-                        ))),
-                        pool.register(pos),
-                    ))),
-                    pool.register(pos),
-                )
-            }
+                                Expr::app(
+                                    pool.new_id(pos),
+                                    Expr::var(pool.new_id(pos), 0),
+                                    Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL)),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
             AstEnum::BuiltInIfCoreTag(s, tag) => {
                 let if_expr = Ast(AstEnum::BuiltInIf(s), pos);
-                let tag = Expr(ExprEnum::Tag(pool.intern_core(tag)), pool.register(pos));
-                Expr(
-                    ExprEnum::App(Box::new(if_expr.to_expr(pool)), Box::new(tag)),
-                    pool.register(pos),
-                )
+                let tag = Expr::tag(pool.new_id(pos), pool.intern_core(tag));
+                Expr::app(pool.new_id(pos), if_expr.to_expr(pool), tag)
             }
         }
     }
@@ -491,6 +442,46 @@ enum ExprEnum {
     App(Box<Expr>, Box<Expr>),
     Pop(Box<Expr>, Box<Expr>, Box<Expr>),
     If((Box<Expr>, Box<Expr>), Box<Expr>, Box<Expr>),
+}
+
+impl Expr {
+    fn var(id: Id, var: usize) -> Self {
+        Self(ExprEnum::Var(var), id)
+    }
+
+    fn tag(id: Id, tag: usize) -> Self {
+        Self(ExprEnum::Tag(tag), id)
+    }
+
+    fn abs(id: Id, body: Expr) -> Self {
+        Self(ExprEnum::Abs(Box::new(body)), id)
+    }
+
+    fn rec(id: Id, body: Expr) -> Self {
+        Self(ExprEnum::Rec(Box::new(body)), id)
+    }
+
+    fn app(id: Id, f: Expr, arg: Expr) -> Self {
+        Self(ExprEnum::App(Box::new(f), Box::new(arg)), id)
+    }
+
+    fn builtin_pop(id: Id, v: Expr, then_expr: Expr, else_expr: Expr) -> Self {
+        Self(
+            ExprEnum::Pop(Box::new(v), Box::new(then_expr), Box::new(else_expr)),
+            id,
+        )
+    }
+
+    fn builtin_if(id: Id, a: Expr, b: Expr, then_expr: Expr, else_expr: Expr) -> Self {
+        Self(
+            ExprEnum::If(
+                (Box::new(a), Box::new(b)),
+                Box::new(then_expr),
+                Box::new(else_expr),
+            ),
+            id,
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -552,7 +543,7 @@ impl<'code> Pool<'code> {
         })
     }
 
-    fn register(&mut self, pos: Pos) -> Id {
+    fn new_id(&mut self, pos: Pos) -> Id {
         let id = Id(self.nodes.len() as u32 + 1);
         self.nodes.insert(id, pos);
         id
@@ -734,10 +725,7 @@ impl Ast<'_> {
                 .unwrap_or_else(|e| panic!("Could not parse primitive {name}: {e}"))
                 .to_expr(&mut pool);
             let pos = Pos { line: 0, col: 0 };
-            expr = Expr(
-                ExprEnum::App(Box::new(expr), Box::new(primitive)),
-                pool.register(pos),
-            );
+            expr = Expr::app(pool.new_id(pos), expr, primitive);
         }
         match expr.eval(&Arc::new(Env::Empty)) {
             Ok(v) => {
