@@ -123,203 +123,228 @@ enum AstEnum<'code> {
     BuiltInLet2(&'code str, Box<Ast<'code>>),
 }
 
+const STD_LIB: &'static [(&str, &str)] = &[
+    (
+        "let",
+        "fn('binding, {
+            fn('val, {
+                fn('block, {
+                    block(val)
+                })
+            })
+        })",
+    ),
+    (
+        "if-eq",
+        "fn(Pair('x, 'y, 'then, 'else), {
+            pop(x, fn(Pair('xx, 'x), {
+                pop(y, fn(Pair('yy, 'y), {
+                    if-tag(xx, {
+                        if-tag(yy, {
+                            if(x, y, then, else)
+                        }, else)
+                    }, else)
+                }), else)
+            }), else)
+        })",
+    ),
+];
+
 type Tokens<'a, 'code> = Peekable<Iter<'a, (Token<'code>, Pos)>>;
 
 pub fn parse(code: &str) -> Result<Ast<'_>, String> {
     let tokens = scan(code);
     let mut tokens = tokens.iter().peekable();
-    let mut stack = vec![];
+    let mut bindings = STD_LIB.iter().map(|(name, _)| *name).collect::<Vec<_>>();
     let pos = Pos { line: 1, col: 1 };
-    let block = parse_block(pos, &mut tokens, &mut stack, &mut vec![])?;
+    let block = parse_block(pos, &mut tokens, &mut vec![], &mut bindings)?;
     if let Some((token, pos)) = tokens.next() {
         return Err(format!(
             "Expected the code to end, but found {token} at {pos}"
         ));
     }
     return Ok(block);
-    fn parse_block<'code>(
-        pos: Pos,
-        tokens: &mut Tokens<'_, 'code>,
-        stack: &mut Vec<&'code str>,
-        bindings: &mut Vec<&'code str>,
-    ) -> Result<Ast<'code>, String> {
-        let mut args = bindings.len();
-        if args == 0 {
-            args += 1;
-            stack.push("");
-        } else {
-            stack.append(bindings);
+}
+
+fn parse_block<'code>(
+    pos: Pos,
+    tokens: &mut Tokens<'_, 'code>,
+    stack: &mut Vec<&'code str>,
+    bindings: &mut Vec<&'code str>,
+) -> Result<Ast<'code>, String> {
+    let mut args = bindings.len();
+    if args == 0 {
+        args += 1;
+        stack.push("");
+    } else {
+        stack.append(bindings);
+    }
+    let mut all_args = args;
+    let expr = parse_expr(tokens, stack, bindings)?;
+    let first = (args, Box::new(expr), bindings.len());
+    let mut rest = vec![];
+    loop {
+        match tokens.peek() {
+            Some((Token::Separator, _)) => {
+                tokens.next();
+                let mut args = bindings.len();
+                if args == 0 {
+                    args += 1;
+                    stack.push("");
+                } else {
+                    stack.append(bindings);
+                }
+                all_args += args;
+                let expr = parse_expr(tokens, stack, bindings)?;
+                rest.push((args, expr, bindings.len()));
+            }
+            Some((Token::BraceClose, _)) | None => {
+                bindings.clear();
+                for _ in 0..all_args {
+                    stack.pop();
+                }
+                return Ok(Ast(AstEnum::Block(first, rest), pos));
+            }
+            Some((t, pos)) => {
+                return Err(format!(
+                    "Expected block to continue with ',' or '}}', but found {t} at {pos}"
+                ));
+            }
         }
-        let mut all_args = args;
-        let expr = parse_expr(tokens, stack, bindings)?;
-        let first = (args, Box::new(expr), bindings.len());
-        let mut rest = vec![];
-        loop {
-            match tokens.peek() {
-                Some((Token::Separator, _)) => {
-                    tokens.next();
-                    let mut args = bindings.len();
-                    if args == 0 {
-                        args += 1;
-                        stack.push("");
-                    } else {
-                        stack.append(bindings);
-                    }
-                    all_args += args;
-                    let expr = parse_expr(tokens, stack, bindings)?;
-                    rest.push((args, expr, bindings.len()));
-                }
-                Some((Token::BraceClose, _)) | None => {
-                    bindings.clear();
-                    for _ in 0..all_args {
-                        stack.pop();
-                    }
-                    return Ok(Ast(AstEnum::Block(first, rest), pos));
-                }
-                Some((t, pos)) => {
+    }
+}
+
+fn parse_expr<'code>(
+    tokens: &mut Tokens<'_, 'code>,
+    stack: &mut Vec<&'code str>,
+    bindings: &mut Vec<&'code str>,
+) -> Result<Ast<'code>, String> {
+    let Some((t, pos)) = tokens.next() else {
+        return Err("Expected an expression, but the code just ended".to_string());
+    };
+    fn expect(toks: &mut Tokens<'_, '_>, msg: &str, t: Token<'_>) -> Result<Pos, String> {
+        match toks.next() {
+            Some((tok, pos)) if tok == &t => Ok(*pos),
+            Some((tok, pos)) => Err(format!("{msg}, expected '{t}', found '{tok}' at {pos}")),
+            None => Err(format!("{msg}, but the code just ended")),
+        }
+    }
+    fn expect_binding<'code>(
+        toks: &mut Tokens<'_, 'code>,
+        msg: &str,
+    ) -> Result<(&'code str, Pos), String> {
+        match toks.next() {
+            Some((Token::Binding(b), pos)) => Ok((b, *pos)),
+            Some((tok, pos)) => Err(format!("{msg}, expected binding, found '{tok}' at {pos}")),
+            None => Err(format!("{msg}, but the code just ended")),
+        }
+    }
+    let pos = *pos;
+    let mut expr = match t {
+        Token::Tag(t) => Ast(AstEnum::Tag(t), pos),
+        Token::Binding(b) => {
+            bindings.push(b);
+            Ast(AstEnum::Binding(b), pos)
+        }
+        Token::BraceOpen => {
+            let block = parse_block(pos, tokens, stack, bindings)?;
+            match tokens.next() {
+                Some(_) => block,
+                None => {
                     return Err(format!(
-                        "Expected block to continue with ',' or '}}', but found {t} at {pos}"
+                        "Expected the block starting at {pos} to be closed with '}}', but the code just ended"
                     ));
                 }
             }
         }
-    }
-    fn parse_expr<'code>(
-        tokens: &mut Tokens<'_, 'code>,
-        stack: &mut Vec<&'code str>,
-        bindings: &mut Vec<&'code str>,
-    ) -> Result<Ast<'code>, String> {
-        let Some((t, pos)) = tokens.next() else {
-            return Err("Expected an expression, but the code just ended".to_string());
-        };
-        fn expect(toks: &mut Tokens<'_, '_>, msg: &str, t: Token<'_>) -> Result<Pos, String> {
-            match toks.next() {
-                Some((tok, pos)) if tok == &t => Ok(*pos),
-                Some((tok, pos)) => Err(format!("{msg}, expected '{t}', found '{tok}' at {pos}")),
-                None => Err(format!("{msg}, but the code just ended")),
-            }
-        }
-        fn expect_binding<'code>(
-            toks: &mut Tokens<'_, 'code>,
-            msg: &str,
-        ) -> Result<(&'code str, Pos), String> {
-            match toks.next() {
-                Some((Token::Binding(b), pos)) => Ok((b, *pos)),
-                Some((tok, pos)) => Err(format!("{msg}, expected binding, found '{tok}' at {pos}")),
-                None => Err(format!("{msg}, but the code just ended")),
-            }
-        }
-        let pos = *pos;
-        let mut expr = match t {
-            Token::Tag(t) => Ast(AstEnum::Tag(t), pos),
-            Token::Binding(b) => {
-                bindings.push(b);
-                Ast(AstEnum::Binding(b), pos)
-            }
-            Token::BraceOpen => {
-                let block = parse_block(pos, tokens, stack, bindings)?;
-                match tokens.next() {
-                    Some(_) => block,
-                    None => {
-                        return Err(format!(
-                            "Expected the block starting at {pos} to be closed with '}}', but the code just ended"
-                        ));
-                    }
-                }
-            }
-            Token::Symbol(s) => {
-                if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| s == *var) {
-                    Ast(AstEnum::Symbol(s, i), pos)
-                } else if *s == "fn" {
-                    Ast(AstEnum::BuiltInFn(s), pos)
-                    // // fn('var, { body })
-                    // let msg = "The built-in 'fn' must be called as fn('var, { body })";
-                    // expect(tokens, msg, Token::ParenOpen)?;
-                    // let (var, _) = expect_binding(tokens, msg)?;
-                    // expect(tokens, msg, Token::Separator)?;
-                    // let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                    // let body = parse_block(block_pos, tokens, stack, &mut vec![var])?;
-                    // expect(tokens, msg, Token::BraceClose)?;
-                    // expect(tokens, msg, Token::ParenClose)?;
-                    // Ast(AstEnum::BuiltInFn(var, Box::new(body)), pos)
-                } else if *s == "let" {
-                    // let('var, val, { body })
-                    let msg = "The built-in 'let' must be called as let('var, val, { body })";
-                    expect(tokens, msg, Token::ParenOpen)?;
-                    let (var, _) = expect_binding(tokens, msg)?;
-                    expect(tokens, msg, Token::Separator)?;
-                    let val = parse_expr(tokens, stack, bindings)?;
-                    if let Some((Token::ParenClose, _)) = tokens.peek() {
-                        tokens.next();
-                        bindings.push(var);
-                        Ast(AstEnum::BuiltInLet2(var, Box::new(val)), pos)
-                    } else {
-                        expect(tokens, msg, Token::Separator)?;
-                        let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                        let body = parse_block(block_pos, tokens, stack, &mut vec![var])?;
-                        expect(tokens, msg, Token::BraceClose)?;
-                        expect(tokens, msg, Token::ParenClose)?;
-                        Ast(AstEnum::BuiltInLet(var, Box::new(val), Box::new(body)), pos)
-                    }
-                } else if *s == "rec" {
-                    // rec('var, { body })
-                    let msg = "The built-in 'rec' must be called as rec('var, { body })";
-                    expect(tokens, msg, Token::ParenOpen)?;
-                    let (var, _) = expect_binding(tokens, msg)?;
+        Token::Symbol(s) => {
+            if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| s == *var) {
+                Ast(AstEnum::Symbol(s, i), pos)
+            } else if *s == "fn" {
+                Ast(AstEnum::BuiltInFn(s), pos)
+                // // fn('var, { body })
+                // let msg = "The built-in 'fn' must be called as fn('var, { body })";
+                // expect(tokens, msg, Token::ParenOpen)?;
+                // let (var, _) = expect_binding(tokens, msg)?;
+                // expect(tokens, msg, Token::Separator)?;
+                // let block_pos = expect(tokens, msg, Token::BraceOpen)?;
+                // let body = parse_block(block_pos, tokens, stack, &mut vec![var])?;
+                // expect(tokens, msg, Token::BraceClose)?;
+                // expect(tokens, msg, Token::ParenClose)?;
+                // Ast(AstEnum::BuiltInFn(var, Box::new(body)), pos)
+            } else if *s == "let" {
+                // let('var, val, { body })
+                let msg = "The built-in 'let' must be called as let('var, val, { body })";
+                expect(tokens, msg, Token::ParenOpen)?;
+                let (var, _) = expect_binding(tokens, msg)?;
+                expect(tokens, msg, Token::Separator)?;
+                let val = parse_expr(tokens, stack, bindings)?;
+                if let Some((Token::ParenClose, _)) = tokens.peek() {
+                    tokens.next();
                     bindings.push(var);
+                    Ast(AstEnum::BuiltInLet2(var, Box::new(val)), pos)
+                } else {
                     expect(tokens, msg, Token::Separator)?;
                     let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                    let body = parse_block(block_pos, tokens, stack, bindings)?;
+                    let body = parse_block(block_pos, tokens, stack, &mut vec![var])?;
                     expect(tokens, msg, Token::BraceClose)?;
                     expect(tokens, msg, Token::ParenClose)?;
-                    Ast(AstEnum::BuiltInRec(var, Box::new(body)), pos)
-                } else if *s == "pop" {
-                    Ast(AstEnum::BuiltInPop(*s), pos)
-                } else if *s == "if" {
-                    Ast(AstEnum::BuiltInIf(*s), pos)
-                } else if *s == "if-tag" {
-                    Ast(AstEnum::BuiltInIfCoreTag(*s, Pool::T_TAG), pos)
-                } else if *s == "if-binding" {
-                    Ast(AstEnum::BuiltInIfCoreTag(*s, Pool::T_BINDING), pos)
-                } else {
-                    return Err(format!("Could not find binding for '{s}' at {pos}"));
+                    Ast(AstEnum::BuiltInLet(var, Box::new(val), Box::new(body)), pos)
                 }
+            } else if *s == "rec" {
+                // rec('var, { body })
+                let msg = "The built-in 'rec' must be called as rec('var, { body })";
+                expect(tokens, msg, Token::ParenOpen)?;
+                let (var, _) = expect_binding(tokens, msg)?;
+                bindings.push(var);
+                expect(tokens, msg, Token::Separator)?;
+                let block_pos = expect(tokens, msg, Token::BraceOpen)?;
+                let body = parse_block(block_pos, tokens, stack, bindings)?;
+                expect(tokens, msg, Token::BraceClose)?;
+                expect(tokens, msg, Token::ParenClose)?;
+                Ast(AstEnum::BuiltInRec(var, Box::new(body)), pos)
+            } else if *s == "pop" {
+                Ast(AstEnum::BuiltInPop(*s), pos)
+            } else if *s == "if" {
+                Ast(AstEnum::BuiltInIf(*s), pos)
+            } else if *s == "if-tag" {
+                Ast(AstEnum::BuiltInIfCoreTag(*s, Pool::T_TAG), pos)
+            } else if *s == "if-binding" {
+                Ast(AstEnum::BuiltInIfCoreTag(*s, Pool::T_BINDING), pos)
+            } else {
+                return Err(format!("Could not find binding for '{s}' at {pos}"));
             }
-            t => return Err(format!("Unexpected token '{t}' at {pos}")),
-        };
-        let mut arg_bindings = vec![];
-        loop {
-            match tokens.peek() {
-                Some((Token::ParenOpen, _)) => {
-                    tokens.next();
-                    let mut args = vec![];
-                    expr = loop {
-                        args.push(parse_expr(tokens, stack, &mut arg_bindings)?);
-                        match tokens.peek() {
-                            Some((Token::ParenClose, _)) => {
-                                tokens.next();
-                                break Ast(AstEnum::Call(Box::new(expr), args), pos);
-                            }
-                            Some((Token::Separator, _)) => {
-                                tokens.next();
-                            }
-                            Some((t, pos)) => {
-                                return Err(format!(
-                                    "Expected ',' or ')', but found '{t}' at {pos}"
-                                ));
-                            }
-                            None => {
-                                return Err(
-                                    "Expected ',' or ')', but the code just ended".to_string()
-                                );
-                            }
+        }
+        t => return Err(format!("Unexpected token '{t}' at {pos}")),
+    };
+    let mut arg_bindings = vec![];
+    loop {
+        match tokens.peek() {
+            Some((Token::ParenOpen, _)) => {
+                tokens.next();
+                let mut args = vec![];
+                expr = loop {
+                    args.push(parse_expr(tokens, stack, &mut arg_bindings)?);
+                    match tokens.peek() {
+                        Some((Token::ParenClose, _)) => {
+                            tokens.next();
+                            break Ast(AstEnum::Call(Box::new(expr), args), pos);
+                        }
+                        Some((Token::Separator, _)) => {
+                            tokens.next();
+                        }
+                        Some((t, pos)) => {
+                            return Err(format!("Expected ',' or ')', but found '{t}' at {pos}"));
+                        }
+                        None => {
+                            return Err("Expected ',' or ')', but the code just ended".to_string());
                         }
                     }
                 }
-                _ => {
-                    bindings.append(&mut arg_bindings);
-                    return Ok(expr);
-                }
+            }
+            _ => {
+                bindings.append(&mut arg_bindings);
+                return Ok(expr);
             }
         }
     }
@@ -340,7 +365,7 @@ impl<'code> Ast<'code> {
                 pool.register(pos),
             )
         }
-        let expr = match &self.0 {
+        match &self.0 {
             AstEnum::Tag(t) => Expr(
                 ExprEnum::App(
                     Box::new(Expr(
@@ -495,9 +520,7 @@ impl<'code> Ast<'code> {
                     pool.register(pos),
                 )
             }
-        };
-        println!("{self}\n  --> {expr}");
-        expr
+        }
     }
 }
 
@@ -767,11 +790,20 @@ impl Ast<'_> {
     pub fn eval(self) -> Result<String, String> {
         let mut pool = Pool::new();
         let mut expr = self.to_expr(&mut pool);
-        if let Expr(ExprEnum::Abs(block), _) = expr {
-            expr = *block;
-        } else {
-            unreachable!("Expected the AST to be parsed as a block.");
+        for (name, code) in STD_LIB.iter() {
+            let tokens = scan(code);
+            let mut tokens = tokens.iter().peekable();
+            let primitive = parse_expr(&mut tokens, &mut vec![], &mut vec![])
+                .unwrap_or_else(|e| panic!("Could not parse primitive {name}: {e}"))
+                .to_expr(&mut pool);
+            let pos = Pos { line: 0, col: 0 };
+            println!("{name} --> {primitive}");
+            expr = Expr(
+                ExprEnum::App(Box::new(expr), Box::new(primitive)),
+                pool.register(pos),
+            );
         }
+        println!("{self}\n  --> {expr}");
         match expr.eval(&Arc::new(Env::Empty)) {
             Ok(v) => {
                 let mut buf = String::new();
@@ -967,13 +999,13 @@ mod tests {
         assert_eq!(parsed.eval().unwrap(), "Pair(X, Y)");
     }
 
-    // #[test]
-    // fn eval_simple_if_else() {
-    //     let code = "if(Foo, Foo, { True }, { False })";
-    //     let parsed = parse(code).unwrap();
-    //     assert_eq!(code, parsed.to_string());
-    //     assert_eq!(parsed.eval().unwrap(), "True");
-    // }
+    #[test]
+    fn eval_simple_if_else() {
+        let code = "if-eq(Foo, Foo, { True }, { False })";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "True");
+    }
 
     // #[test]
     // fn eval_complex_if_else() {
