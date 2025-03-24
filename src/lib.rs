@@ -119,8 +119,6 @@ enum AstEnum<'code> {
     BuiltInPop(&'code str),
     BuiltInIf(&'code str),
     BuiltInIfCoreTag(&'code str, &'static str),
-    BuiltInLet(&'code str, Box<Ast<'code>>, Box<Ast<'code>>),
-    BuiltInLet2(&'code str, Box<Ast<'code>>),
 }
 
 const STD_LIB: &'static [(&str, &str)] = &[
@@ -262,35 +260,6 @@ fn parse_expr<'code>(
                 Ast(AstEnum::Symbol(s, i), pos)
             } else if *s == "fn" {
                 Ast(AstEnum::BuiltInFn(s), pos)
-                // // fn('var, { body })
-                // let msg = "The built-in 'fn' must be called as fn('var, { body })";
-                // expect(tokens, msg, Token::ParenOpen)?;
-                // let (var, _) = expect_binding(tokens, msg)?;
-                // expect(tokens, msg, Token::Separator)?;
-                // let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                // let body = parse_block(block_pos, tokens, stack, &mut vec![var])?;
-                // expect(tokens, msg, Token::BraceClose)?;
-                // expect(tokens, msg, Token::ParenClose)?;
-                // Ast(AstEnum::BuiltInFn(var, Box::new(body)), pos)
-            } else if *s == "let" {
-                // let('var, val, { body })
-                let msg = "The built-in 'let' must be called as let('var, val, { body })";
-                expect(tokens, msg, Token::ParenOpen)?;
-                let (var, _) = expect_binding(tokens, msg)?;
-                expect(tokens, msg, Token::Separator)?;
-                let val = parse_expr(tokens, stack, bindings)?;
-                if let Some((Token::ParenClose, _)) = tokens.peek() {
-                    tokens.next();
-                    bindings.push(var);
-                    Ast(AstEnum::BuiltInLet2(var, Box::new(val)), pos)
-                } else {
-                    expect(tokens, msg, Token::Separator)?;
-                    let block_pos = expect(tokens, msg, Token::BraceOpen)?;
-                    let body = parse_block(block_pos, tokens, stack, &mut vec![var])?;
-                    expect(tokens, msg, Token::BraceClose)?;
-                    expect(tokens, msg, Token::ParenClose)?;
-                    Ast(AstEnum::BuiltInLet(var, Box::new(val), Box::new(body)), pos)
-                }
             } else if *s == "rec" {
                 // rec('var, { body })
                 let msg = "The built-in 'rec' must be called as rec('var, { body })";
@@ -435,20 +404,6 @@ impl<'code> Ast<'code> {
                 }
                 next.unwrap()
             }
-            AstEnum::BuiltInLet(_, val, body) => Expr(
-                ExprEnum::App(Box::new(body.to_expr(pool)), Box::new(val.to_expr(pool))),
-                pool.register(pos),
-            ),
-            AstEnum::BuiltInLet2(_, val) => Expr(
-                ExprEnum::Abs(Box::new(Expr(
-                    ExprEnum::App(
-                        Box::new(Expr(ExprEnum::Var(0), pool.register(pos))),
-                        Box::new(val.to_expr(pool)),
-                    ),
-                    pool.register(pos),
-                ))),
-                pool.register(pos),
-            ),
             AstEnum::BuiltInFn(_) => Expr(
                 ExprEnum::Abs(Box::new(Expr(
                     ExprEnum::Abs(Box::new(Expr(ExprEnum::Var(0), pool.register(pos)))),
@@ -641,8 +596,6 @@ impl Ast<'_> {
             AstEnum::Block((_, first, _), rest) => {
                 1 + first.size() + rest.iter().map(|(_, arg, _)| arg.size()).sum::<usize>()
             }
-            AstEnum::BuiltInLet(_, val, body) => 2 + val.size() + body.size(),
-            AstEnum::BuiltInLet2(_, val) => 2 + val.size(),
             AstEnum::BuiltInRec(_, body) => 1 + body.size(),
             AstEnum::BuiltInFn(_)
             | AstEnum::BuiltInPop(_)
@@ -705,22 +658,6 @@ impl Ast<'_> {
                     expr.pretty(buf, _wrap, lvl);
                 }
                 buf.push_str(" }");
-            }
-            AstEnum::BuiltInLet(var, val, body) => {
-                buf.push_str("let('");
-                buf.push_str(var);
-                buf.push_str(", ");
-                val.pretty(buf, _wrap, lvl);
-                buf.push_str(", ");
-                body.pretty(buf, _wrap, lvl);
-                buf.push(')');
-            }
-            AstEnum::BuiltInLet2(var, val) => {
-                buf.push_str("let('");
-                buf.push_str(var);
-                buf.push_str(", ");
-                val.pretty(buf, _wrap, lvl);
-                buf.push(')');
             }
             AstEnum::BuiltInRec(var, body) => {
                 buf.push_str("rec('");
@@ -797,13 +734,11 @@ impl Ast<'_> {
                 .unwrap_or_else(|e| panic!("Could not parse primitive {name}: {e}"))
                 .to_expr(&mut pool);
             let pos = Pos { line: 0, col: 0 };
-            println!("{name} --> {primitive}");
             expr = Expr(
                 ExprEnum::App(Box::new(expr), Box::new(primitive)),
                 pool.register(pos),
             );
         }
-        println!("{self}\n  --> {expr}");
         match expr.eval(&Arc::new(Env::Empty)) {
             Ok(v) => {
                 let mut buf = String::new();
