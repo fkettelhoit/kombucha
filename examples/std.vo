@@ -1,2 +1,2 @@
-let('x, Foo),
-if-eq(x, Foo, { True }, { False })
+'x = Foo,
+x == Foo { True } { False }
