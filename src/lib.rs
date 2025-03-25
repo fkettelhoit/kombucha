@@ -42,7 +42,7 @@ const PRELUDE: &'static [(&str, &str)] = &[
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Token<'code> {
-    Separator,
+    Separator(Sep),
     ParenOpen,
     ParenClose,
     BraceOpen,
@@ -53,10 +53,17 @@ enum Token<'code> {
     Reserved(&'code str),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Sep {
+    Comma,
+    Newline,
+}
+
 impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::Separator => f.write_str(","),
+            Token::Separator(Sep::Comma) => f.write_str(","),
+            Token::Separator(Sep::Newline) => f.write_str("\\n"),
             Token::ParenOpen => f.write_str("("),
             Token::ParenClose => f.write_str(")"),
             Token::BraceOpen => f.write_str("{"),
@@ -106,10 +113,11 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
                 i = j + 1;
                 match char {
                     '\n' => {
+                        tokens.push((Token::Separator(Sep::Newline), Pos { col, line }));
                         col = 0;
                         line += 1;
                     }
-                    ',' => tokens.push((Token::Separator, Pos { col, line })),
+                    ',' => tokens.push((Token::Separator(Sep::Comma), Pos { col, line })),
                     '(' => tokens.push((Token::ParenOpen, Pos { col, line })),
                     ')' => tokens.push((Token::ParenClose, Pos { col, line })),
                     '{' => tokens.push((Token::BraceOpen, Pos { col, line })),
@@ -175,6 +183,9 @@ fn parse_block<'code>(
     stack: &mut Vec<&'code str>,
     bindings: &mut Vec<&'code str>,
 ) -> Result<Ast<'code>, String> {
+    if let Some((Token::Separator(_), _)) = tokens.peek() {
+        tokens.next();
+    }
     let mut args = bindings.len();
     if args == 0 {
         args += 1;
@@ -188,8 +199,17 @@ fn parse_block<'code>(
     let mut rest = vec![];
     loop {
         match tokens.peek() {
-            Some((Token::Separator, _)) => {
+            Some((Token::Separator(_), _)) => {
                 tokens.next();
+            }
+            Some((Token::BraceClose, _)) | None => {
+                bindings.clear();
+                for _ in 0..all_args {
+                    stack.pop();
+                }
+                return Ok(Ast(AstEnum::Block(first, rest), pos));
+            }
+            _ => {
                 let mut args = bindings.len();
                 if args == 0 {
                     args += 1;
@@ -200,18 +220,6 @@ fn parse_block<'code>(
                 all_args += args;
                 let expr = parse_expr(tokens, stack, bindings)?;
                 rest.push((args, expr, bindings.len()));
-            }
-            Some((Token::BraceClose, _)) | None => {
-                bindings.clear();
-                for _ in 0..all_args {
-                    stack.pop();
-                }
-                return Ok(Ast(AstEnum::Block(first, rest), pos));
-            }
-            Some((t, pos)) => {
-                return Err(format!(
-                    "Expected block to continue with ',' or '}}', but found {t} at {pos}"
-                ));
             }
         }
     }
@@ -248,6 +256,9 @@ fn parse_expr<'code>(
         match tokens.peek() {
             Some((Token::ParenOpen, _)) => {
                 tokens.next();
+                if let Some((Token::Separator(_), _)) = tokens.peek() {
+                    tokens.next();
+                }
                 let mut args = vec![];
                 expr = loop {
                     args.push(parse_expr(tokens, stack, &mut arg_bindings)?);
@@ -262,7 +273,7 @@ fn parse_expr<'code>(
                                 break Ast(AstEnum::Call(Box::new(expr), args), pos);
                             }
                         }
-                        Some((Token::Separator, _)) => {
+                        Some((Token::Separator(_), _)) => {
                             tokens.next();
                         }
                         Some((t, pos)) => {
@@ -331,7 +342,15 @@ fn parse_expr<'code>(
             expect(tokens, msg, Token::ParenOpen)?;
             let (var, _) = expect_binding(tokens, msg)?;
             bindings.push(var);
-            expect(tokens, msg, Token::Separator)?;
+            match tokens.next() {
+                Some((Token::Separator(_), _)) => {}
+                Some((tok, pos)) => {
+                    return Err(format!(
+                        "{msg}, expected ',' or '\n', found '{tok}' at {pos}"
+                    ));
+                }
+                None => return Err(format!("{msg}, but the code just ended")),
+            }
             let block_pos = expect(tokens, msg, Token::BraceOpen)?;
             let body = parse_block(block_pos, tokens, stack, bindings)?;
             expect(tokens, msg, Token::BraceClose)?;
