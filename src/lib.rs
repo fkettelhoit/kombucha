@@ -134,12 +134,12 @@ const STD_LIB: &'static [(&str, &str)] = &[
     ),
     (
         "if-eq",
-        "fn(Pair('x, 'y, 'then, 'else), {
-            pop(x, fn(Pair('xx, 'x), {
-                pop(y, fn(Pair('yy, 'y), {
+        "fn(Args('x, 'y, 'then, 'else), {
+            pop(x, fn(Args('xx, 'x), {
+                pop(y, fn(Args('yy, 'y), {
                     if-tag(xx, {
                         if-tag(yy, {
-                            if(x, y, then, else)
+                            if-eq(x, y, then, else)
                         }, else)
                     }, else)
                 }), else)
@@ -274,7 +274,7 @@ fn parse_expr<'code>(
                 Ast(AstEnum::BuiltInRec(var, Box::new(body)), pos)
             } else if *s == "pop" {
                 Ast(AstEnum::BuiltInPop(*s), pos)
-            } else if *s == "if" {
+            } else if *s == "if-eq" {
                 Ast(AstEnum::BuiltInIf(*s), pos)
             } else if *s == "if-tag" {
                 Ast(AstEnum::BuiltInIfCoreTag(*s, Pool::T_TAG), pos)
@@ -740,8 +740,8 @@ impl Ast<'_> {
 
 #[derive(Debug, Clone)]
 enum Value {
-    Rec(Expr, Arc<Env<Value>>, Id),
-    NonRec(Val),
+    RecVal(Expr, Arc<Env<Value>>, Id),
+    Val(Val),
 }
 
 #[derive(Debug, Clone)]
@@ -753,13 +753,13 @@ enum Val {
 impl Value {
     fn to_string(&self, buf: &mut String, pool: &Pool) {
         match self {
-            Value::Rec(_, _, id) => buf.push_str(&format!("<rec:{id}>")),
-            Value::NonRec(Val::Fn(_, _, id)) => buf.push_str(&format!("<fn:{id}>")),
-            Value::NonRec(Val::Tag(t, vals, _)) => {
+            Value::RecVal(_, _, id) => buf.push_str(&format!("<rec:{id}>")),
+            Value::Val(Val::Fn(_, _, id)) => buf.push_str(&format!("<fn:{id}>")),
+            Value::Val(Val::Tag(t, vals, _)) => {
                 let mut t = *t;
                 let mut skip = 0;
                 if pool.core.iter().any(|(_, id)| *id == t) {
-                    if let Some(Value::NonRec(Val::Tag(tag, inner, _))) = vals.first() {
+                    if let Some(Value::Val(Val::Tag(tag, inner, _))) = vals.first() {
                         if inner.is_empty() {
                             t = *tag;
                             skip = 1;
@@ -816,9 +816,9 @@ impl Expr {
         fn resolve_rec(mut v: Value) -> Result<Val, Expr> {
             loop {
                 match v {
-                    Value::NonRec(val) => return Ok(val),
-                    Value::Rec(body, env, id) => {
-                        let env = env.push(Value::Rec(body.clone(), Arc::clone(&env), id));
+                    Value::Val(val) => return Ok(val),
+                    Value::RecVal(body, env, id) => {
+                        let env = env.push(Value::RecVal(body.clone(), Arc::clone(&env), id));
                         v = body.eval(&env)?;
                     }
                 }
@@ -829,26 +829,26 @@ impl Expr {
                 Val::Fn(body, fn_env, _) => body.eval(&fn_env.push(arg)),
                 Val::Tag(t, mut values, id) => {
                     values.push(arg);
-                    Ok(Value::NonRec(Val::Tag(t, values, id)))
+                    Ok(Value::Val(Val::Tag(t, values, id)))
                 }
             }
         }
         match self.0 {
             ExprEnum::Var(var) => env.get(var).cloned().ok_or(self),
-            ExprEnum::Tag(t) => Ok(Value::NonRec(Val::Tag(t, vec![], self.1))),
-            ExprEnum::Abs(body) => Ok(Value::NonRec(Val::Fn(*body, Arc::clone(env), self.1))),
-            ExprEnum::Rec(body) => Ok(Value::Rec(*body, Arc::clone(env), self.1)),
+            ExprEnum::Tag(t) => Ok(Value::Val(Val::Tag(t, vec![], self.1))),
+            ExprEnum::Abs(body) => Ok(Value::Val(Val::Fn(*body, Arc::clone(env), self.1))),
+            ExprEnum::Rec(body) => Ok(Value::RecVal(*body, Arc::clone(env), self.1)),
             ExprEnum::App(f, arg) => match resolve_rec(f.eval(env)?)? {
                 Val::Fn(body, fn_env, _) => body.eval(&fn_env.push(arg.eval(env)?)),
                 Val::Tag(t, mut values, id) => {
                     values.push(arg.eval(env)?);
-                    Ok(Value::NonRec(Val::Tag(t, values, id)))
+                    Ok(Value::Val(Val::Tag(t, values, id)))
                 }
             },
             ExprEnum::Pop(v, then_expr, else_expr) => match resolve_rec(v.eval(env)?)? {
                 Val::Tag(t, mut values, id) => {
                     if let Some(last) = values.pop() {
-                        let butlast = Value::NonRec(Val::Tag(t, values, id));
+                        let butlast = Value::Val(Val::Tag(t, values, id));
                         app(app(then_expr.eval(env)?, butlast)?, last)
                     } else {
                         else_expr.eval(env)
