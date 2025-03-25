@@ -6,6 +6,37 @@ use std::{
 };
 
 //
+// PRELUDE (PRE-DEFINED FUNCTIONS)
+//
+
+const PRELUDE: &'static [(&str, &str)] = &[
+    (
+        "let",
+        "fn 'binding {
+            fn 'val {
+                fn 'block {
+                    block(val)
+                }
+            }
+        }",
+    ),
+    (
+        "if-eq",
+        "fn(Args('x, 'y, 'then, 'else)) {
+            pop(x, fn(Args('xx, 'x), {
+                pop(y, fn(Args('yy, 'y), {
+                    if-tag(xx, {
+                        if-tag(yy, {
+                            if-eq(x, y, then, else)
+                        }, else)
+                    }, else)
+                }), else)
+            }), else)
+        }",
+    ),
+];
+
+//
 // SCANNER
 //
 
@@ -121,39 +152,12 @@ enum AstEnum<'code> {
     BuiltInIfCoreTag(&'code str, &'static str),
 }
 
-const STD_LIB: &'static [(&str, &str)] = &[
-    (
-        "let",
-        "fn('binding, {
-            fn('val, {
-                fn('block, {
-                    block(val)
-                })
-            })
-        })",
-    ),
-    (
-        "if-eq",
-        "fn(Args('x, 'y, 'then, 'else), {
-            pop(x, fn(Args('xx, 'x), {
-                pop(y, fn(Args('yy, 'y), {
-                    if-tag(xx, {
-                        if-tag(yy, {
-                            if-eq(x, y, then, else)
-                        }, else)
-                    }, else)
-                }), else)
-            }), else)
-        })",
-    ),
-];
-
 type Tokens<'a, 'code> = Peekable<Iter<'a, (Token<'code>, Pos)>>;
 
 pub fn parse(code: &str) -> Result<Ast<'_>, String> {
     let tokens = scan(code);
     let mut tokens = tokens.iter().peekable();
-    let mut bindings = STD_LIB.iter().map(|(name, _)| *name).collect::<Vec<_>>();
+    let mut bindings = PRELUDE.iter().map(|(name, _)| *name).collect::<Vec<_>>();
     let pos = Pos { line: 1, col: 1 };
     let block = parse_block(pos, &mut tokens, &mut vec![], &mut bindings)?;
     if let Some((token, pos)) = tokens.next() {
@@ -238,6 +242,11 @@ fn parse_expr<'code>(
         }
     }
     let pos = *pos;
+    fn unexpected_block_end(pos: Pos) -> String {
+        format!(
+            "Expected the block starting at {pos} to be closed with '}}', but the code just ended"
+        )
+    }
     let mut expr = match t {
         Token::Tag(t) => Ast(AstEnum::Tag(t), pos),
         Token::Binding(b) => {
@@ -248,11 +257,7 @@ fn parse_expr<'code>(
             let block = parse_block(pos, tokens, stack, bindings)?;
             match tokens.next() {
                 Some(_) => block,
-                None => {
-                    return Err(format!(
-                        "Expected the block starting at {pos} to be closed with '}}', but the code just ended"
-                    ));
-                }
+                None => return Err(unexpected_block_end(pos)),
             }
         }
         Token::Symbol(s) => {
@@ -310,6 +315,27 @@ fn parse_expr<'code>(
                         }
                     }
                 }
+            }
+            Some((Token::BraceOpen, _)) => {
+                tokens.next();
+                let block = parse_block(pos, tokens, stack, &mut arg_bindings)?;
+                match tokens.next() {
+                    Some(_) => {
+                        expr = Ast(AstEnum::Call(Box::new(expr), vec![block]), pos);
+                    }
+                    None => return Err(unexpected_block_end(pos)),
+                }
+            }
+            Some((Token::Binding(b), _)) => {
+                tokens.next();
+                arg_bindings.push(b);
+                let arg = Ast(AstEnum::Binding(b), pos);
+                expr = Ast(AstEnum::Call(Box::new(expr), vec![arg]), pos);
+            }
+            Some((Token::Tag(t), _)) => {
+                tokens.next();
+                let arg = Ast(AstEnum::Tag(t), pos);
+                expr = Ast(AstEnum::Call(Box::new(expr), vec![arg]), pos);
             }
             _ => {
                 bindings.append(&mut arg_bindings);
@@ -595,6 +621,13 @@ impl Ast<'_> {
         }
     }
 
+    fn is_invocable(&self) -> bool {
+        match &self.0 {
+            AstEnum::Tag(_) | AstEnum::Binding(_) | AstEnum::Block(_, _) => false,
+            _ => true,
+        }
+    }
+
     fn pretty(&self, buf: &mut String, _wrap: bool, lvl: usize) {
         fn indent(s: &mut String, lvl: usize) {
             for _ in 0..lvl {
@@ -614,7 +647,12 @@ impl Ast<'_> {
             }
             AstEnum::Call(f, args) => {
                 f.pretty(buf, true, lvl);
-                buf.push('(');
+                let is_trailing_arg = args.len() == 1 && !args[0].is_invocable();
+                if is_trailing_arg {
+                    buf.push(' ');
+                } else {
+                    buf.push('(');
+                }
                 let is_simple = args.iter().all(|arg| arg.is_simple());
                 if !is_simple {
                     buf.push('\n');
@@ -639,7 +677,9 @@ impl Ast<'_> {
                     buf.push('\n');
                     indent(buf, lvl);
                 }
-                buf.push(')');
+                if !is_trailing_arg {
+                    buf.push(')');
+                }
             }
             AstEnum::Block((_, first, _), rest) => {
                 buf.push_str("{ ");
@@ -718,7 +758,7 @@ impl Ast<'_> {
     pub fn eval(self) -> Result<String, String> {
         let mut pool = Pool::new();
         let mut expr = self.to_expr(&mut pool);
-        for (name, code) in STD_LIB.iter() {
+        for (name, code) in PRELUDE.iter() {
             let tokens = scan(code);
             let mut tokens = tokens.iter().peekable();
             let primitive = parse_expr(&mut tokens, &mut vec![], &mut vec![])
@@ -876,7 +916,7 @@ mod tests {
 
     #[test]
     fn eval_fn_app() {
-        let code = "fn('x, { x })(Foo)";
+        let code = "fn 'x { x } Foo";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "Foo");
@@ -892,7 +932,7 @@ mod tests {
 
     #[test]
     fn eval_block() {
-        let code = "{ Foo }(Nil)";
+        let code = "{ Foo } Nil";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
         assert!(parsed.eval().unwrap().starts_with("Foo"));
