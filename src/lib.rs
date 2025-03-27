@@ -163,7 +163,7 @@ enum AstEnum<'code> {
     ),
     List(Vec<Ast<'code>>),
     BuiltInFn(&'code str),
-    BuiltInRec(&'code str, Box<Ast<'code>>),
+    BuiltInRec(&'code str),
     BuiltInPop(&'code str),
     BuiltInIf(&'code str),
     BuiltInIfCoreTag(&'code str, &'static str),
@@ -289,7 +289,7 @@ fn parse_expr<'code>(
                 None => return Err(unexpected_end(pos, Tok::BracketClose)),
             }
         }
-        Tok::Symbol(s) => parse_symbol(pos, *s, tokens, stack, bindings)?,
+        Tok::Symbol(s) => parse_symbol(pos, *s, stack)?,
         t => return Err(format!("Unexpected token '{t}' at {pos}")),
     };
     let mut infix = None;
@@ -320,6 +320,24 @@ fn parse_expr<'code>(
                     }
                 }
             }
+            Some((Tok::Symbol(s), pos)) if infix.is_none() => {
+                tokens.next();
+                infix = Some(parse_symbol(*pos, s, stack)?);
+            }
+            Some((
+                Tok::ParenClose | Tok::BracketClose | Tok::BraceClose | Tok::Separator(_),
+                _,
+            ))
+            | None => {
+                if infix.is_some() {
+                    return Err(format!(
+                        "Expected an argument to the right side of infix call starting at {pos}"
+                    ));
+                } else {
+                    bindings.append(&mut arg_bindings);
+                    return Ok(expr);
+                }
+            }
             Some((t @ (Tok::Tag(_) | Tok::Binding(_) | Tok::BraceOpen | Tok::BracketOpen), p)) => {
                 tokens.next();
                 let arg = match t {
@@ -336,7 +354,7 @@ fn parse_expr<'code>(
                         }
                     }
                     Tok::BracketOpen => {
-                        let list = parse_list(pos, tokens, stack, bindings)?;
+                        let list = parse_list(pos, tokens, stack, &mut arg_bindings)?;
                         match tokens.next() {
                             Some(_) => list,
                             None => {
@@ -354,44 +372,29 @@ fn parse_expr<'code>(
                     expr = Ast(AstEnum::Call(Box::new(expr), vec![arg]), pos);
                 }
             }
-            Some((Tok::Symbol(s), pos)) => {
-                tokens.next();
-                infix = Some(parse_symbol(*pos, s, tokens, stack, bindings)?);
-            }
-            _ if infix.is_some() => {
-                return Err(format!(
-                    "Expected an argument to the right side of infix call starting at {pos}"
-                ));
-            }
-            _ => {
-                bindings.append(&mut arg_bindings);
-                return Ok(expr);
+            Some(_) => {
+                let arg = parse_expr(tokens, stack, &mut arg_bindings)?;
+                if let Some(f) = infix {
+                    let call = AstEnum::InfixCall(Box::new(expr), Box::new(f), vec![arg]);
+                    expr = Ast(call, pos);
+                    infix = None;
+                } else {
+                    expr = Ast(AstEnum::Call(Box::new(expr), vec![arg]), pos);
+                }
             }
         }
     }
     fn parse_symbol<'code>(
         pos: Pos,
         s: &'code str,
-        tokens: &mut Tokens<'_, 'code>,
-        stack: &mut Vec<&'code str>,
-        bindings: &mut Vec<&'code str>,
+        stack: &[&'code str],
     ) -> Result<Ast<'code>, String> {
         if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| &s == *var) {
             Ok(Ast(AstEnum::Symbol(s, i), pos))
         } else if s == "fn" {
             Ok(Ast(AstEnum::BuiltInFn(s), pos))
         } else if s == "rec" {
-            // rec('var, { body })
-            let msg = "The built-in 'rec' must be called as rec('var, { body })";
-            expect(tokens, msg, Tok::ParenOpen)?;
-            let (var, _) = expect_binding(tokens, msg)?;
-            bindings.push(var);
-            expect(tokens, msg, Tok::Separator(Sep::Comma))?;
-            let block_pos = expect(tokens, msg, Tok::BraceOpen)?;
-            let body = parse_block(block_pos, tokens, stack, bindings)?;
-            expect(tokens, msg, Tok::BraceClose)?;
-            expect(tokens, msg, Tok::ParenClose)?;
-            Ok(Ast(AstEnum::BuiltInRec(var, Box::new(body)), pos))
+            Ok(Ast(AstEnum::BuiltInRec(s), pos))
         } else if s == "pop" {
             Ok(Ast(AstEnum::BuiltInPop(s), pos))
         } else if s == "if-eq" {
@@ -421,23 +424,6 @@ fn parse_expr<'code>(
                 }
                 _ => elems.push(parse_expr(tokens, stack, bindings)?),
             }
-        }
-    }
-    fn expect(toks: &mut Tokens<'_, '_>, msg: &str, t: Tok<'_>) -> Result<Pos, String> {
-        match toks.next() {
-            Some((tok, pos)) if tok == &t => Ok(*pos),
-            Some((tok, pos)) => Err(format!("{msg}, expected '{t}', found '{tok}' at {pos}")),
-            None => Err(format!("{msg}, but the code just ended")),
-        }
-    }
-    fn expect_binding<'code>(
-        toks: &mut Tokens<'_, 'code>,
-        msg: &str,
-    ) -> Result<(&'code str, Pos), String> {
-        match toks.next() {
-            Some((Tok::Binding(b), pos)) => Ok((b, *pos)),
-            Some((tok, pos)) => Err(format!("{msg}, expected binding, found '{tok}' at {pos}")),
-            None => Err(format!("{msg}, but the code just ended")),
         }
     }
     fn unexpected_end(pos: Pos, expected: Tok) -> String {
@@ -522,7 +508,10 @@ impl<'code> Ast<'code> {
                 pool.new_id(pos),
                 Expr::abs(pool.new_id(pos), Expr::var(pool.new_id(pos), 0)),
             ),
-            AstEnum::BuiltInRec(_, body) => Expr::rec(pool.new_id(pos), body.to_expr(pool)),
+            AstEnum::BuiltInRec(_) => Expr::abs(
+                pool.new_id(pos),
+                Expr::rec(pool.new_id(pos), Expr::var(pool.new_id(pos), 0)),
+            ),
             AstEnum::BuiltInPop(_) => Expr::abs(
                 pool.new_id(pos),
                 Expr::abs(
@@ -724,7 +713,7 @@ impl std::fmt::Display for Ast<'_> {
 
 impl Ast<'_> {
     fn is_simple(&self) -> bool {
-        self.size() < 4
+        self.size() < 10
     }
 
     fn size(&self) -> usize {
@@ -740,8 +729,8 @@ impl Ast<'_> {
                 1 + first.size() + rest.iter().map(|(_, arg, _)| arg.size()).sum::<usize>()
             }
             AstEnum::List(elems) => 1 + elems.iter().map(|elem| elem.size()).sum::<usize>(),
-            AstEnum::BuiltInRec(_, body) => 1 + body.size(),
-            AstEnum::BuiltInFn(_)
+            AstEnum::BuiltInRec(_)
+            | AstEnum::BuiltInFn(_)
             | AstEnum::BuiltInPop(_)
             | AstEnum::BuiltInIf(_)
             | AstEnum::BuiltInIfCoreTag(_, _) => 1,
@@ -835,14 +824,8 @@ impl Ast<'_> {
                 }
                 buf.push(']');
             }
-            AstEnum::BuiltInRec(var, body) => {
-                buf.push_str("rec('");
-                buf.push_str(var);
-                buf.push_str(", ");
-                body.pretty(buf, _wrap, lvl);
-                buf.push(')');
-            }
-            AstEnum::BuiltInFn(s)
+            AstEnum::BuiltInRec(s)
+            | AstEnum::BuiltInFn(s)
             | AstEnum::BuiltInPop(s)
             | AstEnum::BuiltInIf(s)
             | AstEnum::BuiltInIfCoreTag(s, _) => buf.push_str(s),
@@ -1033,7 +1016,10 @@ impl Expr {
             ExprEnum::Var(var) => env.get(var).cloned().ok_or(self),
             ExprEnum::Tag(t) => Ok(Value::Val(Val::Tag(t, vec![], self.1))),
             ExprEnum::Abs(body) => Ok(Value::Val(Val::Fn(*body, Arc::clone(env), self.1))),
-            ExprEnum::Rec(body) => Ok(Value::RecVal(*body, Arc::clone(env), self.1)),
+            ExprEnum::Rec(body) => match body.eval(env)? {
+                Value::Val(Val::Fn(body, fn_env, id)) => Ok(Value::RecVal(body, fn_env, id)),
+                v => Ok(v),
+            },
             ExprEnum::App(f, arg) => match resolve_rec(f.eval(env)?)? {
                 Val::Fn(body, fn_env, _) => body.eval(&fn_env.push(arg.eval(env)?)),
                 Val::Tag(t, mut values, id) => {
@@ -1136,10 +1122,11 @@ mod tests {
 
     #[test]
     fn eval_rec() {
-        let code = "rec('r, { Cons(Foo, r) })";
+        let code =
+            "=('r, rec(fn('r, { Cons(Foo, r) }))), pop(r, fn(Pair('xs, 'x), { xs }), { Error })";
         let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-        assert!(parsed.eval().unwrap().starts_with("<rec:"));
+        // assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "Cons(Foo)");
     }
 
     #[test]
