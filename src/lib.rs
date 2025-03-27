@@ -1,4 +1,5 @@
 use std::{
+    cmp::max,
     collections::HashMap,
     iter::{Peekable, once},
     slice::Iter,
@@ -156,10 +157,7 @@ enum AstEnum<'code> {
     Binding(&'code str),
     Call(Box<Ast<'code>>, Vec<Ast<'code>>),
     InfixCall(Box<Ast<'code>>, Box<Ast<'code>>, Vec<Ast<'code>>),
-    Block(
-        (usize, Box<Ast<'code>>, usize),
-        Vec<(usize, Ast<'code>, usize)>,
-    ),
+    Block(Vec<(usize, Ast<'code>)>),
     List(Vec<Ast<'code>>),
     Core(&'code str, BuiltIn),
 }
@@ -196,20 +194,8 @@ fn parse_block<'code>(
     stack: &mut Vec<&'code str>,
     bindings: &mut Vec<&'code str>,
 ) -> Result<Ast<'code>, String> {
-    if let Some((Tok::Separator(_), _)) = tokens.peek() {
-        tokens.next();
-    }
-    let mut args = bindings.len();
-    if args == 0 {
-        args += 1;
-        stack.push("");
-    } else {
-        stack.append(bindings);
-    }
-    let mut all_args = args;
-    let expr = parse_expr(tokens, stack, bindings)?;
-    let first = (args, Box::new(expr), bindings.len());
-    let mut rest = vec![];
+    let stack_size_before = stack.len();
+    let mut elems = vec![];
     loop {
         match tokens.peek() {
             Some((Tok::Separator(_), _)) => {
@@ -217,22 +203,25 @@ fn parse_block<'code>(
             }
             Some((Tok::BraceClose, _)) | None => {
                 bindings.clear();
-                for _ in 0..all_args {
+                for _ in 0..(stack.len() - stack_size_before) {
                     stack.pop();
                 }
-                return Ok(Ast(AstEnum::Block(first, rest), pos));
+                if elems.is_empty() {
+                    return Err(format!(
+                        "Blocks cannot be empty, but found an empty block at {pos}"
+                    ));
+                }
+                return Ok(Ast(AstEnum::Block(elems), pos));
             }
             _ => {
-                let mut args = bindings.len();
-                if args == 0 {
-                    args += 1;
+                let args = bindings.len();
+                if bindings.is_empty() {
                     stack.push("");
                 } else {
                     stack.append(bindings);
                 }
-                all_args += args;
                 let expr = parse_expr(tokens, stack, bindings)?;
-                rest.push((args, expr, bindings.len()));
+                elems.push((args, expr));
             }
         }
     }
@@ -475,18 +464,14 @@ impl<'code> Ast<'code> {
                 }
                 expr
             }
-            AstEnum::Block((args, first, bindings_left), rest) => {
+            AstEnum::Block(elems) => {
                 // `{ a('x), b('y), c }`
                 // desugars to `a('x, { b('y), c })`
                 // desugars to `a('x, { b('y, { c }) })`
-                let mut next = None;
-                let mut exprs = vec![(*args, first.as_ref(), *bindings_left)];
-                for (args, expr, bindings_left) in rest {
-                    exprs.push((*args, expr, *bindings_left));
-                }
-                for (args, expr, args_next) in exprs.into_iter().rev() {
+                let mut next: Option<(Expr, usize)> = None;
+                for (args, expr) in elems.into_iter().rev() {
                     let mut expr = expr.to_expr(pool);
-                    if let Some(block) = next {
+                    if let Some((block, args_next)) = next {
                         if args_next == 0 {
                             // { f(), ... }
                             // <==> (_ => ...)(f())
@@ -497,12 +482,12 @@ impl<'code> Ast<'code> {
                             expr = Expr::app(pool.new_id(pos), expr, block);
                         }
                     }
-                    for _ in 0..args {
+                    for _ in 0..max(1, *args) {
                         expr = Expr::abs(pool.new_id(pos), expr);
                     }
-                    next = Some(expr)
+                    next = Some((expr, *args))
                 }
-                next.unwrap()
+                next.unwrap().0
             }
             AstEnum::List(elems) => {
                 let mut expr = Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_LIST));
@@ -706,10 +691,11 @@ impl std::fmt::Display for Ast<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut buf = String::new();
         match &self.0 {
-            AstEnum::Block((_, first, _), rest) => {
-                first.pretty(&mut buf, false, 0);
-                for (_, expr, _) in rest {
-                    buf.push_str(", ");
+            AstEnum::Block(elems) => {
+                for (i, (_, expr)) in elems.iter().enumerate() {
+                    if i != 0 {
+                        buf.push_str(", ");
+                    }
                     expr.pretty(&mut buf, false, 0);
                 }
             }
@@ -737,9 +723,7 @@ impl Ast<'_> {
             AstEnum::InfixCall(a, f, args) => {
                 1 + a.size() + f.size() + args.iter().map(|arg| arg.size()).sum::<usize>()
             }
-            AstEnum::Block((_, first, _), rest) => {
-                1 + first.size() + rest.iter().map(|(_, arg, _)| arg.size()).sum::<usize>()
-            }
+            AstEnum::Block(elems) => 1 + elems.iter().map(|(_, arg)| arg.size()).sum::<usize>(),
             AstEnum::List(elems) => 1 + elems.iter().map(|elem| elem.size()).sum::<usize>(),
         }
     }
@@ -747,7 +731,7 @@ impl Ast<'_> {
     fn is_invocable(&self) -> bool {
         !matches!(
             &self.0,
-            AstEnum::Tag(_) | AstEnum::Binding(_) | AstEnum::Block(_, _) | AstEnum::List(_)
+            AstEnum::Tag(_) | AstEnum::Binding(_) | AstEnum::Block(_) | AstEnum::List(_)
         )
     }
 
@@ -809,11 +793,12 @@ impl Ast<'_> {
                 buf.push(' ');
                 Ast(AstEnum::Call(f.clone(), args.clone()), self.1).pretty(buf, _wrap, lvl)
             }
-            AstEnum::Block((_, first, _), rest) => {
+            AstEnum::Block(elems) => {
                 buf.push_str("{ ");
-                first.pretty(buf, _wrap, lvl);
-                for (_, expr, _) in rest {
-                    buf.push_str(", ");
+                for (i, (_, expr)) in elems.iter().enumerate() {
+                    if i != 0 {
+                        buf.push_str(", ");
+                    }
                     expr.pretty(buf, _wrap, lvl);
                 }
                 buf.push_str(" }");
