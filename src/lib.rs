@@ -9,7 +9,7 @@ use std::{
 // PRELUDE (PRE-DEFINED FUNCTIONS)
 //
 
-const PRELUDE: &'static [(&str, &str)] = &[
+const PRELUDE: &[(&str, &str)] = &[
     (
         "=",
         "fn 'binding {
@@ -187,7 +187,7 @@ pub fn parse(code: &str) -> Result<Ast<'_>, String> {
             "Expected the code to end, but found {token} at {pos}"
         ));
     }
-    return Ok(block);
+    Ok(block)
 }
 
 fn parse_block<'code>(
@@ -294,7 +294,7 @@ fn parse_expr<'code>(
                 None => return Err(unexpected_end(pos, Tok::BracketClose)),
             }
         }
-        Tok::Symbol(s) => parse_symbol(pos, *s, stack)?,
+        Tok::Symbol(s) => parse_symbol(pos, s, stack)?,
         t => return Err(format!("Unexpected token '{t}' at {pos}")),
     };
     let mut infix = None;
@@ -745,12 +745,10 @@ impl Ast<'_> {
     }
 
     fn is_invocable(&self) -> bool {
-        match &self.0 {
-            AstEnum::Tag(_) | AstEnum::Binding(_) | AstEnum::Block(_, _) | AstEnum::List(_) => {
-                false
-            }
-            _ => true,
-        }
+        !matches!(
+            &self.0,
+            AstEnum::Tag(_) | AstEnum::Binding(_) | AstEnum::Block(_, _) | AstEnum::List(_)
+        )
     }
 
     fn pretty(&self, buf: &mut String, _wrap: bool, lvl: usize) {
@@ -1045,9 +1043,9 @@ impl Expr {
                     (Val::Tag(a, rest_a, _), Val::Tag(b, rest_b, _))
                         if a == b && rest_a.is_empty() && rest_b.is_empty() =>
                     {
-                        then_expr.eval(&env)
+                        then_expr.eval(env)
                     }
-                    _ => else_expr.eval(&env),
+                    _ => else_expr.eval(env),
                 }
             }
         }
