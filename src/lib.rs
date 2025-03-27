@@ -151,7 +151,6 @@ pub struct Ast<'code>(AstEnum<'code>, Pos);
 
 #[derive(Debug, Clone)]
 enum AstEnum<'code> {
-    Nil,
     Tag(&'code str),
     Symbol(&'code str, usize),
     Binding(&'code str),
@@ -162,11 +161,17 @@ enum AstEnum<'code> {
         Vec<(usize, Ast<'code>, usize)>,
     ),
     List(Vec<Ast<'code>>),
-    BuiltInFn(&'code str),
-    BuiltInRec(&'code str),
-    BuiltInPop(&'code str),
-    BuiltInIf(&'code str),
-    BuiltInIfCoreTag(&'code str, &'static str),
+    Core(&'code str, BuiltIn),
+}
+
+#[derive(Debug, Clone, Copy)]
+enum BuiltIn {
+    Fn,
+    Rec,
+    Pop,
+    If,
+    IfCoreTag(&'static str),
+    Nil,
 }
 
 type Tokens<'a, 'code> = Peekable<Iter<'a, (Tok<'code>, Pos)>>;
@@ -252,7 +257,7 @@ fn parse_expr<'code>(
             match tokens.peek() {
                 Some((Tok::ParenClose, _)) => {
                     tokens.next();
-                    break Ast(AstEnum::Nil, pos);
+                    break Ast(AstEnum::Core("()", BuiltIn::Nil), pos);
                 }
                 Some((Tok::Separator(_), _)) => {
                     tokens.next();
@@ -392,17 +397,20 @@ fn parse_expr<'code>(
         if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| &s == *var) {
             Ok(Ast(AstEnum::Symbol(s, i), pos))
         } else if s == "fn" {
-            Ok(Ast(AstEnum::BuiltInFn(s), pos))
+            Ok(Ast(AstEnum::Core(s, BuiltIn::Fn), pos))
         } else if s == "rec" {
-            Ok(Ast(AstEnum::BuiltInRec(s), pos))
+            Ok(Ast(AstEnum::Core(s, BuiltIn::Rec), pos))
         } else if s == "pop" {
-            Ok(Ast(AstEnum::BuiltInPop(s), pos))
+            Ok(Ast(AstEnum::Core(s, BuiltIn::Pop), pos))
         } else if s == "if-eq" {
-            Ok(Ast(AstEnum::BuiltInIf(s), pos))
+            Ok(Ast(AstEnum::Core(s, BuiltIn::If), pos))
         } else if s == "if-tag" {
-            Ok(Ast(AstEnum::BuiltInIfCoreTag(s, Pool::T_TAG), pos))
+            Ok(Ast(AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_TAG)), pos))
         } else if s == "if-binding" {
-            Ok(Ast(AstEnum::BuiltInIfCoreTag(s, Pool::T_BINDING), pos))
+            Ok(Ast(
+                AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_BINDING)),
+                pos,
+            ))
         } else {
             return Err(format!("Could not find binding for '{s}' at {pos}"));
         }
@@ -437,7 +445,6 @@ impl<'code> Ast<'code> {
     fn to_expr(&self, pool: &mut Pool<'code>) -> Expr {
         let pos = self.1;
         match &self.0 {
-            AstEnum::Nil => Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL)),
             AstEnum::Tag(t) => Expr::app(
                 pool.new_id(pos),
                 Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_TAG)),
@@ -504,15 +511,15 @@ impl<'code> Ast<'code> {
                 }
                 expr
             }
-            AstEnum::BuiltInFn(_) => Expr::abs(
+            AstEnum::Core(_, BuiltIn::Fn) => Expr::abs(
                 pool.new_id(pos),
                 Expr::abs(pool.new_id(pos), Expr::var(pool.new_id(pos), 0)),
             ),
-            AstEnum::BuiltInRec(_) => Expr::abs(
+            AstEnum::Core(_, BuiltIn::Rec) => Expr::abs(
                 pool.new_id(pos),
                 Expr::rec(pool.new_id(pos), Expr::var(pool.new_id(pos), 0)),
             ),
-            AstEnum::BuiltInPop(_) => Expr::abs(
+            AstEnum::Core(_, BuiltIn::Pop) => Expr::abs(
                 pool.new_id(pos),
                 Expr::abs(
                     pool.new_id(pos),
@@ -531,7 +538,7 @@ impl<'code> Ast<'code> {
                     ),
                 ),
             ),
-            AstEnum::BuiltInIf(_) => Expr::abs(
+            AstEnum::Core(_, BuiltIn::If) => Expr::abs(
                 pool.new_id(pos),
                 Expr::abs(
                     pool.new_id(pos),
@@ -558,10 +565,13 @@ impl<'code> Ast<'code> {
                     ),
                 ),
             ),
-            AstEnum::BuiltInIfCoreTag(s, tag) => {
-                let if_expr = Ast(AstEnum::BuiltInIf(s), pos);
+            AstEnum::Core(s, BuiltIn::IfCoreTag(tag)) => {
+                let if_expr = Ast(AstEnum::Core(s, BuiltIn::If), pos);
                 let tag = Expr::tag(pool.new_id(pos), pool.intern_core(tag));
                 Expr::app(pool.new_id(pos), if_expr.to_expr(pool), tag)
+            }
+            AstEnum::Core(_, BuiltIn::Nil) => {
+                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL))
             }
         }
     }
@@ -718,7 +728,9 @@ impl Ast<'_> {
 
     fn size(&self) -> usize {
         match &self.0 {
-            AstEnum::Nil | AstEnum::Tag(_) | AstEnum::Symbol(_, _) | AstEnum::Binding(_) => 1,
+            AstEnum::Tag(_) | AstEnum::Symbol(_, _) | AstEnum::Binding(_) | AstEnum::Core(_, _) => {
+                1
+            }
             AstEnum::Call(f, args) => {
                 1 + f.size() + args.iter().map(|arg| arg.size()).sum::<usize>()
             }
@@ -729,11 +741,6 @@ impl Ast<'_> {
                 1 + first.size() + rest.iter().map(|(_, arg, _)| arg.size()).sum::<usize>()
             }
             AstEnum::List(elems) => 1 + elems.iter().map(|elem| elem.size()).sum::<usize>(),
-            AstEnum::BuiltInRec(_)
-            | AstEnum::BuiltInFn(_)
-            | AstEnum::BuiltInPop(_)
-            | AstEnum::BuiltInIf(_)
-            | AstEnum::BuiltInIfCoreTag(_, _) => 1,
         }
     }
 
@@ -753,7 +760,6 @@ impl Ast<'_> {
             }
         }
         match &self.0 {
-            AstEnum::Nil => buf.push_str("()"),
             AstEnum::Tag(t) => {
                 buf.push_str(t);
             }
@@ -824,11 +830,7 @@ impl Ast<'_> {
                 }
                 buf.push(']');
             }
-            AstEnum::BuiltInRec(s)
-            | AstEnum::BuiltInFn(s)
-            | AstEnum::BuiltInPop(s)
-            | AstEnum::BuiltInIf(s)
-            | AstEnum::BuiltInIfCoreTag(s, _) => buf.push_str(s),
+            AstEnum::Core(s, _) => buf.push_str(s),
         }
     }
 }
