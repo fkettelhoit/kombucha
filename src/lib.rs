@@ -41,7 +41,7 @@ const PRELUDE: &'static [(&str, &str)] = &[
 //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Token<'code> {
+enum Tok<'code> {
     Separator(Sep),
     ParenOpen,
     ParenClose,
@@ -61,20 +61,20 @@ enum Sep {
     Newline,
 }
 
-impl std::fmt::Display for Token<'_> {
+impl std::fmt::Display for Tok<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::Separator(Sep::Comma) => f.write_str(","),
-            Token::Separator(Sep::Newline) => f.write_str("\\n"),
-            Token::ParenOpen => f.write_str("("),
-            Token::ParenClose => f.write_str(")"),
-            Token::BracketOpen => f.write_str("["),
-            Token::BracketClose => f.write_str("]"),
-            Token::BraceOpen => f.write_str("{"),
-            Token::BraceClose => f.write_str("}"),
-            Token::Tag(s) | Token::Symbol(s) => write!(f, "{s}"),
-            Token::Binding(s) => write!(f, "'{s}"),
-            Token::Reserved(s) => write!(f, "\\{s}"),
+            Tok::Separator(Sep::Comma) => f.write_str(","),
+            Tok::Separator(Sep::Newline) => f.write_str("\\n"),
+            Tok::ParenOpen => f.write_str("("),
+            Tok::ParenClose => f.write_str(")"),
+            Tok::BracketOpen => f.write_str("["),
+            Tok::BracketClose => f.write_str("]"),
+            Tok::BraceOpen => f.write_str("{"),
+            Tok::BraceClose => f.write_str("}"),
+            Tok::Tag(s) | Tok::Symbol(s) => write!(f, "{s}"),
+            Tok::Binding(s) => write!(f, "'{s}"),
+            Tok::Reserved(s) => write!(f, "\\{s}"),
         }
     }
 }
@@ -91,7 +91,7 @@ impl std::fmt::Display for Pos {
     }
 }
 
-fn scan(code: &str) -> Vec<(Token, Pos)> {
+fn scan(code: &str) -> Vec<(Tok, Pos)> {
     let mut tokens = vec![];
     let mut col = 1;
     let mut line = 1;
@@ -104,30 +104,30 @@ fn scan(code: &str) -> Vec<(Token, Pos)> {
                     let curr = &code[i..j];
                     if let Some(first) = curr.chars().next() {
                         if first.is_uppercase() {
-                            tokens.push((Token::Tag(curr), start));
+                            tokens.push((Tok::Tag(curr), start));
                         } else if first == '\'' {
-                            tokens.push((Token::Binding(&curr[1..]), start));
+                            tokens.push((Tok::Binding(&curr[1..]), start));
                         } else if first == '\\' {
-                            tokens.push((Token::Reserved(&curr[1..]), start));
+                            tokens.push((Tok::Reserved(&curr[1..]), start));
                         } else {
-                            tokens.push((Token::Symbol(curr), start));
+                            tokens.push((Tok::Symbol(curr), start));
                         }
                     }
                 }
                 i = j + 1;
                 match char {
                     '\n' => {
-                        tokens.push((Token::Separator(Sep::Newline), Pos { col, line }));
+                        tokens.push((Tok::Separator(Sep::Newline), Pos { col, line }));
                         col = 0;
                         line += 1;
                     }
-                    ',' => tokens.push((Token::Separator(Sep::Comma), Pos { col, line })),
-                    '(' => tokens.push((Token::ParenOpen, Pos { col, line })),
-                    ')' => tokens.push((Token::ParenClose, Pos { col, line })),
-                    '[' => tokens.push((Token::BracketOpen, Pos { col, line })),
-                    ']' => tokens.push((Token::BracketClose, Pos { col, line })),
-                    '{' => tokens.push((Token::BraceOpen, Pos { col, line })),
-                    '}' => tokens.push((Token::BraceClose, Pos { col, line })),
+                    ',' => tokens.push((Tok::Separator(Sep::Comma), Pos { col, line })),
+                    '(' => tokens.push((Tok::ParenOpen, Pos { col, line })),
+                    ')' => tokens.push((Tok::ParenClose, Pos { col, line })),
+                    '[' => tokens.push((Tok::BracketOpen, Pos { col, line })),
+                    ']' => tokens.push((Tok::BracketClose, Pos { col, line })),
+                    '{' => tokens.push((Tok::BraceOpen, Pos { col, line })),
+                    '}' => tokens.push((Tok::BraceClose, Pos { col, line })),
                     _ => {}
                 }
                 col += 1;
@@ -151,6 +151,7 @@ pub struct Ast<'code>(AstEnum<'code>, Pos);
 
 #[derive(Debug, Clone)]
 enum AstEnum<'code> {
+    Nil,
     Tag(&'code str),
     Symbol(&'code str, usize),
     Binding(&'code str),
@@ -168,7 +169,7 @@ enum AstEnum<'code> {
     BuiltInIfCoreTag(&'code str, &'static str),
 }
 
-type Tokens<'a, 'code> = Peekable<Iter<'a, (Token<'code>, Pos)>>;
+type Tokens<'a, 'code> = Peekable<Iter<'a, (Tok<'code>, Pos)>>;
 
 pub fn parse(code: &str) -> Result<Ast<'_>, String> {
     let tokens = scan(code);
@@ -190,7 +191,7 @@ fn parse_block<'code>(
     stack: &mut Vec<&'code str>,
     bindings: &mut Vec<&'code str>,
 ) -> Result<Ast<'code>, String> {
-    if let Some((Token::Separator(_), _)) = tokens.peek() {
+    if let Some((Tok::Separator(_), _)) = tokens.peek() {
         tokens.next();
     }
     let mut args = bindings.len();
@@ -206,10 +207,10 @@ fn parse_block<'code>(
     let mut rest = vec![];
     loop {
         match tokens.peek() {
-            Some((Token::Separator(_), _)) => {
+            Some((Tok::Separator(_), _)) => {
                 tokens.next();
             }
-            Some((Token::BraceClose, _)) | None => {
+            Some((Tok::BraceClose, _)) | None => {
                 bindings.clear();
                 for _ in 0..all_args {
                     stack.pop();
@@ -242,42 +243,65 @@ fn parse_expr<'code>(
     };
     let pos = *pos;
     let mut expr = match t {
-        Token::Tag(t) => Ast(AstEnum::Tag(t), pos),
-        Token::Binding(b) => {
+        Tok::Tag(t) => Ast(AstEnum::Tag(t), pos),
+        Tok::Binding(b) => {
             bindings.push(b);
             Ast(AstEnum::Binding(b), pos)
         }
-        Token::BraceOpen => {
+        Tok::ParenOpen => loop {
+            match tokens.peek() {
+                Some((Tok::ParenClose, _)) => {
+                    tokens.next();
+                    break Ast(AstEnum::Nil, pos);
+                }
+                Some((Tok::Separator(_), _)) => {
+                    tokens.next();
+                }
+                _ => {
+                    let expr = parse_expr(tokens, stack, bindings)?;
+                    match tokens.next() {
+                        Some((Tok::ParenClose, _)) => break expr,
+                        Some((t, p)) => {
+                            return Err(format!(
+                                "Unmatched '(' at {pos}: Expected ')', found '{t}' at {p}"
+                            ));
+                        }
+                        None => {
+                            return Err(format!(
+                                "Unmatched '(' at {pos}: Expected ')', but the code just ended"
+                            ));
+                        }
+                    }
+                }
+            }
+        },
+        Tok::BraceOpen => {
             let block = parse_block(pos, tokens, stack, bindings)?;
             match tokens.next() {
                 Some(_) => block,
-                None => return Err(unexpected_end(pos, Token::BraceClose)),
+                None => return Err(unexpected_end(pos, Tok::BraceClose)),
             }
         }
-        Token::BracketOpen => {
+        Tok::BracketOpen => {
             let list = parse_list(pos, tokens, stack, bindings)?;
             match tokens.next() {
                 Some(_) => list,
-                None => return Err(unexpected_end(pos, Token::BracketClose)),
+                None => return Err(unexpected_end(pos, Tok::BracketClose)),
             }
         }
-        Token::Symbol(s) => parse_symbol(pos, *s, tokens, stack, bindings)?,
+        Tok::Symbol(s) => parse_symbol(pos, *s, tokens, stack, bindings)?,
         t => return Err(format!("Unexpected token '{t}' at {pos}")),
     };
     let mut infix = None;
     let mut arg_bindings = vec![];
     loop {
         match tokens.peek() {
-            Some((Token::ParenOpen, _)) => {
+            Some((Tok::ParenOpen, _)) => {
                 tokens.next();
-                if let Some((Token::Separator(_), _)) = tokens.peek() {
-                    tokens.next();
-                }
                 let mut args = vec![];
                 expr = loop {
-                    args.push(parse_expr(tokens, stack, &mut arg_bindings)?);
                     match tokens.peek() {
-                        Some((Token::ParenClose, _)) => {
+                        Some((Tok::ParenClose, _)) => {
                             tokens.next();
                             if let Some(f) = infix {
                                 let call = AstEnum::InfixCall(Box::new(expr), Box::new(f), args);
@@ -287,42 +311,36 @@ fn parse_expr<'code>(
                                 break Ast(AstEnum::Call(Box::new(expr), args), pos);
                             }
                         }
-                        Some((Token::Separator(_), _)) => {
+                        Some((Tok::Separator(_), _)) => {
                             tokens.next();
                         }
-                        Some((t, pos)) => {
-                            return Err(format!("Expected ',' or ')', but found '{t}' at {pos}"));
-                        }
-                        None => {
-                            return Err(format!("Expected ',' or ')', but the code just ended"));
+                        _ => {
+                            args.push(parse_expr(tokens, stack, &mut arg_bindings)?);
                         }
                     }
                 }
             }
-            Some((
-                t @ (Token::Tag(_) | Token::Binding(_) | Token::BraceOpen | Token::BracketOpen),
-                arg_pos,
-            )) => {
+            Some((t @ (Tok::Tag(_) | Tok::Binding(_) | Tok::BraceOpen | Tok::BracketOpen), p)) => {
                 tokens.next();
                 let arg = match t {
-                    Token::Tag(t) => Ast(AstEnum::Tag(t), *arg_pos),
-                    Token::Binding(b) => {
+                    Tok::Tag(t) => Ast(AstEnum::Tag(t), *p),
+                    Tok::Binding(b) => {
                         arg_bindings.push(b);
-                        Ast(AstEnum::Binding(b), *arg_pos)
+                        Ast(AstEnum::Binding(b), *p)
                     }
-                    Token::BraceOpen => {
-                        let block = parse_block(*arg_pos, tokens, stack, &mut arg_bindings)?;
+                    Tok::BraceOpen => {
+                        let block = parse_block(*p, tokens, stack, &mut arg_bindings)?;
                         match tokens.next() {
                             Some(_) => block,
-                            None => return Err(unexpected_end(pos, Token::BraceClose)),
+                            None => return Err(unexpected_end(pos, Tok::BraceClose)),
                         }
                     }
-                    Token::BracketOpen => {
+                    Tok::BracketOpen => {
                         let list = parse_list(pos, tokens, stack, bindings)?;
                         match tokens.next() {
                             Some(_) => list,
                             None => {
-                                return Err(unexpected_end(pos, Token::BracketClose));
+                                return Err(unexpected_end(pos, Tok::BracketClose));
                             }
                         }
                     }
@@ -336,7 +354,7 @@ fn parse_expr<'code>(
                     expr = Ast(AstEnum::Call(Box::new(expr), vec![arg]), pos);
                 }
             }
-            Some((Token::Symbol(s), pos)) => {
+            Some((Tok::Symbol(s), pos)) => {
                 tokens.next();
                 infix = Some(parse_symbol(*pos, s, tokens, stack, bindings)?);
             }
@@ -365,14 +383,14 @@ fn parse_expr<'code>(
         } else if s == "rec" {
             // rec('var, { body })
             let msg = "The built-in 'rec' must be called as rec('var, { body })";
-            expect(tokens, msg, Token::ParenOpen)?;
+            expect(tokens, msg, Tok::ParenOpen)?;
             let (var, _) = expect_binding(tokens, msg)?;
             bindings.push(var);
-            expect(tokens, msg, Token::Separator(Sep::Comma))?;
-            let block_pos = expect(tokens, msg, Token::BraceOpen)?;
+            expect(tokens, msg, Tok::Separator(Sep::Comma))?;
+            let block_pos = expect(tokens, msg, Tok::BraceOpen)?;
             let body = parse_block(block_pos, tokens, stack, bindings)?;
-            expect(tokens, msg, Token::BraceClose)?;
-            expect(tokens, msg, Token::ParenClose)?;
+            expect(tokens, msg, Tok::BraceClose)?;
+            expect(tokens, msg, Tok::ParenClose)?;
             Ok(Ast(AstEnum::BuiltInRec(var, Box::new(body)), pos))
         } else if s == "pop" {
             Ok(Ast(AstEnum::BuiltInPop(s), pos))
@@ -395,17 +413,17 @@ fn parse_expr<'code>(
         let mut elems = vec![];
         loop {
             match tokens.peek() {
-                Some((Token::BracketClose, _)) => {
+                Some((Tok::BracketClose, _)) => {
                     break Ok(Ast(AstEnum::List(elems), pos));
                 }
-                Some((Token::Separator(_), _)) => {
+                Some((Tok::Separator(_), _)) => {
                     tokens.next();
                 }
                 _ => elems.push(parse_expr(tokens, stack, bindings)?),
             }
         }
     }
-    fn expect(toks: &mut Tokens<'_, '_>, msg: &str, t: Token<'_>) -> Result<Pos, String> {
+    fn expect(toks: &mut Tokens<'_, '_>, msg: &str, t: Tok<'_>) -> Result<Pos, String> {
         match toks.next() {
             Some((tok, pos)) if tok == &t => Ok(*pos),
             Some((tok, pos)) => Err(format!("{msg}, expected '{t}', found '{tok}' at {pos}")),
@@ -417,12 +435,12 @@ fn parse_expr<'code>(
         msg: &str,
     ) -> Result<(&'code str, Pos), String> {
         match toks.next() {
-            Some((Token::Binding(b), pos)) => Ok((b, *pos)),
+            Some((Tok::Binding(b), pos)) => Ok((b, *pos)),
             Some((tok, pos)) => Err(format!("{msg}, expected binding, found '{tok}' at {pos}")),
             None => Err(format!("{msg}, but the code just ended")),
         }
     }
-    fn unexpected_end(pos: Pos, expected: Token) -> String {
+    fn unexpected_end(pos: Pos, expected: Tok) -> String {
         format!(
             "Expected the block starting at {pos} to be closed with '{expected}', but the code just ended"
         )
@@ -433,6 +451,7 @@ impl<'code> Ast<'code> {
     fn to_expr(&self, pool: &mut Pool<'code>) -> Expr {
         let pos = self.1;
         match &self.0 {
+            AstEnum::Nil => Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL)),
             AstEnum::Tag(t) => Expr::app(
                 pool.new_id(pos),
                 Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_TAG)),
@@ -446,10 +465,15 @@ impl<'code> Ast<'code> {
             AstEnum::Symbol(_, i) => Expr::var(pool.new_id(pos), *i),
             AstEnum::Call(f, args) => {
                 let mut expr = f.to_expr(pool);
-                for arg in args {
-                    expr = Expr::app(pool.new_id(pos), expr, arg.to_expr(pool));
+                if args.is_empty() {
+                    let nil = Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL));
+                    Expr::app(pool.new_id(pos), expr, nil)
+                } else {
+                    for arg in args {
+                        expr = Expr::app(pool.new_id(pos), expr, arg.to_expr(pool));
+                    }
+                    expr
                 }
-                expr
             }
             AstEnum::InfixCall(a, f, args) => {
                 let mut expr = Expr::app(pool.new_id(pos), f.to_expr(pool), a.to_expr(pool));
@@ -705,7 +729,7 @@ impl Ast<'_> {
 
     fn size(&self) -> usize {
         match &self.0 {
-            AstEnum::Tag(_) | AstEnum::Symbol(_, _) | AstEnum::Binding(_) => 1,
+            AstEnum::Nil | AstEnum::Tag(_) | AstEnum::Symbol(_, _) | AstEnum::Binding(_) => 1,
             AstEnum::Call(f, args) => {
                 1 + f.size() + args.iter().map(|arg| arg.size()).sum::<usize>()
             }
@@ -740,6 +764,7 @@ impl Ast<'_> {
             }
         }
         match &self.0 {
+            AstEnum::Nil => buf.push_str("()"),
             AstEnum::Tag(t) => {
                 buf.push_str(t);
             }
@@ -941,6 +966,7 @@ impl Value {
                                 }
                                 return buf.push(']');
                             }
+                            Some((tag, _)) if *tag == Pool::T_NIL => buf.push_str("()"),
                             Some((tag, _)) => buf.push_str(&format!("\\{tag}")),
                             None => buf.push_str(&format!("<tag:{t}>")),
                         },
@@ -1129,5 +1155,13 @@ mod tests {
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "[Foo(Bar, [Baz, Qux])]");
+    }
+
+    #[test]
+    fn eval_nil() {
+        let code = "() Bar(Baz())";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+        assert_eq!(parsed.eval().unwrap(), "()(Bar, Baz(()))");
     }
 }
