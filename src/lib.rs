@@ -7,38 +7,7 @@ use std::{
 };
 
 //
-// PRELUDE (PRE-DEFINED FUNCTIONS)
-//
-
-const PRELUDE: &[(&str, &str)] = &[
-    (
-        "=",
-        "fn 'binding {
-            fn 'val {
-                fn 'block {
-                    block(val)
-                }
-            }
-        }",
-    ),
-    (
-        "==",
-        "fn(Args('x, 'y, 'then, 'else)) {
-            pop(x, fn(Args('xx, 'x), {
-                pop(y, fn(Args('yy, 'y), {
-                    if-tag(xx, {
-                        if-tag(yy, {
-                            if-eq(x, y, then, else)
-                        }, else)
-                    }, else)
-                }), else)
-            }), else)
-        }",
-    ),
-];
-
-//
-// SCANNER
+// SCAN
 //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -144,7 +113,7 @@ fn scan(code: &str) -> Vec<(Tok, Pos)> {
 }
 
 //
-// PARSER
+// PARSE
 //
 
 #[derive(Debug, Clone)]
@@ -235,26 +204,6 @@ fn parse_block<'code>(
     }
 }
 
-// expr = prefix-expr
-//      | prefix-expr symbol args trail-args
-//
-// args = "(" exprs ")" | "(" exprs ")" args
-//
-// exprs = expr | expr "," exprs
-//
-// prefix-expr = trail-arg
-//             | symbol args trail-args
-//
-// trail-arg = value
-//           | value args
-//
-// trail-args = trail-arg | trail-arg trail-args
-//
-// value = tag
-//       | binding
-//       | "[]"
-//       | "[" exprs "]"
-//       | "{" exprs "}"
 fn parse_expr<'code>(
     tokens: &mut Tokens<'_, 'code>,
     stack: &mut Vec<&'code str>,
@@ -467,6 +416,131 @@ fn parse_expr<'code>(
     }
 }
 
+//
+// DESUGAR
+//
+
+#[derive(Debug, Clone)]
+struct Expr(ExprEnum, Id);
+
+#[derive(Debug, Clone)]
+enum ExprEnum {
+    Var(usize),
+    Tag(usize),
+    Abs(Box<Expr>),
+    Rec(Box<Expr>),
+    App(Box<Expr>, Box<Expr>),
+    Pop(Box<Expr>, Box<Expr>, Box<Expr>),
+    If((Box<Expr>, Box<Expr>), Box<Expr>, Box<Expr>),
+}
+
+impl Expr {
+    fn var(id: Id, var: usize) -> Self {
+        Self(ExprEnum::Var(var), id)
+    }
+
+    fn tag(id: Id, tag: usize) -> Self {
+        Self(ExprEnum::Tag(tag), id)
+    }
+
+    fn abs(id: Id, body: Expr) -> Self {
+        Self(ExprEnum::Abs(Box::new(body)), id)
+    }
+
+    fn rec(id: Id, body: Expr) -> Self {
+        Self(ExprEnum::Rec(Box::new(body)), id)
+    }
+
+    fn app(id: Id, f: Expr, arg: Expr) -> Self {
+        Self(ExprEnum::App(Box::new(f), Box::new(arg)), id)
+    }
+
+    fn builtin_pop(id: Id, v: Expr, then_expr: Expr, else_expr: Expr) -> Self {
+        Self(
+            ExprEnum::Pop(Box::new(v), Box::new(then_expr), Box::new(else_expr)),
+            id,
+        )
+    }
+
+    fn builtin_if(id: Id, a: Expr, b: Expr, then_expr: Expr, else_expr: Expr) -> Self {
+        Self(
+            ExprEnum::If(
+                (Box::new(a), Box::new(b)),
+                Box::new(then_expr),
+                Box::new(else_expr),
+            ),
+            id,
+        )
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct Id(u32);
+
+impl std::fmt::Display for Id {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Pool<'code> {
+    core: HashMap<&'code str, usize>,
+    tags: HashMap<&'code str, usize>,
+    bindings: HashMap<&'code str, usize>,
+    nodes: HashMap<Id, Pos>,
+}
+
+impl<'code> Pool<'code> {
+    const T_LIST: &'static str = "list";
+    const T_NIL: &'static str = "nil";
+    const T_TAG: &'static str = "tag";
+    const T_BINDING: &'static str = "bind";
+
+    fn new() -> Self {
+        Self {
+            core: HashMap::new(),
+            tags: HashMap::from_iter(vec![("nil", 0)]),
+            bindings: HashMap::new(),
+            nodes: HashMap::new(),
+        }
+    }
+
+    fn next_interned(&self) -> usize {
+        self.core.len() + self.tags.len() + self.bindings.len()
+    }
+
+    fn intern_core(&mut self, s: &'code str) -> usize {
+        self.core.get(s).copied().unwrap_or_else(|| {
+            let id = self.next_interned();
+            self.core.insert(s, id);
+            id
+        })
+    }
+
+    fn intern_tag(&mut self, s: &'code str) -> usize {
+        self.tags.get(s).copied().unwrap_or_else(|| {
+            let id = self.next_interned();
+            self.tags.insert(s, id);
+            id
+        })
+    }
+
+    fn intern_binding(&mut self, s: &'code str) -> usize {
+        self.bindings.get(s).copied().unwrap_or_else(|| {
+            let id = self.next_interned();
+            self.bindings.insert(s, id);
+            id
+        })
+    }
+
+    fn new_id(&mut self, pos: Pos) -> Id {
+        let id = Id(self.nodes.len() as u32 + 1);
+        self.nodes.insert(id, pos);
+        id
+    }
+}
+
 impl<'code> Ast<'code> {
     fn to_expr(&self, pool: &mut Pool<'code>) -> Expr {
         let pos = self.1;
@@ -602,127 +676,6 @@ impl<'code> Ast<'code> {
                 Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL))
             }
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Expr(ExprEnum, Id);
-
-#[derive(Debug, Clone)]
-enum ExprEnum {
-    Var(usize),
-    Tag(usize),
-    Abs(Box<Expr>),
-    Rec(Box<Expr>),
-    App(Box<Expr>, Box<Expr>),
-    Pop(Box<Expr>, Box<Expr>, Box<Expr>),
-    If((Box<Expr>, Box<Expr>), Box<Expr>, Box<Expr>),
-}
-
-impl Expr {
-    fn var(id: Id, var: usize) -> Self {
-        Self(ExprEnum::Var(var), id)
-    }
-
-    fn tag(id: Id, tag: usize) -> Self {
-        Self(ExprEnum::Tag(tag), id)
-    }
-
-    fn abs(id: Id, body: Expr) -> Self {
-        Self(ExprEnum::Abs(Box::new(body)), id)
-    }
-
-    fn rec(id: Id, body: Expr) -> Self {
-        Self(ExprEnum::Rec(Box::new(body)), id)
-    }
-
-    fn app(id: Id, f: Expr, arg: Expr) -> Self {
-        Self(ExprEnum::App(Box::new(f), Box::new(arg)), id)
-    }
-
-    fn builtin_pop(id: Id, v: Expr, then_expr: Expr, else_expr: Expr) -> Self {
-        Self(
-            ExprEnum::Pop(Box::new(v), Box::new(then_expr), Box::new(else_expr)),
-            id,
-        )
-    }
-
-    fn builtin_if(id: Id, a: Expr, b: Expr, then_expr: Expr, else_expr: Expr) -> Self {
-        Self(
-            ExprEnum::If(
-                (Box::new(a), Box::new(b)),
-                Box::new(then_expr),
-                Box::new(else_expr),
-            ),
-            id,
-        )
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct Id(u32);
-
-impl std::fmt::Display for Id {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Pool<'code> {
-    core: HashMap<&'code str, usize>,
-    tags: HashMap<&'code str, usize>,
-    bindings: HashMap<&'code str, usize>,
-    nodes: HashMap<Id, Pos>,
-}
-
-impl<'code> Pool<'code> {
-    const T_LIST: &'static str = "list";
-    const T_NIL: &'static str = "nil";
-    const T_TAG: &'static str = "tag";
-    const T_BINDING: &'static str = "bind";
-
-    fn new() -> Self {
-        Self {
-            core: HashMap::new(),
-            tags: HashMap::from_iter(vec![("nil", 0)]),
-            bindings: HashMap::new(),
-            nodes: HashMap::new(),
-        }
-    }
-
-    fn next_interned(&self) -> usize {
-        self.core.len() + self.tags.len() + self.bindings.len()
-    }
-
-    fn intern_core(&mut self, s: &'code str) -> usize {
-        self.core.get(s).copied().unwrap_or_else(|| {
-            let id = self.next_interned();
-            self.core.insert(s, id);
-            id
-        })
-    }
-
-    fn intern_tag(&mut self, s: &'code str) -> usize {
-        self.tags.get(s).copied().unwrap_or_else(|| {
-            let id = self.next_interned();
-            self.tags.insert(s, id);
-            id
-        })
-    }
-
-    fn intern_binding(&mut self, s: &'code str) -> usize {
-        self.bindings.get(s).copied().unwrap_or_else(|| {
-            let id = self.next_interned();
-            self.bindings.insert(s, id);
-            id
-        })
-    }
-
-    fn new_id(&mut self, pos: Pos) -> Id {
-        let id = Id(self.nodes.len() as u32 + 1);
-        self.nodes.insert(id, pos);
-        id
     }
 }
 
@@ -906,6 +859,33 @@ impl std::fmt::Display for Expr {
 // EVAL
 //
 
+const PRELUDE: &[(&str, &str)] = &[
+    (
+        "=",
+        "fn 'binding {
+            fn 'val {
+                fn 'block {
+                    block(val)
+                }
+            }
+        }",
+    ),
+    (
+        "==",
+        "fn(Args('x, 'y, 'then, 'else)) {
+            pop(x, fn(Args('xx, 'x), {
+                pop(y, fn(Args('yy, 'y), {
+                    if-tag(xx, {
+                        if-tag(yy, {
+                            if-eq(x, y, then, else)
+                        }, else)
+                    }, else)
+                }), else)
+            }), else)
+        }",
+    ),
+];
+
 impl Ast<'_> {
     pub fn eval(self) -> Result<String, String> {
         let mut pool = Pool::new();
@@ -932,8 +912,8 @@ impl Ast<'_> {
 
 #[derive(Debug, Clone)]
 enum Value {
-    RecVal(Expr, Arc<Env<Value>>, Id),
     Val(Val),
+    RecVal(Expr, Arc<Env<Value>>, Id),
 }
 
 #[derive(Debug, Clone)]
@@ -1101,7 +1081,7 @@ mod tests {
         let code = "{ Foo }(Nil)";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert!(parsed.eval().unwrap().starts_with("Foo"));
+        assert_eq!(parsed.eval().unwrap(), "Foo");
     }
 
     #[test]
@@ -1135,14 +1115,6 @@ mod tests {
         assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "True");
     }
-
-    // #[test]
-    // fn eval_complex_if_else() {
-    //     let code = "if(Pair(Foo, Bar), Pair('x, 'y), { x }, { Nil })";
-    //     let parsed = parse(code).unwrap();
-    //     assert_eq!(code, parsed.to_string());
-    //     assert_eq!(parsed.eval().unwrap(), "Foo");
-    // }
 
     #[test]
     fn eval_rec() {
