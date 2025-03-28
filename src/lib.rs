@@ -1127,8 +1127,9 @@ mod tests {
 
     #[test]
     fn eval_std_lib() {
-        let code = include_str!("../examples/std.vo");
+        let code = "'x = Foo, x == Foo { True } { False }";
         let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "True");
     }
 

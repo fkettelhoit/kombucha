@@ -1,2 +1,0 @@
-'x = Foo
-x == Foo { True } { False }
