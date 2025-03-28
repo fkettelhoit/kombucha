@@ -860,21 +860,12 @@ impl std::fmt::Display for Expr {
 //
 
 const PRELUDE: &[(&str, &str)] = &[
-    (
-        "=",
-        "fn 'binding {
-            fn 'val {
-                fn 'block {
-                    block(val)
-                }
-            }
-        }",
-    ),
+    ("=", "fn ['binding, 'val, 'block] { block(val) }"),
     (
         "==",
-        "fn(Args('x, 'y, 'then, 'else)) {
-            pop(x, fn(Args('xx, 'x), {
-                pop(y, fn(Args('yy, 'y), {
+        "fn(['x, 'y, 'then, 'else]) {
+            pop(x, fn(['xx, 'x], {
+                pop(y, fn(['yy, 'y], {
                     if-tag(xx, {
                         if-tag(yy, {
                             if-eq(x, y, then, else)
