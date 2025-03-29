@@ -406,10 +406,9 @@ fn parse_expr<'code>(
         } else if s == "if-tag" {
             Ok(Ast(AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_TAG)), pos))
         } else if s == "if-binding" {
-            Ok(Ast(
-                AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_BINDING)),
-                pos,
-            ))
+            Ok(Ast(AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_BIND)), pos))
+        } else if s == "if-nil" {
+            Ok(Ast(AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_NIL)), pos))
         } else {
             return Err(format!("Could not find binding for '{s}' at {pos}"));
         }
@@ -495,7 +494,7 @@ impl<'code> Pool<'code> {
     const T_LIST: &'static str = "list";
     const T_NIL: &'static str = "nil";
     const T_TAG: &'static str = "tag";
-    const T_BINDING: &'static str = "bind";
+    const T_BIND: &'static str = "bind";
 
     fn new() -> Self {
         Self {
@@ -552,22 +551,25 @@ impl<'code> Ast<'code> {
             ),
             AstEnum::Binding(b) => Expr::app(
                 pool.new_id(pos),
-                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_BINDING)),
+                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_BIND)),
                 Expr::tag(pool.new_id(pos), pool.intern_binding(b)),
             ),
             AstEnum::Symbol(_, i) => Expr::var(pool.new_id(pos), *i),
             AstEnum::Call(infix_arg, f, args) => {
-                let args = infix_arg
-                    .as_deref()
-                    .iter()
-                    .copied()
-                    .chain(args.iter())
-                    .collect::<Vec<_>>();
                 let mut expr = f.to_expr(pool);
                 if args.is_empty() {
+                    if let Some(infix_arg) = infix_arg {
+                        expr = Expr::app(pool.new_id(pos), expr, infix_arg.to_expr(pool));
+                    }
                     let nil = Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL));
                     Expr::app(pool.new_id(pos), expr, nil)
                 } else {
+                    let args = infix_arg
+                        .as_deref()
+                        .iter()
+                        .copied()
+                        .chain(args.iter())
+                        .collect::<Vec<_>>();
                     for arg in args {
                         expr = Expr::app(pool.new_id(pos), expr, arg.to_expr(pool));
                     }
@@ -862,7 +864,7 @@ impl std::fmt::Display for Expr {
 const PRELUDE: &[(&str, &str)] = &[
     ("=", "fn ['binding, 'val, 'block] { block(val) }"),
     (
-        "==",
+        "if-eq",
         "fn(['x, 'y, 'then, 'else]) {
             pop(x, fn(['xx, 'x], {
                 pop(y, fn(['yy, 'y], {
@@ -919,13 +921,20 @@ impl Value {
             Value::RecVal(_, _, id) => buf.push_str(&format!("<rec:{id}>")),
             Value::Val(Val::Fn(_, _, id)) => buf.push_str(&format!("<fn:{id}>")),
             Value::Val(Val::Tag(t, vals, _)) => {
+                let core_tag = pool
+                    .core
+                    .iter()
+                    .find(|(_, id)| *id == t)
+                    .map(|(name, _)| *name);
                 let mut t = *t;
                 let mut skip = 0;
-                if pool.core.iter().any(|(_, id)| *id == t) {
-                    if let Some(Value::Val(Val::Tag(tag, inner, _))) = vals.first() {
-                        if inner.is_empty() {
-                            t = *tag;
-                            skip = 1;
+                if let Some(core_tag) = core_tag {
+                    if core_tag == Pool::T_TAG || core_tag == Pool::T_BIND {
+                        if let Some(Value::Val(Val::Tag(tag, inner, _))) = vals.first() {
+                            if inner.is_empty() {
+                                t = *tag;
+                                skip = 1;
+                            }
                         }
                     }
                 }
@@ -933,8 +942,8 @@ impl Value {
                     Some((tag, _)) => buf.push_str(tag),
                     None => match pool.bindings.iter().find(|(_, id)| **id == t) {
                         Some((tag, _)) => buf.push_str(&format!("'{tag}")),
-                        None => match pool.core.iter().find(|(_, id)| **id == t) {
-                            Some((tag, _)) if *tag == Pool::T_LIST => {
+                        None => match core_tag {
+                            Some(tag) if tag == Pool::T_LIST => {
                                 buf.push('[');
                                 for (i, val) in vals.iter().skip(skip).enumerate() {
                                     if i != 0 {
@@ -944,8 +953,8 @@ impl Value {
                                 }
                                 return buf.push(']');
                             }
-                            Some((tag, _)) if *tag == Pool::T_NIL => buf.push_str("()"),
-                            Some((tag, _)) => buf.push_str(&format!("\\{tag}")),
+                            Some(tag) if tag == Pool::T_NIL => buf.push_str("()"),
+                            Some(tag) => buf.push_str(&format!("\\{tag}")),
                             None => buf.push_str(&format!("<tag:{t}>")),
                         },
                     },
@@ -1101,7 +1110,7 @@ mod tests {
 
     #[test]
     fn eval_simple_if_else() {
-        let code = "Foo == Foo { True } { False }";
+        let code = "if-eq(Foo, Foo) { True } { False }";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "True");
@@ -1118,7 +1127,7 @@ mod tests {
 
     #[test]
     fn eval_std_lib() {
-        let code = "'x = Foo, x == Foo { True } { False }";
+        let code = "'x = Foo, if-eq(x, Foo) { True } { False }";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "True");
@@ -1138,5 +1147,12 @@ mod tests {
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
         assert_eq!(parsed.eval().unwrap(), "()(Bar, Baz(()))");
+    }
+
+    #[test]
+    fn eval_match() {
+        let code = include_str!("../examples/eq.vo");
+        let parsed = parse(code).unwrap();
+        assert_eq!(parsed.eval().unwrap(), "[True, False, True, False, True]");
     }
 }
