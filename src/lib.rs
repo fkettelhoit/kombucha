@@ -128,16 +128,16 @@ enum AstEnum<'code> {
     TrailingCall(Option<Box<Ast<'code>>>, Box<Ast<'code>>, Box<Ast<'code>>),
     Block(Vec<(usize, Ast<'code>)>),
     List(Vec<Ast<'code>>),
-    Core(&'code str, BuiltIn),
+    BuiltIn(&'code str, BuiltIn),
 }
 
 #[derive(Debug, Clone, Copy)]
 enum BuiltIn {
-    Fn,
+    Abs,
     Rec,
     Pop,
     If,
-    IfCoreTag(&'static str),
+    Ty,
     Nil,
 }
 
@@ -241,7 +241,7 @@ fn parse_expr<'code>(
                 let f = match tokens.peek() {
                     Some((Tok::ParenClose, _)) => {
                         tokens.next();
-                        Ast(AstEnum::Core("()", BuiltIn::Nil), *pos)
+                        Ast(AstEnum::BuiltIn("()", BuiltIn::Nil), *pos)
                     }
                     _ => {
                         let expr = parse_expr(tokens, stack, bindings)?;
@@ -396,19 +396,15 @@ fn parse_expr<'code>(
         if let Some((i, _)) = stack.iter().rev().enumerate().find(|(_, var)| &s == *var) {
             Ok(Ast(AstEnum::Symbol(s, i), pos))
         } else if s == "fn" {
-            Ok(Ast(AstEnum::Core(s, BuiltIn::Fn), pos))
+            Ok(Ast(AstEnum::BuiltIn(s, BuiltIn::Abs), pos))
         } else if s == "rec" {
-            Ok(Ast(AstEnum::Core(s, BuiltIn::Rec), pos))
+            Ok(Ast(AstEnum::BuiltIn(s, BuiltIn::Rec), pos))
         } else if s == "pop" {
-            Ok(Ast(AstEnum::Core(s, BuiltIn::Pop), pos))
-        } else if s == "if-eq" {
-            Ok(Ast(AstEnum::Core(s, BuiltIn::If), pos))
-        } else if s == "if-tag" {
-            Ok(Ast(AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_TAG)), pos))
-        } else if s == "if-binding" {
-            Ok(Ast(AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_BIND)), pos))
-        } else if s == "if-nil" {
-            Ok(Ast(AstEnum::Core(s, BuiltIn::IfCoreTag(Pool::T_NIL)), pos))
+            Ok(Ast(AstEnum::BuiltIn(s, BuiltIn::Pop), pos))
+        } else if s == "if" {
+            Ok(Ast(AstEnum::BuiltIn(s, BuiltIn::If), pos))
+        } else if s == "type" {
+            Ok(Ast(AstEnum::BuiltIn(s, BuiltIn::Ty), pos))
         } else {
             return Err(format!("Could not find binding for '{s}' at {pos}"));
         }
@@ -426,11 +422,13 @@ struct Expr(ExprEnum, Id);
 enum ExprEnum {
     Var(usize),
     Tag(usize),
+    Wrap(Box<Expr>),
     Abs(Box<Expr>),
     Rec(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
     Pop(Box<Expr>, Box<Expr>, Box<Expr>),
     If((Box<Expr>, Box<Expr>), Box<Expr>, Box<Expr>),
+    Ty(Box<Expr>),
 }
 
 impl Expr {
@@ -471,6 +469,10 @@ impl Expr {
             id,
         )
     }
+
+    fn builtin_ty(id: Id, v: Expr) -> Self {
+        Self(ExprEnum::Ty(Box::new(v)), id)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -484,51 +486,47 @@ impl std::fmt::Display for Id {
 
 #[derive(Debug, Clone)]
 struct Pool<'code> {
-    core: HashMap<&'code str, usize>,
     tags: HashMap<&'code str, usize>,
-    bindings: HashMap<&'code str, usize>,
     nodes: HashMap<Id, Pos>,
 }
 
-impl<'code> Pool<'code> {
-    const T_LIST: &'static str = "list";
-    const T_NIL: &'static str = "nil";
-    const T_TAG: &'static str = "tag";
-    const T_BIND: &'static str = "bind";
+// Make sure to change the `core_tags` variable in `next_interned` whenever a variant is added!
+enum CoreTag {
+    Nil,
+    List,
+    Fn,
+    Tag,
+    Value,
+    Block,
+    Binding,
+    Compound,
+}
 
+impl<'code> Pool<'code> {
     fn new() -> Self {
         Self {
-            core: HashMap::new(),
-            tags: HashMap::from_iter(vec![("nil", 0)]),
-            bindings: HashMap::new(),
+            tags: HashMap::from_iter(vec![
+                // Nil and List are not directly represented as tags and so don't appear here
+                ("Fn", CoreTag::Fn as usize),
+                ("Tag", CoreTag::Tag as usize),
+                ("Value", CoreTag::Value as usize),
+                ("Block", CoreTag::Block as usize),
+                ("Binding", CoreTag::Binding as usize),
+                ("Compound", CoreTag::Compound as usize),
+            ]),
             nodes: HashMap::new(),
         }
     }
 
     fn next_interned(&self) -> usize {
-        self.core.len() + self.tags.len() + self.bindings.len()
-    }
-
-    fn intern_core(&mut self, s: &'code str) -> usize {
-        self.core.get(s).copied().unwrap_or_else(|| {
-            let id = self.next_interned();
-            self.core.insert(s, id);
-            id
-        })
+        let core_tags = 8; // the number of variants of the `CoreTag` enum
+        core_tags + self.tags.len()
     }
 
     fn intern_tag(&mut self, s: &'code str) -> usize {
         self.tags.get(s).copied().unwrap_or_else(|| {
             let id = self.next_interned();
             self.tags.insert(s, id);
-            id
-        })
-    }
-
-    fn intern_binding(&mut self, s: &'code str) -> usize {
-        self.bindings.get(s).copied().unwrap_or_else(|| {
-            let id = self.next_interned();
-            self.bindings.insert(s, id);
             id
         })
     }
@@ -541,19 +539,168 @@ impl<'code> Pool<'code> {
 }
 
 impl<'code> Ast<'code> {
+    fn to_wrapped_expr(&self, pool: &mut Pool<'code>) -> Expr {
+        #[derive(PartialEq, Eq)]
+        enum Arg {
+            Value,
+            Block,
+            Pending,
+        }
+        fn reflect<'code>(expr: &Ast<'code>) -> Arg {
+            match &expr.0 {
+                AstEnum::Tag(_) | AstEnum::Symbol(_, _) | AstEnum::BuiltIn(_, _) => Arg::Value,
+                AstEnum::Binding(_) => Arg::Pending,
+                AstEnum::Block(_) => Arg::Block,
+                AstEnum::Call(arg, f, args) => {
+                    let mut arg = arg.as_ref().map(|arg| reflect(arg)).unwrap_or(Arg::Value);
+                    if arg == Arg::Block {
+                        return Arg::Value;
+                    };
+                    for a in args {
+                        match reflect(a) {
+                            Arg::Value => {}
+                            Arg::Block => return Arg::Block,
+                            Arg::Pending => arg = Arg::Pending,
+                        }
+                    }
+                    match reflect(f) {
+                        Arg::Value => arg,
+                        Arg::Block => arg,
+                        Arg::Pending => Arg::Pending,
+                    }
+                }
+                AstEnum::TrailingCall(a, f, b) => {
+                    let mut arg = a.as_ref().map(|arg| reflect(arg)).unwrap_or(Arg::Value);
+                    if arg == Arg::Block {
+                        return Arg::Value;
+                    };
+                    match reflect(b) {
+                        Arg::Value => {}
+                        Arg::Block => return Arg::Block,
+                        Arg::Pending => arg = Arg::Pending,
+                    }
+                    match reflect(f) {
+                        Arg::Value => arg,
+                        Arg::Block => arg,
+                        Arg::Pending => Arg::Pending,
+                    }
+                }
+                AstEnum::List(elems) => {
+                    for elem in elems {
+                        if let Arg::Pending = reflect(elem) {
+                            return Arg::Pending;
+                        }
+                    }
+                    return Arg::Value;
+                }
+            }
+        }
+        let pos = self.1;
+        match &self.0 {
+            AstEnum::Binding(_) => Expr::app(
+                pool.new_id(pos),
+                Expr::tag(pool.new_id(pos), CoreTag::Binding as usize),
+                self.to_expr(pool),
+            ),
+            AstEnum::Block(_) => Expr::app(
+                pool.new_id(pos),
+                Expr::tag(pool.new_id(pos), CoreTag::Block as usize),
+                self.to_expr(pool),
+            ),
+            AstEnum::Call(infix_arg, f, args) if reflect(self) != Arg::Value => {
+                let mut has_block_arg = false;
+                let mut wrapped_args = vec![];
+                if let Some(infix_arg) = infix_arg {
+                    if reflect(infix_arg) == Arg::Block {
+                        has_block_arg = true;
+                    }
+                    wrapped_args.push(infix_arg.to_wrapped_expr(pool));
+                }
+                for arg in args {
+                    if reflect(arg) == Arg::Block {
+                        has_block_arg = true;
+                    }
+                    wrapped_args.push(arg.to_wrapped_expr(pool));
+                }
+                if wrapped_args.is_empty() {
+                    wrapped_args.push(Expr::app(
+                        pool.new_id(pos),
+                        Expr::tag(pool.new_id(pos), CoreTag::Value as usize),
+                        Expr::tag(pool.new_id(pos), CoreTag::Nil as usize),
+                    ));
+                }
+                let mut expr = if has_block_arg {
+                    f.to_expr(pool)
+                } else {
+                    f.to_wrapped_expr(pool)
+                };
+                for arg in wrapped_args {
+                    expr = Expr::app(pool.new_id(pos), expr, arg);
+                }
+                if !has_block_arg {
+                    expr = Expr::app(
+                        pool.new_id(pos),
+                        Expr::tag(pool.new_id(pos), CoreTag::Compound as usize),
+                        expr,
+                    )
+                }
+                expr
+            }
+            AstEnum::TrailingCall(infix_arg, f, arg) if reflect(self) != Arg::Value => {
+                let mut has_block_arg = false;
+                let mut wrapped_args = vec![];
+                if let Some(infix_arg) = infix_arg {
+                    if reflect(infix_arg) == Arg::Block {
+                        has_block_arg = true;
+                    }
+                    wrapped_args.push(infix_arg.to_wrapped_expr(pool));
+                }
+                if reflect(arg) == Arg::Block {
+                    has_block_arg = true;
+                }
+                wrapped_args.push(arg.to_wrapped_expr(pool));
+                let mut expr = if has_block_arg {
+                    f.to_expr(pool)
+                } else {
+                    f.to_wrapped_expr(pool)
+                };
+                for arg in wrapped_args {
+                    expr = Expr::app(pool.new_id(pos), expr, arg);
+                }
+                if !has_block_arg {
+                    expr = Expr::app(
+                        pool.new_id(pos),
+                        Expr::tag(pool.new_id(pos), CoreTag::Compound as usize),
+                        expr,
+                    )
+                }
+                expr
+            }
+            AstEnum::List(elems) => {
+                let mut expr = Expr::tag(pool.new_id(pos), CoreTag::List as usize);
+                for elem in elems {
+                    expr = Expr::app(pool.new_id(pos), expr, elem.to_wrapped_expr(pool));
+                }
+                Expr::app(
+                    pool.new_id(pos),
+                    Expr::tag(pool.new_id(pos), CoreTag::Compound as usize),
+                    expr,
+                )
+            }
+            _ => Expr::app(
+                pool.new_id(pos),
+                Expr::tag(pool.new_id(pos), CoreTag::Value as usize),
+                self.to_expr(pool),
+            ),
+        }
+    }
+    // are to_wrapped_expr and to_expr really different fns? aren't all values wrapped?
     fn to_expr(&self, pool: &mut Pool<'code>) -> Expr {
         let pos = self.1;
         match &self.0 {
-            AstEnum::Tag(t) => Expr::app(
-                pool.new_id(pos),
-                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_TAG)),
-                Expr::tag(pool.new_id(pos), pool.intern_tag(t)),
-            ),
-            AstEnum::Binding(b) => Expr::app(
-                pool.new_id(pos),
-                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_BIND)),
-                Expr::tag(pool.new_id(pos), pool.intern_binding(b)),
-            ),
+            AstEnum::Tag(t) | AstEnum::Binding(t) => {
+                Expr::tag(pool.new_id(pos), pool.intern_tag(t))
+            }
             AstEnum::Symbol(_, i) => Expr::var(pool.new_id(pos), *i),
             AstEnum::Call(infix_arg, f, args) => {
                 let mut expr = f.to_expr(pool);
@@ -561,7 +708,7 @@ impl<'code> Ast<'code> {
                     if let Some(infix_arg) = infix_arg {
                         expr = Expr::app(pool.new_id(pos), expr, infix_arg.to_expr(pool));
                     }
-                    let nil = Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL));
+                    let nil = Expr::tag(pool.new_id(pos), CoreTag::Nil as usize);
                     Expr::app(pool.new_id(pos), expr, nil)
                 } else {
                     let args = infix_arg
@@ -609,21 +756,21 @@ impl<'code> Ast<'code> {
                 next.unwrap().0
             }
             AstEnum::List(elems) => {
-                let mut expr = Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_LIST));
+                let mut expr = Expr::tag(pool.new_id(pos), CoreTag::List as usize);
                 for elem in elems {
                     expr = Expr::app(pool.new_id(pos), expr, elem.to_expr(pool));
                 }
                 expr
             }
-            AstEnum::Core(_, BuiltIn::Fn) => Expr::abs(
+            AstEnum::BuiltIn(_, BuiltIn::Abs) => Expr::abs(
                 pool.new_id(pos),
                 Expr::abs(pool.new_id(pos), Expr::var(pool.new_id(pos), 0)),
             ),
-            AstEnum::Core(_, BuiltIn::Rec) => Expr::abs(
+            AstEnum::BuiltIn(_, BuiltIn::Rec) => Expr::abs(
                 pool.new_id(pos),
                 Expr::rec(pool.new_id(pos), Expr::var(pool.new_id(pos), 0)),
             ),
-            AstEnum::Core(_, BuiltIn::Pop) => Expr::abs(
+            AstEnum::BuiltIn(_, BuiltIn::Pop) => Expr::abs(
                 pool.new_id(pos),
                 Expr::abs(
                     pool.new_id(pos),
@@ -636,13 +783,13 @@ impl<'code> Ast<'code> {
                             Expr::app(
                                 pool.new_id(pos),
                                 Expr::var(pool.new_id(pos), 0),
-                                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL)),
+                                Expr::tag(pool.new_id(pos), CoreTag::Nil as usize),
                             ),
                         ),
                     ),
                 ),
             ),
-            AstEnum::Core(_, BuiltIn::If) => Expr::abs(
+            AstEnum::BuiltIn(_, BuiltIn::If) => Expr::abs(
                 pool.new_id(pos),
                 Expr::abs(
                     pool.new_id(pos),
@@ -657,26 +804,23 @@ impl<'code> Ast<'code> {
                                 Expr::app(
                                     pool.new_id(pos),
                                     Expr::var(pool.new_id(pos), 1),
-                                    Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL)),
+                                    Expr::tag(pool.new_id(pos), CoreTag::Nil as usize),
                                 ),
                                 Expr::app(
                                     pool.new_id(pos),
                                     Expr::var(pool.new_id(pos), 0),
-                                    Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL)),
+                                    Expr::tag(pool.new_id(pos), CoreTag::Nil as usize),
                                 ),
                             ),
                         ),
                     ),
                 ),
             ),
-            AstEnum::Core(s, BuiltIn::IfCoreTag(tag)) => {
-                let if_expr = Ast(AstEnum::Core(s, BuiltIn::If), pos);
-                let tag = Expr::tag(pool.new_id(pos), pool.intern_core(tag));
-                Expr::app(pool.new_id(pos), if_expr.to_expr(pool), tag)
-            }
-            AstEnum::Core(_, BuiltIn::Nil) => {
-                Expr::tag(pool.new_id(pos), pool.intern_core(Pool::T_NIL))
-            }
+            AstEnum::BuiltIn(_, BuiltIn::Ty) => Expr::abs(
+                pool.new_id(pos),
+                Expr::builtin_ty(pool.new_id(pos), Expr::var(pool.new_id(pos), 0)),
+            ),
+            AstEnum::BuiltIn(_, BuiltIn::Nil) => Expr::tag(pool.new_id(pos), CoreTag::Nil as usize),
         }
     }
 }
@@ -712,9 +856,10 @@ impl Ast<'_> {
 
     fn size(&self) -> usize {
         match &self.0 {
-            AstEnum::Tag(_) | AstEnum::Symbol(_, _) | AstEnum::Binding(_) | AstEnum::Core(_, _) => {
-                1
-            }
+            AstEnum::Tag(_)
+            | AstEnum::Symbol(_, _)
+            | AstEnum::Binding(_)
+            | AstEnum::BuiltIn(_, _) => 1,
             AstEnum::Call(infix_arg, f, args) => {
                 f.size()
                     + infix_arg.iter().map(|arg| arg.size()).sum::<usize>()
@@ -807,7 +952,7 @@ impl Ast<'_> {
                 }
                 buf.push(']');
             }
-            AstEnum::Core(s, _) => buf.push_str(s),
+            AstEnum::BuiltIn(s, _) => buf.push_str(s),
         }
     }
 }
@@ -816,10 +961,15 @@ impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.0 {
             ExprEnum::Var(s) => write!(f, "{s}"),
-            ExprEnum::Tag(t) => write!(f, "_{t}"),
+            ExprEnum::Tag(t) => write!(f, "\"{t}\""),
             ExprEnum::Abs(expr) => {
                 f.write_str("(=> ")?;
                 expr.fmt(f)?;
+                f.write_str(")")
+            }
+            ExprEnum::Wrap(value) => {
+                f.write_str("(wrap ")?;
+                value.fmt(f)?;
                 f.write_str(")")
             }
             ExprEnum::Rec(expr) => {
@@ -851,6 +1001,11 @@ impl std::fmt::Display for Expr {
                 then_expr.fmt(f)?;
                 f.write_str(" else ")?;
                 else_expr.fmt(f)?;
+                f.write_str(")")
+            }
+            ExprEnum::Ty(value) => {
+                f.write_str("(type ")?;
+                value.fmt(f)?;
                 f.write_str(")")
             }
         }
@@ -906,6 +1061,7 @@ impl Ast<'_> {
 #[derive(Debug, Clone)]
 enum Value {
     Val(Val),
+    Wrap(Box<Value>),
     RecVal(Expr, Arc<Env<Value>>, Id),
 }
 
@@ -918,50 +1074,29 @@ enum Val {
 impl Value {
     fn to_string(&self, buf: &mut String, pool: &Pool) {
         match self {
-            Value::RecVal(_, _, id) => buf.push_str(&format!("<rec:{id}>")),
-            Value::Val(Val::Fn(_, _, id)) => buf.push_str(&format!("<fn:{id}>")),
+            Value::Wrap(v) => v.to_string(buf, pool),
+            Value::RecVal(body, _, _) => buf.push_str(&format!("(~> {})", body.to_string())),
+            Value::Val(Val::Fn(body, _, _)) => buf.push_str(&format!("(=> {})", body.to_string())),
             Value::Val(Val::Tag(t, vals, _)) => {
-                let core_tag = pool
-                    .core
-                    .iter()
-                    .find(|(_, id)| *id == t)
-                    .map(|(name, _)| *name);
-                let mut t = *t;
-                let mut skip = 0;
-                if let Some(core_tag) = core_tag {
-                    if core_tag == Pool::T_TAG || core_tag == Pool::T_BIND {
-                        if let Some(Value::Val(Val::Tag(tag, inner, _))) = vals.first() {
-                            if inner.is_empty() {
-                                t = *tag;
-                                skip = 1;
-                            }
+                if *t == CoreTag::List as usize {
+                    buf.push('[');
+                    for (i, val) in vals.iter().enumerate() {
+                        if i != 0 {
+                            buf.push_str(", ");
                         }
+                        val.to_string(buf, pool);
                     }
+                    return buf.push(']');
+                } else if *t == CoreTag::Nil as usize {
+                    buf.push_str("()");
+                } else if let Some((tag, _)) = pool.tags.iter().find(|(_, tag)| *tag == t) {
+                    buf.push_str(tag);
+                } else {
+                    buf.push_str(&format!("\\{t}"))
                 }
-                match pool.tags.iter().find(|(_, id)| **id == t) {
-                    Some((tag, _)) => buf.push_str(tag),
-                    None => match pool.bindings.iter().find(|(_, id)| **id == t) {
-                        Some((tag, _)) => buf.push_str(&format!("'{tag}")),
-                        None => match core_tag {
-                            Some(tag) if tag == Pool::T_LIST => {
-                                buf.push('[');
-                                for (i, val) in vals.iter().skip(skip).enumerate() {
-                                    if i != 0 {
-                                        buf.push_str(", ");
-                                    }
-                                    val.to_string(buf, pool);
-                                }
-                                return buf.push(']');
-                            }
-                            Some(tag) if tag == Pool::T_NIL => buf.push_str("()"),
-                            Some(tag) => buf.push_str(&format!("\\{tag}")),
-                            None => buf.push_str(&format!("<tag:{t}>")),
-                        },
-                    },
-                }
-                if vals.len() > skip {
+                if !vals.is_empty() {
                     buf.push('(');
-                    for (i, val) in vals.iter().skip(skip).enumerate() {
+                    for (i, val) in vals.iter().enumerate() {
                         if i != 0 {
                             buf.push_str(", ");
                         }
@@ -1000,6 +1135,7 @@ impl Expr {
             loop {
                 match v {
                     Value::Val(val) => return Ok(val),
+                    Value::Wrap(value) => v = *value,
                     Value::RecVal(body, env, id) => {
                         let env = env.push(Value::RecVal(body.clone(), Arc::clone(&env), id));
                         v = body.eval(&env)?;
@@ -1019,6 +1155,7 @@ impl Expr {
         match self.0 {
             ExprEnum::Var(var) => env.get(var).cloned().ok_or(self),
             ExprEnum::Tag(t) => Ok(Value::Val(Val::Tag(t, vec![], self.1))),
+            ExprEnum::Wrap(v) => Ok(Value::Wrap(Box::new(v.eval(env)?))),
             ExprEnum::Abs(body) => Ok(Value::Val(Val::Fn(*body, Arc::clone(env), self.1))),
             ExprEnum::Rec(body) => match body.eval(env)? {
                 Value::Val(Val::Fn(body, fn_env, id)) => Ok(Value::RecVal(body, fn_env, id)),
@@ -1050,6 +1187,27 @@ impl Expr {
                         then_expr.eval(env)
                     }
                     _ => else_expr.eval(env),
+                }
+            }
+            ExprEnum::Ty(v) => {
+                let id = v.1;
+                let mut v = v.eval(env)?;
+                loop {
+                    match v {
+                        Value::Wrap(_) => {
+                            return Ok(Value::Val(Val::Tag(CoreTag::Value as usize, vec![], id)));
+                        }
+                        Value::Val(Val::Fn(_, _, _)) => {
+                            return Ok(Value::Val(Val::Tag(CoreTag::Fn as usize, vec![], id)));
+                        }
+                        Value::Val(Val::Tag(_, _, _)) => {
+                            return Ok(Value::Val(Val::Tag(CoreTag::Tag as usize, vec![], id)));
+                        }
+                        Value::RecVal(body, env, id) => {
+                            let env = env.push(Value::RecVal(body.clone(), Arc::clone(&env), id));
+                            v = body.eval(&env)?;
+                        }
+                    }
                 }
             }
         }
