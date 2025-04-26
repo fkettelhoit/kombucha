@@ -13,8 +13,6 @@ enum Tok {
     RParen,
     LBrace,
     RBrace,
-    LBracket,
-    RBracket,
     Separator,
 }
 
@@ -27,8 +25,6 @@ fn scan<'code>(code: &'code str) -> Vec<(Tok, usize, &'code str)> {
             ')' => Some(Tok::RParen),
             '{' => Some(Tok::LBrace),
             '}' => Some(Tok::RBrace),
-            '[' => Some(Tok::LBracket),
-            ']' => Some(Tok::RBracket),
             ',' | '\n' => Some(Tok::Separator),
             _ => None,
         };
@@ -56,7 +52,6 @@ enum Ast<'code> {
     Var(&'code str),
     String(&'code str),
     Binding(&'code str),
-    List(Vec<Ast<'code>>),
     Block(Vec<Ast<'code>>),
     PrefixCall(Box<Ast<'code>>, Vec<Ast<'code>>),
     InfixCall(Box<Ast<'code>>, &'code str, Vec<Ast<'code>>),
@@ -140,8 +135,7 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
                 }
             }
             Tok::LBrace => Ok(Ast::Block(_exprs(toks, i, Some(Tok::RBrace))?)),
-            Tok::LBracket => Ok(Ast::List(_exprs(toks, i, Some(Tok::RBracket))?)),
-            Tok::RParen | Tok::RBrace | Tok::RBracket => Err(Some(Error(i, E::Unmatched(s)))),
+            Tok::RParen | Tok::RBrace => Err(Some(Error(i, E::Unmatched(s)))),
             Tok::Keyword => Err(Some(Error(i, E::KeywordAsValue(s)))),
             Tok::Separator => Err(Some(Error(i, E::SeparatorAsValue(s)))),
         }
@@ -228,7 +222,6 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
                 match expected {
                     Some(Tok::RParen) => "with ')'",
                     Some(Tok::RBrace) => "with '}'",
-                    Some(Tok::RBracket) => "with ']'",
                     _ => "by the end of the code",
                 },
                 instead(actual, code)
@@ -272,7 +265,7 @@ impl<'code> Ast<'code> {
     fn size(&self) -> usize {
         match self {
             Ast::Var(_) | Ast::String(_) | Ast::Binding(_) => 1,
-            Ast::List(xs) | Ast::Block(xs) => xs.iter().map(|x| x.size()).sum::<usize>() + 1,
+            Ast::Block(xs) => xs.iter().map(|x| x.size()).sum::<usize>() + 1,
             Ast::PrefixCall(f, xs) => f.size() + xs.iter().map(|x| x.size()).sum::<usize>(),
             Ast::InfixCall(a, _, xs) => a.size() + 1 + xs.iter().map(|x| x.size()).sum::<usize>(),
             Ast::KeywordCall(xs) => xs.iter().map(|(_, x)| x.size() + 1).sum(),
@@ -306,11 +299,6 @@ impl<'code> Ast<'code> {
         let is_multiline = self.size() > 10;
         match self {
             Ast::Var(s) | Ast::String(s) | Ast::Binding(s) => buf.push_str(s),
-            Ast::List(elems) => {
-                buf.push('[');
-                pretty_exprs(elems, buf, lvl, is_multiline);
-                buf.push(']');
-            }
             Ast::Block(elems) => {
                 buf.push('{');
                 pretty_exprs(elems, buf, lvl, is_multiline);
@@ -391,7 +379,7 @@ mod tests {
 
     #[test]
     fn parse_error_unmatched() {
-        let code = "[)]";
+        let code = "{)}";
         let e = parse(code).unwrap_err();
         eprintln!("{e}");
         assert!(e.contains("')'"));
@@ -436,24 +424,24 @@ mod tests {
 
     #[test]
     fn parse_error_fn_args_without_separators() {
-        let code = "f([a] [b]";
+        let code = "f({a} {b}";
         let e = parse(code).unwrap_err();
         eprintln!("{e}");
         assert!(e.contains("',' or '\\n'"));
-        assert!(e.contains("'[' at line 1, col 7"));
+        assert!(e.contains("'{' at line 1, col 7"));
     }
 
     #[test]
     fn parse_error_fn_args_without_r_paren() {
-        let code = "[f(a]";
+        let code = "{f(a}";
         let e = parse(code).unwrap_err();
         eprintln!("{e}");
-        assert!(e.contains("']' at line 1, col 5"));
+        assert!(e.contains("'}' at line 1, col 5"));
     }
 
     #[test]
     fn parse_error_invalid_group() {
-        for code in ["(", "(a", "([a] [b])", "([a], [b])"] {
+        for code in ["(", "(a", "({a} {b})", "({a}, {b})"] {
             let e = parse(code).unwrap_err();
             eprintln!("'{code}': {e}");
             assert!(e.contains("'(' at line 1, col 1"));
@@ -481,10 +469,10 @@ mod tests {
 
     #[test]
     fn parse_error_list_without_closing_bracket() {
-        for code in ["x + [a, b", "x + [a, )"] {
+        for code in ["x + {a, b", "x + {a, )"] {
             let e = parse(code).unwrap_err();
             eprintln!("'{code}': {e}");
-            assert!(e.contains("closed with ']'"));
+            assert!(e.contains("closed with '}'"));
             assert!(e.contains("starting at line 1, col 5"));
         }
     }
@@ -513,13 +501,6 @@ mod tests {
     #[test]
     fn pretty_block() {
         let code = "{foo, Foo, 'foo}";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_list() {
-        let code = "[foo, Foo, 'foo]";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
     }
@@ -571,6 +552,16 @@ mod tests {
         let code = "'foo = Foo
 
 'id = ('x => {x})
+
+f'('x, 'y) = {
+  match: Pair(x, y) with: Vec(
+    Pair('x, 'x) => {x}
+    Pair('x, 'y) => {Mismatch}
+    ' => {InvalidPair}
+  )
+}
+
+if: x == y do: {print(Equal)} else {print(NotEqual)}
 
 'x = id(id(foo))
 
