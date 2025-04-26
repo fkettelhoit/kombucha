@@ -3,10 +3,12 @@ use std::{
     vec::IntoIter,
 };
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tok {
     Symbol,
+    String,
     Keyword,
+    Binding,
     LParen,
     RParen,
     LBrace,
@@ -17,11 +19,10 @@ enum Tok {
     Separator,
 }
 
-fn scan<'code>(code: &'code str) -> Vec<(usize, &'code str, Tok)> {
-    let mut chars = code.chars().chain(once(' ')).enumerate();
+fn scan<'code>(code: &'code str) -> Vec<(Tok, usize, &'code str)> {
     let mut toks = vec![];
     let mut i = 0;
-    while let Some((j, c)) = chars.next() {
+    for (j, c) in code.chars().into_iter().chain(once(' ')).enumerate() {
         let tok = match c {
             '(' => Some(Tok::LParen),
             ')' => Some(Tok::RParen),
@@ -34,15 +35,19 @@ fn scan<'code>(code: &'code str) -> Vec<(usize, &'code str, Tok)> {
             _ => None,
         };
         if tok.is_some() || c.is_ascii_whitespace() {
-            let curr = &code[i..j];
-            match curr.chars().next() {
-                Some(first) if first.is_uppercase() => toks.push((i, curr, Tok::Keyword)),
-                _ => toks.push((i, curr, Tok::Symbol)),
+            if let (Some(n), Some(l)) = (code[i..j].chars().next(), code[i..j].chars().last()) {
+                let tok = match (n, l) {
+                    (c, _) if c.is_ascii_uppercase() => Tok::String,
+                    ('\'', _) => Tok::Binding,
+                    (_, ':') => Tok::Keyword,
+                    (_, _) => Tok::Symbol,
+                };
+                toks.push((tok, j, &code[i..j]));
             }
             i = j + 1;
         }
         if let Some(tok) = tok {
-            toks.push((j, &code[j - 1..j], tok));
+            toks.push((tok, j, &code[j..j + 1]));
         }
     }
     toks
@@ -51,108 +56,215 @@ fn scan<'code>(code: &'code str) -> Vec<(usize, &'code str, Tok)> {
 enum Ast<'code> {
     Nil,
     Var(&'code str),
-    Keyword(&'code str),
+    String(&'code str),
+    Binding(&'code str),
     List(Vec<Ast<'code>>),
     Block(Vec<Ast<'code>>),
     PrefixCall(Box<Ast<'code>>, Vec<Ast<'code>>),
-    PipedCall(Box<Ast<'code>>, Box<Ast<'code>>, Vec<Ast<'code>>),
     InfixCall(Box<Ast<'code>>, &'code str, Box<Ast<'code>>),
 }
 
-fn parse<'code>(code: &'code str) -> Result<Ast<'code>, String> {
-    type Toks<'code> = Peekable<IntoIter<(usize, &'code str, Tok)>>;
+pub struct Prg<'code>(Vec<Ast<'code>>);
+
+enum E<'code> {
+    NoParenAfterGroup(&'code str),
+    EndOfGroup,
+    ClosingTok(&'code str),
+    InvalidArgTok(&'code str),
+    NeedsSep(&'code str),
+}
+
+fn msg<'code>(e: &E<'code>) -> String {
+    match e {
+        E::NoParenAfterGroup(s) => format!("Expected (...) to be closed with ')', but found '{s}'"),
+        E::EndOfGroup => format!("Expected (...) to be closed with ')', but the code just ended"),
+        E::ClosingTok(s) => format!("Expected an expression, but found an unmatched '{s}'"),
+        E::InvalidArgTok(s) => format!("Expected a simple expression, but found '{s}'"),
+        E::NeedsSep(s) => {
+            format!("Expressions must be separated using ',' or '\\n', but found '{s}'")
+        }
+    }
+}
+
+pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
+    struct Error<'code>(usize, E<'code>);
+    type Toks<'code> = Peekable<IntoIter<(Tok, usize, &'code str)>>;
     let mut toks = scan(code).into_iter().peekable();
-    fn parse_expr<'code>(toks: &mut Toks<'code>) -> Result<Ast<'code>, Option<String>> {
-        let expr = parse_call(toks)?;
-        if let Some((_, s, Tok::Symbol)) = toks.peek().copied() {
+    fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+        _infix_call(toks)
+    }
+    fn _infix_call<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+        let expr = _prefix_call(toks)?;
+        if let Some((Tok::Symbol, _, s)) = toks.peek().copied() {
             toks.next();
-            match parse_call(toks) {
-                Ok(expr2) => Ok(Ast::InfixCall(Box::new(expr), s, Box::new(expr2))),
-                Err(None) => Err(Some(format!(
-                    "Expected a second argument after the infix call '{s}'"
-                ))),
-                Err(e) => Err(e),
-            }
+            let expr2 = _prefix_call(toks)?;
+            Ok(Ast::InfixCall(Box::new(expr), s, Box::new(expr2)))
         } else {
             Ok(expr)
         }
     }
-    fn parse_call<'code>(toks: &mut Toks<'code>) -> Result<Ast<'code>, Option<String>> {
-        let expr = parse_value(toks)?;
-        if let Some((_, _, Tok::LParen)) = toks.peek().copied() {
+    fn _prefix_call<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+        let mut expr = _arg(toks)?;
+        while let Some((Tok::LParen, _, _)) = toks.peek() {
             toks.next();
-            let args = parse_exprs(toks, Some(Tok::RParen))?;
-            Ok(Ast::PrefixCall(Box::new(expr), args))
-        } else {
-            Ok(expr)
+            let args = _exprs(toks, Some(Tok::RParen))?;
+            expr = Ast::PrefixCall(Box::new(expr), args);
         }
+        Ok(expr)
     }
-    fn parse_value<'code>(toks: &mut Toks<'code>) -> Result<Ast<'code>, Option<String>> {
-        let Some((_, s, t)) = toks.next() else {
+    fn _arg<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+        let Some((tok, i, s)) = toks.next() else {
             return Err(None);
         };
-        match t {
+        match tok {
             Tok::Symbol => Ok(Ast::Var(s)),
-            Tok::Keyword => Ok(Ast::Keyword(s)),
+            Tok::String => Ok(Ast::String(s)),
+            Tok::Binding => Ok(Ast::Binding(s)),
             Tok::LParen => {
-                if let Some((_, _, Tok::RParen)) = toks.peek() {
+                if let Some((Tok::RParen, _, _)) = toks.peek() {
                     toks.next();
                     return Ok(Ast::Nil);
                 }
-                let expr = parse_expr(toks)?;
+                let expr = _expr(toks)?;
                 match toks.next() {
-                    None => Err(Some(format!(
-                        "Expected a closing ')', but the code just ended"
-                    ))),
-                    Some((_, _, Tok::RParen)) => Ok(expr),
-                    Some((_, s, _)) => {
-                        Err(Some(format!("Expected a closing ')', but found '{s}'")))
-                    }
+                    Some((Tok::RParen, _, _)) => Ok(expr),
+                    Some((_, i, s)) => Err(Some(Error(i, E::NoParenAfterGroup(s)))),
+                    None => Err(Some(Error(i, E::EndOfGroup))),
                 }
             }
-            Tok::LBrace => Ok(Ast::Block(parse_exprs(toks, Some(Tok::RBrace))?)),
-            Tok::LBracket => Ok(Ast::List(parse_exprs(toks, Some(Tok::RBracket))?)),
-            Tok::RParen | Tok::RBrace | Tok::RBracket | Tok::Dot | Tok::Separator => {
-                Err(Some(format!("Expected an expression, found '{s}'")))
-            }
+            Tok::LBrace => Ok(Ast::Block(_exprs(toks, Some(Tok::RBrace))?)),
+            Tok::LBracket => Ok(Ast::List(_exprs(toks, Some(Tok::RBracket))?)),
+            Tok::RParen | Tok::RBrace | Tok::RBracket => Err(Some(Error(i, E::ClosingTok(s)))),
+            Tok::Keyword | Tok::Dot | Tok::Separator => Err(Some(Error(i, E::InvalidArgTok(s)))),
         }
     }
-    fn parse_exprs<'code>(
-        toks: &mut Toks<'code>,
-        closing_tok: Option<Tok>,
-    ) -> Result<Vec<Ast<'code>>, Option<String>> {
+    fn _exprs<'c>(toks: &mut Toks<'c>, t: Option<Tok>) -> Result<Vec<Ast<'c>>, Option<Error<'c>>> {
         let mut exprs = vec![];
-        let mut expect_separator = false;
+        let mut needs_separator = false;
         loop {
             match toks.peek() {
-                Some((_, _, Tok::Separator)) => {
-                    toks.next();
-                    expect_separator = false;
-                }
-                t if t.map(|(_, _, t)| *t) == closing_tok => {
+                tok if tok.map(|(tok, _, _)| *tok) == t => {
                     toks.next();
                     return Ok(exprs);
                 }
-                _ if expect_separator => {
-                    return Err(Some(format!(
-                        "Expected a ',' or '\\n' to separate expressions"
-                    )));
+                Some((Tok::Separator, _, _)) => {
+                    toks.next();
+                    needs_separator = false;
+                }
+                Some((_, i, s)) if needs_separator => {
+                    return Err(Some(Error(*i, E::NeedsSep(*s))));
                 }
                 _ => {
-                    exprs.push(parse_expr(toks)?);
-                    expect_separator = true;
+                    exprs.push(_expr(toks)?);
+                    needs_separator = true;
                 }
             }
         }
     }
-    let exprs = parse_exprs(&mut toks, None)
-        .map_err(|e| e.unwrap_or_else(|| format!("Expected an expression, but found nothing")))?;
-    Ok(Ast::Block(exprs))
+    match _exprs(&mut toks, None) {
+        Ok(elems) => Ok(Prg(elems)),
+        Err(None) => todo!(),
+        Err(Some(Error(i, e))) => {
+            let msg = msg(&e);
+            let mut line = 0;
+            let mut col = 0;
+            for c in code.chars().take(i) {
+                if c == '\n' {
+                    line += 1;
+                    col = 0;
+                } else {
+                    col += 1;
+                }
+            }
+            Err(format!("{msg}, at line {line}, col {col}"))
+        }
+    }
 }
 
-impl<'code> std::fmt::Display for Ast<'code> {
+impl<'code> Ast<'code> {
+    const MULTILINE_SIZE_THRESHOLD: usize = 10;
+
+    fn size(&self) -> usize {
+        match self {
+            Ast::Nil | Ast::Var(_) | Ast::String(_) | Ast::Binding(_) => 1,
+            Ast::List(xs) | Ast::Block(xs) => xs.iter().map(|x| x.size()).sum::<usize>() + 1,
+            Ast::PrefixCall(f, args) => f.size() + args.iter().map(|x| x.size()).sum::<usize>() + 1,
+            Ast::InfixCall(a, _, b) => a.size() + b.size() + 1,
+        }
+    }
+
+    fn pretty(&self, buf: &mut String, lvl: usize, wrap: bool) {
+        fn indent(buf: &mut String, lvl: usize) {
+            for _ in 0..lvl {
+                buf.push_str("  ");
+            }
+        }
+        fn pretty_exprs<'c>(exprs: &[Ast<'c>], buf: &mut String, lvl: usize, is_multiline: bool) {
+            if is_multiline {
+                for expr in exprs {
+                    buf.push('\n');
+                    indent(buf, lvl + 1);
+                    expr.pretty(buf, lvl + 1, false);
+                }
+                buf.push('\n');
+                indent(buf, lvl);
+            } else {
+                for (i, expr) in exprs.iter().enumerate() {
+                    if i != 0 {
+                        buf.push_str(", ");
+                    }
+                    expr.pretty(buf, lvl, false);
+                }
+            }
+        }
+        let is_multiline = self.size() > Self::MULTILINE_SIZE_THRESHOLD;
+        match self {
+            Ast::Nil => buf.push_str("()"),
+            Ast::Var(s) | Ast::String(s) | Ast::Binding(s) => buf.push_str(s),
+            Ast::List(elems) => {
+                buf.push('[');
+                pretty_exprs(elems, buf, lvl, is_multiline);
+                buf.push(']');
+            }
+            Ast::Block(elems) => {
+                buf.push('{');
+                pretty_exprs(elems, buf, lvl, is_multiline);
+                buf.push('}');
+            }
+            Ast::PrefixCall(f, args) => {
+                f.pretty(buf, lvl, true);
+                buf.push('(');
+                pretty_exprs(args, buf, lvl, is_multiline);
+                buf.push(')');
+            }
+            Ast::InfixCall(a, f, b) => {
+                if wrap {
+                    buf.push('(');
+                }
+                a.pretty(buf, lvl, true);
+                buf.push(' ');
+                buf.push_str(f);
+                buf.push(' ');
+                b.pretty(buf, lvl, true);
+                if wrap {
+                    buf.push(')');
+                }
+            }
+        }
+    }
+}
+
+impl<'code> std::fmt::Display for Prg<'code> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        for (i, elem) in self.0.iter().enumerate() {
+            if i != 0 {
+                f.write_str("\n\n")?;
+            }
+            let mut buf = String::new();
+            elem.pretty(&mut buf, 0, false);
+            f.write_str(&buf)?;
+        }
+        Ok(())
     }
 }
 
@@ -175,101 +287,71 @@ mod tests {
     use super::*;
 
     #[test]
-    fn eval_fn_app() {
-        let code = "fn 'x { x } Foo";
+    fn pretty_var() {
+        let code = "foo";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "Foo");
     }
 
     #[test]
-    fn eval_let() {
-        let code = "=('x, Foo, { x })";
+    fn pretty_string() {
+        let code = "Foo";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "Foo");
     }
 
     #[test]
-    fn eval_block() {
-        let code = "{ Foo }(Nil)";
+    fn pretty_binding() {
+        let code = "'foo";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "Foo");
     }
 
     #[test]
-    fn eval_let_in_block() {
-        let code = "'bar = Bar, Foo(bar)";
+    fn pretty_block() {
+        let code = "{foo, Foo, 'foo}";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "Foo(Bar)");
     }
 
     #[test]
-    fn eval_multiple_let_in_block() {
-        let code = "'x = X, 'y = Y, Pair(x, y)";
+    fn pretty_list() {
+        let code = "[foo, Foo, 'foo]";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "Pair(X, Y)");
     }
 
     #[test]
-    fn eval_multiple_let_and_side_effect_in_block() {
-        let code = "'x = X, Nil, 'y = Y, Pair(x, y)";
+    fn pretty_prefix_call() {
+        let code = "f(g(), h(Bar), Baz)";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "Pair(X, Y)");
     }
 
     #[test]
-    fn eval_simple_if_else() {
-        let code = "if-eq(Foo, Foo) { True } { False }";
+    fn pretty_infix_call() {
+        let code = "f(x) foo g(y)";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "True");
     }
 
     #[test]
-    fn eval_rec() {
-        let code =
-            "'r = rec(fn('r, { Cons(Foo, r) })), pop(r, fn(Pair('xs, 'x), { xs }), { Error })";
+    fn pretty_grouped_infix_call() {
+        let code = "a + (b * c)";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "Cons(Foo)");
     }
 
     #[test]
-    fn eval_std_lib() {
-        let code = "'x = Foo, if-eq(x, Foo) { True } { False }";
+    fn pretty() {
+        let code = "'foo = Foo
+
+'id = ('x => {x})
+
+'x = id(id(foo))
+
+Pair(x, x)";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "True");
-    }
-
-    #[test]
-    fn eval_list() {
-        let code = "[Foo(Bar), [Baz, Qux]]";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "[Foo(Bar), [Baz, Qux]]");
-    }
-
-    #[test]
-    fn eval_nil() {
-        let code = "()(Bar, Baz())";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-        assert_eq!(parsed.eval().to_string(), "()(Bar, Baz(()))");
-    }
-
-    #[test]
-    fn eval_match() {
-        let code = include_str!("../examples/eq.vo");
-        let parsed = parse(code).unwrap();
-        assert_eq!(
-            parsed.eval().to_string(),
-            "[True, False, True, False, True]"
-        );
     }
 }
