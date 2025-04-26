@@ -63,20 +63,14 @@ pub struct Prg<'code>(Vec<Ast<'code>>);
 
 pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
     type Toks<'c> = Peekable<IntoIter<(Tok, usize, &'c str)>>;
-    fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+    fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Error<'c>> {
         let mut args = vec![];
         while let Some((Tok::Keyword, i, s)) = toks.peek().copied() {
             toks.next();
             match _infix(toks) {
                 Ok(arg) => args.push((s, arg)),
-                Err(None) => return Err(Some(Error(i, E::ExpectedKeywordArg(s, None)))),
-                Err(Some(Error(j, E::Unmatched(t) | E::SeparatorAsValue(t)))) => {
-                    return Err(Some(Error(i, E::ExpectedKeywordArg(s, Some((j, t))))));
-                }
-                Err(Some(Error(j, E::KeywordAsValue(t)))) => {
-                    return Err(Some(Error(i, E::DoubleKeyword(s, j, t))));
-                }
-                Err(Some(e)) => return Err(Some(e)),
+                Err(Error(_, tok, Exp::Value)) => return Err(Error(i, tok, Exp::KeywordArg(s))),
+                Err(e) => return Err(e),
             }
         }
         if args.is_empty() {
@@ -85,23 +79,20 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
             Ok(Ast::KeywordCall(args))
         }
     }
-    fn _infix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+    fn _infix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Error<'c>> {
         let expr = _prefix(toks)?;
         let mut f = None;
         let mut args = vec![];
-        while let Some((Tok::Symbol, i, s)) = toks.peek().copied() {
+        while let Some((Tok::Symbol, j, s)) = toks.peek().copied() {
             toks.next();
             match f {
-                Some((f, h)) if f != s => return Err(Some(Error(h, E::InfixMismatch(f, i, s)))),
-                _ => f = Some((s, i)),
+                Some((f, i)) if f != s => return Err(Error(i, Some((j, s)), Exp::InfixFn(f))),
+                _ => f = Some((s, j)),
             }
             match _prefix(toks) {
                 Ok(arg) => args.push(arg),
-                Err(None) => return Err(Some(Error(i, E::ExpectedInfixArg(s, None)))),
-                Err(Some(Error(j, E::Unmatched(t) | E::SeparatorAsValue(t)))) => {
-                    return Err(Some(Error(i, E::ExpectedInfixArg(s, Some((j, t))))));
-                }
-                Err(Some(e)) => return Err(Some(e)),
+                Err(Error(_, tok, Exp::Value)) => return Err(Error(j, tok, Exp::InfixArg(s))),
+                Err(e) => return Err(e),
             }
         }
         match f {
@@ -109,7 +100,7 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
             None => Ok(expr),
         }
     }
-    fn _prefix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+    fn _prefix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Error<'c>> {
         let mut expr = _value(toks)?;
         while let Some((Tok::LParen, i, _)) = toks.peek().copied() {
             toks.next();
@@ -117,27 +108,30 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
         }
         Ok(expr)
     }
-    fn _value<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+    fn _value<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Error<'c>> {
         let Some((t, i, s)) = toks.next() else {
-            return Err(None);
+            return Err(Error(0, None, Exp::Value));
         };
         match t {
             Tok::Symbol => Ok(Ast::Var(s)),
             Tok::String => Ok(Ast::String(s)),
             Tok::Binding => Ok(Ast::Binding(s)),
             Tok::LParen => {
-                let expr = _expr(toks)
-                    .map_err(|e| e.unwrap_or_else(|| Error(i, E::ExpectedRParen(None))))?;
+                let expr = match _expr(toks) {
+                    Ok(expr) => expr,
+                    Err(Error(i, None, Exp::Value)) => return Err(Error(i, None, Exp::RParen)),
+                    Err(e) => return Err(e),
+                };
                 match toks.next() {
                     Some((Tok::RParen, _, _)) => Ok(expr),
-                    Some((_, j, s)) => Err(Some(Error(i, E::ExpectedRParen(Some((j, s)))))),
-                    None => Err(Some(Error(i, E::ExpectedRParen(None)))),
+                    Some((_, j, s)) => Err(Error(i, Some((j, s)), Exp::RParen)),
+                    None => Err(Error(i, None, Exp::RParen)),
                 }
             }
             Tok::LBrace => Ok(Ast::Block(_exprs(toks, i, Some(Tok::RBrace))?)),
-            Tok::RParen | Tok::RBrace => Err(Some(Error(i, E::Unmatched(s)))),
-            Tok::Keyword => Err(Some(Error(i, E::KeywordAsValue(s)))),
-            Tok::Separator => Err(Some(Error(i, E::SeparatorAsValue(s)))),
+            Tok::RParen | Tok::RBrace | Tok::Keyword | Tok::Separator => {
+                Err(Error(i, Some((i, s)), Exp::Value))
+            }
         }
     }
     fn _exprs<'c>(ts: &mut Toks<'c>, i: usize, t: Option<Tok>) -> Result<Vec<Ast<'c>>, Error<'c>> {
@@ -153,35 +147,30 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
                     ts.next();
                     needs_separator = false;
                 }
-                Some((_, j, s)) if needs_separator => {
-                    return Err(Error(i, E::ExpectedSeparator(j, s)));
-                }
+                Some((_, j, s)) if needs_separator => return Err(Error(i, Some((j, s)), Exp::Sep)),
                 _ => match _expr(ts) {
                     Ok(expr) => {
                         exprs.push(expr);
                         needs_separator = true;
                     }
-                    Err(None) => return Err(Error(i, E::ExpectedClosing(t, None))),
-                    Err(Some(Error(j, E::Unmatched(closing)))) => {
-                        return Err(Error(i, E::ExpectedClosing(t, Some((j, closing)))));
-                    }
-                    Err(Some(e)) => return Err(e),
+                    Err(Error(_, actual, Exp::Value)) => match t {
+                        Some(Tok::RParen) => return Err(Error(i, actual, Exp::RParen)),
+                        _ => return Err(Error(i, actual, Exp::RBrace)),
+                    },
+                    Err(e) => return Err(e),
                 },
             }
         }
     }
-    struct Error<'c>(usize, E<'c>);
-    enum E<'c> {
-        Unmatched(&'c str),
-        ExpectedRParen(Option<(usize, &'c str)>),
-        KeywordAsValue(&'c str),
-        SeparatorAsValue(&'c str),
-        ExpectedClosing(Option<Tok>, Option<(usize, &'c str)>),
-        ExpectedInfixArg(&'c str, Option<(usize, &'c str)>),
-        InfixMismatch(&'c str, usize, &'c str),
-        ExpectedSeparator(usize, &'c str),
-        ExpectedKeywordArg(&'c str, Option<(usize, &'c str)>),
-        DoubleKeyword(&'c str, usize, &'c str),
+    struct Error<'c>(usize, Option<(usize, &'c str)>, Exp<'c>);
+    enum Exp<'c> {
+        RParen,
+        RBrace,
+        Sep,
+        Value,
+        InfixFn(&'c str),
+        InfixArg(&'c str),
+        KeywordArg(&'c str),
     }
     fn at(i: usize, code: &str) -> String {
         let mut line = 1;
@@ -189,69 +178,33 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
         for c in code.chars().take(i) {
             if c == '\n' {
                 line += 1;
-                col = 1;
-            } else {
-                col += 1;
+                col = 0;
             }
+            col += 1;
         }
         format!("line {line}, col {col}")
     }
-    fn instead(tok: Option<(usize, &str)>, code: &str) -> String {
-        match tok {
-            None => "but the code just ended".to_string(),
-            Some((j, s)) => format!("but found '{s}' at {}", at(j, code)),
-        }
-    }
-    fn msg<'code>(e: E<'code>, i: usize, code: &'code str) -> String {
+    fn msg<'code>(e: Exp<'code>, i: usize, tok: Option<(usize, &str)>, code: &'code str) -> String {
         let pos = at(i, code);
-        match e {
-            E::Unmatched(s) => format!("Expected a value, but found an unmatched '{s}' at {pos}"),
-            E::ExpectedRParen(s) => format!(
-                "Expected the '(' at {pos} to be followed by a single expression and closed with ')', {}",
-                instead(s, code)
-            ),
-            E::KeywordAsValue(s) => {
-                format!("Expected a value, but found the keyword '{s}' at {pos}")
-            }
-            E::SeparatorAsValue(s) => format!(
-                "Expected a value, but found the separator '{}' at {pos}",
-                s.replace("\n", "\\n")
-            ),
-            E::ExpectedClosing(expected, actual) => format!(
-                "Expected the expressions starting at {pos} to be closed {}, {}",
-                match expected {
-                    Some(Tok::RParen) => "with ')'",
-                    Some(Tok::RBrace) => "with '}'",
-                    _ => "by the end of the code",
-                },
-                instead(actual, code)
-            ),
-            E::ExpectedInfixArg(f, s) => format!(
-                "Expected an infix argument after function '{f}' at {pos}, {}",
-                instead(s, code)
-            ),
-            E::InfixMismatch(f1, j, f2) => format!(
-                "All functions in an infix call must be the same or use (...) to disambiguate precedence, but found '{f1}' at {pos} and then '{f2}' at {}",
-                at(j, code),
-            ),
-            E::ExpectedSeparator(j, s) => format!(
-                "Expected a ',' or '\\n' to separate the expressions starting at {pos}, but found '{s}' at {}",
-                at(j, code)
-            ),
-            E::ExpectedKeywordArg(k, s) => format!(
-                "Expected an argument after the keyword '{k}' at {pos}, {}",
-                instead(s, code)
-            ),
-            E::DoubleKeyword(k1, j, k2) => format!(
-                "Keyword functions must be followed by non-keyword values, but found '{k1}' at {pos} and then '{k2}' at {}",
-                at(j, code),
-            ),
-        }
+        let expected = match e {
+            Exp::RParen => format!("the '(' at {pos} to be closed with ')'"),
+            Exp::RBrace => format!("the '{{' at {pos} to be closed with '}}'"),
+            Exp::Sep => format!("a ',' or '\\n' to separate the expressions starting at {pos}"),
+            Exp::Value => format!("a value"),
+            Exp::InfixArg(f) => format!("an infix argument after the function '{f}' at {pos}"),
+            Exp::InfixFn(f) => format!("all infix functions starting at {pos} to be named '{f}'"),
+            Exp::KeywordArg(k) => format!("an argument after the keyword '{k}' at {pos}"),
+        };
+        let actual = match tok {
+            None => "but the code just ended".to_string(),
+            Some((j, s)) => format!("but found '{}' at {}", s.replace("\n", "\\n"), at(j, code)),
+        };
+        format!("Expected {expected}, {actual}")
     }
     let mut toks = scan(code).into_iter().peekable();
     match _exprs(&mut toks, 0, None) {
         Ok(elems) => Ok(Prg(elems)),
-        Err(Error(i, e)) => Err(msg(e, i, &code)),
+        Err(Error(i, actual, e)) => Err(msg(e, i, actual, &code)),
     }
 }
 
@@ -397,7 +350,7 @@ mod tests {
         let code = "a + b - c";
         let e = parse(code).unwrap_err();
         eprintln!("{e}");
-        assert!(e.contains("'+' at line 1, col 3"));
+        assert!(e.contains("all infix functions starting at line 1, col 3 to be named '+'"));
         assert!(e.contains("'-' at line 1, col 7"));
     }
 
@@ -406,7 +359,7 @@ mod tests {
         let code = "a +";
         let e = parse(code).unwrap_err();
         eprintln!("{e}");
-        assert!(e.contains("infix argument after function '+' at line 1, col 3"));
+        assert!(e.contains("infix argument after the function '+' at line 1, col 3"));
     }
 
     #[test]
@@ -414,7 +367,7 @@ mod tests {
         let code = "f(a +)";
         let e = parse(code).unwrap_err();
         eprintln!("{e}");
-        assert!(e.contains("infix argument after function '+' at line 1, col 5"));
+        assert!(e.contains("infix argument after the function '+' at line 1, col 5"));
     }
 
     #[test]
@@ -422,7 +375,6 @@ mod tests {
         for code in ["f(", "f(a"] {
             let e = parse(code).unwrap_err();
             eprintln!("'{code}': {e}");
-            assert!(e.contains("expressions"));
             assert!(e.contains("at line 1, col 2"));
             assert!(e.contains("')'"));
         }
@@ -451,7 +403,6 @@ mod tests {
             let e = parse(code).unwrap_err();
             eprintln!("'{code}': {e}");
             assert!(e.contains("'(' at line 1, col 1"));
-            assert!(e.contains("single expression"));
             assert!(e.contains("')'"));
         }
     }
@@ -461,7 +412,17 @@ mod tests {
         let code = "a + keyword:";
         let e = parse(code).unwrap_err();
         eprintln!("{e}");
-        assert!(e.contains("keyword 'keyword:' at line 1, col 5"));
+        assert!(e.contains("infix argument"));
+        assert!(e.contains("'keyword:' at line 1, col 5"));
+    }
+
+    #[test]
+    fn parse_error_double_keyword() {
+        let code = "foo: bar:";
+        let e = parse(code).unwrap_err();
+        eprintln!("{e}");
+        assert!(e.contains("argument"));
+        assert!(e.contains("'bar:' at line 1, col 6"));
     }
 
     #[test]
@@ -479,7 +440,7 @@ mod tests {
             let e = parse(code).unwrap_err();
             eprintln!("'{code}': {e}");
             assert!(e.contains("closed with '}'"));
-            assert!(e.contains("starting at line 1, col 5"));
+            assert!(e.contains("at line 1, col 5"));
         }
     }
 
