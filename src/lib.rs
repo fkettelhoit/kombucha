@@ -60,6 +60,7 @@ enum Ast<'code> {
     Block(Vec<Ast<'code>>),
     PrefixCall(Box<Ast<'code>>, Vec<Ast<'code>>),
     InfixCall(Box<Ast<'code>>, &'code str, Vec<Ast<'code>>),
+    KeywordCall(Vec<(&'code str, Ast<'code>)>),
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +68,28 @@ pub struct Prg<'code>(Vec<Ast<'code>>);
 
 pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
     type Toks<'c> = Peekable<IntoIter<(Tok, usize, &'c str)>>;
+    fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
+        let mut args = vec![];
+        while let Some((Tok::Keyword, i, s)) = toks.peek().copied() {
+            toks.next();
+            match _infix(toks) {
+                Ok(arg) => args.push((s, arg)),
+                Err(None) => return Err(Some(Error(i, E::ExpectedKeywordArg(s, None)))),
+                Err(Some(Error(j, E::Unmatched(t) | E::SeparatorAsValue(t)))) => {
+                    return Err(Some(Error(i, E::ExpectedKeywordArg(s, Some((j, t))))));
+                }
+                Err(Some(Error(j, E::KeywordAsValue(t)))) => {
+                    return Err(Some(Error(i, E::DoubleKeyword(s, j, t))));
+                }
+                Err(Some(e)) => return Err(Some(e)),
+            }
+        }
+        if args.is_empty() {
+            _infix(toks)
+        } else {
+            Ok(Ast::KeywordCall(args))
+        }
+    }
     fn _infix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Option<Error<'c>>> {
         let expr = _prefix(toks)?;
         let mut f = None;
@@ -108,7 +131,7 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
             Tok::String => Ok(Ast::String(s)),
             Tok::Binding => Ok(Ast::Binding(s)),
             Tok::LParen => {
-                let expr = _infix(toks)
+                let expr = _expr(toks)
                     .map_err(|e| e.unwrap_or_else(|| Error(i, E::ExpectedRParen(None))))?;
                 match toks.next() {
                     Some((Tok::RParen, _, _)) => Ok(expr),
@@ -139,7 +162,7 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
                 Some((_, j, s)) if needs_separator => {
                     return Err(Error(i, E::ExpectedSeparator(j, s)));
                 }
-                _ => match _infix(ts) {
+                _ => match _expr(ts) {
                     Ok(expr) => {
                         exprs.push(expr);
                         needs_separator = true;
@@ -163,6 +186,8 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
         ExpectedInfixArg(&'c str, Option<(usize, &'c str)>),
         InfixMismatch(&'c str, usize, &'c str),
         ExpectedSeparator(usize, &'c str),
+        ExpectedKeywordArg(&'c str, Option<(usize, &'c str)>),
+        DoubleKeyword(&'c str, usize, &'c str),
     }
     fn at(i: usize, code: &str) -> String {
         let mut line = 1;
@@ -177,16 +202,19 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
         }
         format!("line {line}, col {col}")
     }
+    fn instead(tok: Option<(usize, &str)>, code: &str) -> String {
+        match tok {
+            None => "but the code just ended".to_string(),
+            Some((j, s)) => format!("but found '{s}' at {}", at(j, code)),
+        }
+    }
     fn msg<'code>(e: E<'code>, i: usize, code: &'code str) -> String {
         let pos = at(i, code);
         match e {
             E::Unmatched(s) => format!("Expected a value, but found an unmatched '{s}' at {pos}"),
             E::ExpectedRParen(s) => format!(
                 "Expected the '(' at {pos} to be followed by a single expression and closed with ')', {}",
-                match s {
-                    None => "but the code just ended".to_string(),
-                    Some((j, s)) => format!("but found '{s}' at {}", at(j, code)),
-                }
+                instead(s, code)
             ),
             E::KeywordAsValue(s) => {
                 format!("Expected a value, but found the keyword '{s}' at {pos}")
@@ -203,17 +231,11 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
                     Some(Tok::RBracket) => "with ']'",
                     _ => "by the end of the code",
                 },
-                match actual {
-                    None => "but the code just ended".to_string(),
-                    Some((j, s)) => format!("but found an unmatched '{s}' at {}", at(j, code)),
-                }
+                instead(actual, code)
             ),
             E::ExpectedInfixArg(f, s) => format!(
                 "Expected an infix argument after function '{f}' at {pos}, {}",
-                match s {
-                    None => "but the code just ended".to_string(),
-                    Some((j, s)) => format!("but found '{s}' at {}", at(j, code)),
-                }
+                instead(s, code)
             ),
             E::InfixMismatch(f1, j, f2) => format!(
                 "All functions in an infix call must be the same or use (...) to disambiguate precedence, but found '{f1}' at {pos} and then '{f2}' at {}",
@@ -222,6 +244,14 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
             E::ExpectedSeparator(j, s) => format!(
                 "Expected a ',' or '\\n' to separate the expressions starting at {pos}, but found '{s}' at {}",
                 at(j, code)
+            ),
+            E::ExpectedKeywordArg(k, s) => format!(
+                "Expected an argument after the keyword '{k}' at {pos}, {}",
+                instead(s, code)
+            ),
+            E::DoubleKeyword(k1, j, k2) => format!(
+                "Keyword functions must be followed by non-keyword values, but found '{k1}' at {pos} and then '{k2}' at {}",
+                at(j, code),
             ),
         }
     }
@@ -232,6 +262,12 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
     }
 }
 
+enum IsInside {
+    RegularExpr,
+    KeywordCall,
+    InfixCall,
+}
+
 impl<'code> Ast<'code> {
     fn size(&self) -> usize {
         match self {
@@ -239,10 +275,11 @@ impl<'code> Ast<'code> {
             Ast::List(xs) | Ast::Block(xs) => xs.iter().map(|x| x.size()).sum::<usize>() + 1,
             Ast::PrefixCall(f, xs) => f.size() + xs.iter().map(|x| x.size()).sum::<usize>(),
             Ast::InfixCall(a, _, xs) => a.size() + 1 + xs.iter().map(|x| x.size()).sum::<usize>(),
+            Ast::KeywordCall(xs) => xs.iter().map(|(_, x)| x.size() + 1).sum(),
         }
     }
 
-    fn pretty(&self, buf: &mut String, lvl: usize, wrap: bool) {
+    fn pretty(&self, buf: &mut String, lvl: usize, is_inside: IsInside) {
         fn indent(buf: &mut String, lvl: usize) {
             for _ in 0..lvl {
                 buf.push_str("  ");
@@ -253,7 +290,7 @@ impl<'code> Ast<'code> {
                 for expr in exprs {
                     buf.push('\n');
                     indent(buf, lvl + 1);
-                    expr.pretty(buf, lvl + 1, false);
+                    expr.pretty(buf, lvl + 1, IsInside::RegularExpr);
                 }
                 buf.push('\n');
                 indent(buf, lvl);
@@ -262,7 +299,7 @@ impl<'code> Ast<'code> {
                     if i != 0 {
                         buf.push_str(", ");
                     }
-                    expr.pretty(buf, lvl, false);
+                    expr.pretty(buf, lvl, IsInside::RegularExpr);
                 }
             }
         }
@@ -280,23 +317,39 @@ impl<'code> Ast<'code> {
                 buf.push('}');
             }
             Ast::PrefixCall(f, args) => {
-                f.pretty(buf, lvl, true);
+                f.pretty(buf, lvl, IsInside::RegularExpr);
                 buf.push('(');
                 pretty_exprs(args, buf, lvl, is_multiline);
                 buf.push(')');
             }
             Ast::InfixCall(arg, f, args) => {
-                if wrap {
+                if let IsInside::InfixCall = is_inside {
                     buf.push('(');
                 }
-                arg.pretty(buf, lvl, true);
+                arg.pretty(buf, lvl, IsInside::InfixCall);
                 for arg in args {
                     buf.push(' ');
                     buf.push_str(f);
                     buf.push(' ');
-                    arg.pretty(buf, lvl, true);
+                    arg.pretty(buf, lvl, IsInside::InfixCall);
                 }
-                if wrap {
+                if let IsInside::InfixCall = is_inside {
+                    buf.push(')');
+                }
+            }
+            Ast::KeywordCall(args) => {
+                if let IsInside::KeywordCall | IsInside::InfixCall = is_inside {
+                    buf.push('(');
+                }
+                for (i, (keyword, arg)) in args.iter().enumerate() {
+                    if i != 0 {
+                        buf.push(' ');
+                    }
+                    buf.push_str(keyword);
+                    buf.push(' ');
+                    arg.pretty(buf, lvl, IsInside::KeywordCall);
+                }
+                if let IsInside::KeywordCall | IsInside::InfixCall = is_inside {
                     buf.push(')');
                 }
             }
@@ -311,7 +364,7 @@ impl<'code> std::fmt::Display for Prg<'code> {
                 f.write_str("\n\n")?;
             }
             let mut buf = String::new();
-            expr.pretty(&mut buf, 0, false);
+            expr.pretty(&mut buf, 0, IsInside::RegularExpr);
             f.write_str(&buf)?;
         }
         Ok(())
@@ -341,7 +394,7 @@ mod tests {
         let code = "[)]";
         let e = parse(code).unwrap_err();
         eprintln!("{e}");
-        assert!(e.contains("unmatched ')'"));
+        assert!(e.contains("')'"));
         assert!(e.contains("line 1, col 2"));
     }
 
@@ -500,6 +553,20 @@ mod tests {
     }
 
     #[test]
+    fn pretty_keyword_call() {
+        let code = "if: x == y do: {foo()} else: Bar";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+    }
+
+    #[test]
+    fn pretty_grouped_keyword_call() {
+        let code = "if: x == y do: (foo: Bar baz: Qux) else: Bar";
+        let parsed = parse(code).unwrap();
+        assert_eq!(code, parsed.to_string());
+    }
+
+    #[test]
     fn pretty() {
         let code = "'foo = Foo
 
@@ -507,7 +574,7 @@ mod tests {
 
 'x = id(id(foo))
 
-Pair(x, x)";
+if: x == Foo do: Pair(x, x) else: Error";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
     }
