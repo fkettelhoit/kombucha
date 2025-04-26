@@ -208,12 +208,6 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
     }
 }
 
-enum IsInside {
-    RegularExpr,
-    KeywordCall,
-    InfixCall,
-}
-
 impl<'code> Ast<'code> {
     fn size(&self) -> usize {
         match self {
@@ -225,7 +219,7 @@ impl<'code> Ast<'code> {
         }
     }
 
-    fn pretty(&self, buf: &mut String, lvl: usize, is_inside: IsInside) {
+    fn pretty(&self, buf: &mut String, lvl: usize) {
         fn indent(buf: &mut String, lvl: usize) {
             for _ in 0..lvl {
                 buf.push_str("  ");
@@ -236,7 +230,7 @@ impl<'code> Ast<'code> {
                 for expr in exprs {
                     buf.push('\n');
                     indent(buf, lvl + 1);
-                    expr.pretty(buf, lvl + 1, IsInside::RegularExpr);
+                    expr.pretty(buf, lvl + 1);
                 }
                 buf.push('\n');
                 indent(buf, lvl);
@@ -245,7 +239,7 @@ impl<'code> Ast<'code> {
                     if i != 0 {
                         buf.push_str(", ");
                     }
-                    expr.pretty(buf, lvl, IsInside::RegularExpr);
+                    expr.pretty(buf, lvl);
                 }
             }
         }
@@ -264,40 +258,46 @@ impl<'code> Ast<'code> {
                 buf.push('}');
             }
             Ast::PrefixCall(f, args) => {
-                f.pretty(buf, lvl, IsInside::RegularExpr);
+                f.pretty(buf, lvl);
                 buf.push('(');
                 pretty_exprs(args, buf, lvl, is_multiline);
                 buf.push(')');
             }
             Ast::InfixCall(arg, f, args) => {
-                if let IsInside::InfixCall = is_inside {
+                if let Ast::KeywordCall(_) | Ast::InfixCall(_, _, _) = arg.as_ref() {
                     buf.push('(');
+                    arg.pretty(buf, lvl);
+                    buf.push(')');
+                } else {
+                    arg.pretty(buf, lvl);
                 }
-                arg.pretty(buf, lvl, IsInside::InfixCall);
                 for arg in args {
                     buf.push(' ');
                     buf.push_str(f);
                     buf.push(' ');
-                    arg.pretty(buf, lvl, IsInside::InfixCall);
-                }
-                if let IsInside::InfixCall = is_inside {
-                    buf.push(')');
+                    if let Ast::KeywordCall(_) | Ast::InfixCall(_, _, _) = arg {
+                        buf.push('(');
+                        arg.pretty(buf, lvl);
+                        buf.push(')');
+                    } else {
+                        arg.pretty(buf, lvl);
+                    }
                 }
             }
             Ast::KeywordCall(args) => {
-                if let IsInside::KeywordCall | IsInside::InfixCall = is_inside {
-                    buf.push('(');
-                }
                 for (i, (keyword, arg)) in args.iter().enumerate() {
                     if i != 0 {
                         buf.push(' ');
                     }
                     buf.push_str(keyword);
                     buf.push(' ');
-                    arg.pretty(buf, lvl, IsInside::KeywordCall);
-                }
-                if let IsInside::KeywordCall | IsInside::InfixCall = is_inside {
-                    buf.push(')');
+                    if let Ast::KeywordCall(_) = arg {
+                        buf.push('(');
+                        arg.pretty(buf, lvl);
+                        buf.push(')');
+                    } else {
+                        arg.pretty(buf, lvl);
+                    }
                 }
             }
         }
@@ -311,7 +311,7 @@ impl<'code> std::fmt::Display for Prg<'code> {
                 f.write_str("\n\n")?;
             }
             let mut buf = String::new();
-            expr.pretty(&mut buf, 0, IsInside::RegularExpr);
+            expr.pretty(&mut buf, 0);
             f.write_str(&buf)?;
         }
         Ok(())
@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn pretty_grouped_infix_call() {
-        let code = "a + (b * c)";
+        let code = "(a * b) + (c * d)";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
     }
