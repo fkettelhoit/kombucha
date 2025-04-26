@@ -301,7 +301,13 @@ impl<'code> Ast<'code> {
             Ast::Var(s) | Ast::String(s) | Ast::Binding(s) => buf.push_str(s),
             Ast::Block(elems) => {
                 buf.push('{');
+                if !is_multiline {
+                    buf.push(' ');
+                }
                 pretty_exprs(elems, buf, lvl, is_multiline);
+                if !is_multiline {
+                    buf.push(' ');
+                }
                 buf.push('}');
             }
             Ast::PrefixCall(f, args) => {
@@ -500,7 +506,7 @@ mod tests {
 
     #[test]
     fn pretty_block() {
-        let code = "{foo, Foo, 'foo}";
+        let code = "{ foo, Foo, 'foo }";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
     }
@@ -535,7 +541,7 @@ mod tests {
 
     #[test]
     fn pretty_keyword_call() {
-        let code = "if: x == y do: {foo()} else: Bar";
+        let code = "if: x == y do: { foo() } else: Bar";
         let parsed = parse(code).unwrap();
         assert_eq!(code, parsed.to_string());
     }
@@ -551,17 +557,17 @@ mod tests {
     fn pretty() {
         let code = "'foo = Foo
 
-'id = ('x => {x})
+'id = ('x => { x })
 
 f'('x, 'y) = {
   match: Pair(x, y) with: Vec(
-    Pair('x, 'x) => {x}
-    Pair('x, 'y) => {Mismatch}
-    ' => {InvalidPair}
+    Pair('x, 'x) => { x }
+    Pair('x, 'y) => { Mismatch }
+    ' => { InvalidPair }
   )
 }
 
-if: x == y do: {print(Equal)} else {print(NotEqual)}
+if: x == y do: { print(Equal) } else: { print(NotEqual) }
 
 'x = id(id(foo))
 
