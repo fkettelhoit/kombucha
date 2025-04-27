@@ -54,7 +54,7 @@ enum Ast<'code> {
     Binding(&'code str),
     Block(Vec<Ast<'code>>),
     PrefixCall(Box<Ast<'code>>, Vec<Ast<'code>>),
-    InfixCall(Box<Ast<'code>>, &'code str, Vec<Ast<'code>>),
+    InfixCall(&'code str, Vec<Ast<'code>>),
     KeywordCall(Vec<(&'code str, Ast<'code>)>),
 }
 
@@ -62,107 +62,7 @@ enum Ast<'code> {
 pub struct Prg<'code>(Vec<Ast<'code>>);
 
 pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
-    type Toks<'c> = Peekable<IntoIter<(Tok, usize, &'c str)>>;
-    fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Error<'c>> {
-        let mut args = vec![];
-        while let Some((Tok::Keyword, i, s)) = toks.peek().copied() {
-            toks.next();
-            match _infix(toks) {
-                Ok(arg) => args.push((s, arg)),
-                Err(Error(_, tok, Exp::Value)) => return Err(Error(i, tok, Exp::KeywordArg(s))),
-                Err(e) => return Err(e),
-            }
-        }
-        if args.is_empty() {
-            _infix(toks)
-        } else {
-            Ok(Ast::KeywordCall(args))
-        }
-    }
-    fn _infix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Error<'c>> {
-        let expr = _prefix(toks)?;
-        let mut f = None;
-        let mut args = vec![];
-        while let Some((Tok::Symbol, j, s)) = toks.peek().copied() {
-            toks.next();
-            match f {
-                Some((f, i)) if f != s => return Err(Error(i, Some((j, s)), Exp::InfixFn(f))),
-                _ => f = Some((s, j)),
-            }
-            match _prefix(toks) {
-                Ok(arg) => args.push(arg),
-                Err(Error(_, tok, Exp::Value)) => return Err(Error(j, tok, Exp::InfixArg(s))),
-                Err(e) => return Err(e),
-            }
-        }
-        match f {
-            Some((f, _)) => Ok(Ast::InfixCall(Box::new(expr), f, args)),
-            None => Ok(expr),
-        }
-    }
-    fn _prefix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Error<'c>> {
-        let mut expr = _value(toks)?;
-        while let Some((Tok::LParen, i, _)) = toks.peek().copied() {
-            toks.next();
-            expr = Ast::PrefixCall(Box::new(expr), _exprs(toks, i, Some(Tok::RParen))?);
-        }
-        Ok(expr)
-    }
-    fn _value<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, Error<'c>> {
-        let Some((t, i, s)) = toks.next() else {
-            return Err(Error(0, None, Exp::Value));
-        };
-        match t {
-            Tok::Symbol => Ok(Ast::Var(s)),
-            Tok::String => Ok(Ast::String(s)),
-            Tok::Binding => Ok(Ast::Binding(s)),
-            Tok::LParen => {
-                let expr = match _expr(toks) {
-                    Ok(expr) => expr,
-                    Err(Error(i, None, Exp::Value)) => return Err(Error(i, None, Exp::RParen)),
-                    Err(e) => return Err(e),
-                };
-                match toks.next() {
-                    Some((Tok::RParen, _, _)) => Ok(expr),
-                    Some((_, j, s)) => Err(Error(i, Some((j, s)), Exp::RParen)),
-                    None => Err(Error(i, None, Exp::RParen)),
-                }
-            }
-            Tok::LBrace => Ok(Ast::Block(_exprs(toks, i, Some(Tok::RBrace))?)),
-            Tok::RParen | Tok::RBrace | Tok::Keyword | Tok::Separator => {
-                Err(Error(i, Some((i, s)), Exp::Value))
-            }
-        }
-    }
-    fn _exprs<'c>(ts: &mut Toks<'c>, i: usize, t: Option<Tok>) -> Result<Vec<Ast<'c>>, Error<'c>> {
-        let mut exprs = vec![];
-        let mut needs_separator = false;
-        loop {
-            match ts.peek().copied() {
-                tok if tok.map(|t| t.0) == t => {
-                    ts.next();
-                    return Ok(exprs);
-                }
-                Some((Tok::Separator, _, _)) => {
-                    ts.next();
-                    needs_separator = false;
-                }
-                Some((_, j, s)) if needs_separator => return Err(Error(i, Some((j, s)), Exp::Sep)),
-                _ => match _expr(ts) {
-                    Ok(expr) => {
-                        exprs.push(expr);
-                        needs_separator = true;
-                    }
-                    Err(Error(_, actual, Exp::Value)) => match t {
-                        Some(Tok::RParen) => return Err(Error(i, actual, Exp::RParen)),
-                        _ => return Err(Error(i, actual, Exp::RBrace)),
-                    },
-                    Err(e) => return Err(e),
-                },
-            }
-        }
-    }
-    struct Error<'c>(usize, Option<(usize, &'c str)>, Exp<'c>);
+    struct E<'c>(usize, Option<(usize, &'c str)>, Exp<'c>);
     enum Exp<'c> {
         RParen,
         RBrace,
@@ -172,39 +72,130 @@ pub fn parse<'code>(code: &'code str) -> Result<Prg<'code>, String> {
         InfixArg(&'c str),
         KeywordArg(&'c str),
     }
-    fn at(i: usize, code: &str) -> String {
-        let mut line = 1;
-        let mut col = 1;
-        for c in code.chars().take(i) {
-            if c == '\n' {
-                line += 1;
-                col = 0;
+    type Toks<'c> = Peekable<IntoIter<(Tok, usize, &'c str)>>;
+    fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, E<'c>> {
+        let Some((Tok::Keyword, _, _)) = toks.peek().copied() else {
+            return _infix(toks);
+        };
+        let mut args = vec![];
+        while let Some((Tok::Keyword, i, s)) = toks.peek().copied() {
+            toks.next();
+            match _infix(toks) {
+                Ok(arg) => args.push((s, arg)),
+                Err(E(_, tok, Exp::Value)) => return Err(E(i, tok, Exp::KeywordArg(s))),
+                Err(e) => return Err(e),
             }
-            col += 1;
         }
-        format!("line {line}, col {col}")
+        Ok(Ast::KeywordCall(args))
     }
-    fn msg<'code>(e: Exp<'code>, i: usize, tok: Option<(usize, &str)>, code: &'code str) -> String {
-        let pos = at(i, code);
-        let expected = match e {
-            Exp::RParen => format!("the '(' at {pos} to be closed with ')'"),
-            Exp::RBrace => format!("the '{{' at {pos} to be closed with '}}'"),
-            Exp::Sep => format!("a ',' or '\\n' to separate the expressions starting at {pos}"),
-            Exp::Value => format!("a value"),
-            Exp::InfixArg(f) => format!("an infix argument after the function '{f}' at {pos}"),
-            Exp::InfixFn(f) => format!("all infix functions starting at {pos} to be named '{f}'"),
-            Exp::KeywordArg(k) => format!("an argument after the keyword '{k}' at {pos}"),
+    fn _infix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, E<'c>> {
+        let expr = _prefix(toks)?;
+        let Some((Tok::Symbol, i, f)) = toks.peek().copied() else {
+            return Ok(expr);
         };
-        let actual = match tok {
-            None => "but the code just ended".to_string(),
-            Some((j, s)) => format!("but found '{}' at {}", s.replace("\n", "\\n"), at(j, code)),
-        };
-        format!("Expected {expected}, {actual}")
+        let mut args = vec![expr];
+        while let Some((Tok::Symbol, j, s)) = toks.peek().copied() {
+            toks.next();
+            if f != s {
+                return Err(E(i, Some((j, s)), Exp::InfixFn(f)));
+            }
+            match _prefix(toks) {
+                Ok(arg) => args.push(arg),
+                Err(E(_, tok, Exp::Value)) => return Err(E(j, tok, Exp::InfixArg(s))),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(Ast::InfixCall(f, args))
+    }
+    fn _prefix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, E<'c>> {
+        let mut expr = _value(toks)?;
+        while let Some((Tok::LParen, i, _)) = toks.peek().copied() {
+            toks.next();
+            expr = Ast::PrefixCall(Box::new(expr), _exprs(toks, i, Some(Tok::RParen))?);
+        }
+        Ok(expr)
+    }
+    fn _value<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, E<'c>> {
+        match toks.next() {
+            None => Err(E(0, None, Exp::Value)),
+            Some((t, i, s)) => match t {
+                Tok::Symbol => Ok(Ast::Var(s)),
+                Tok::String => Ok(Ast::String(s)),
+                Tok::Binding => Ok(Ast::Binding(s)),
+                Tok::LParen => match _expr(toks) {
+                    Err(E(i, tok, Exp::Value)) => Err(E(i, tok, Exp::RParen)),
+                    Err(e) => Err(e),
+                    Ok(expr) => match toks.next() {
+                        Some((Tok::RParen, _, _)) => Ok(expr),
+                        tok => Err(E(i, tok.map(|(_, i, s)| (i, s)), Exp::RParen)),
+                    },
+                },
+                Tok::LBrace => Ok(Ast::Block(_exprs(toks, i, Some(Tok::RBrace))?)),
+                Tok::RParen | Tok::RBrace | Tok::Separator | Tok::Keyword => {
+                    Err(E(i, Some((i, s)), Exp::Value))
+                }
+            },
+        }
+    }
+    fn _exprs<'c>(toks: &mut Toks<'c>, i: usize, t: Option<Tok>) -> Result<Vec<Ast<'c>>, E<'c>> {
+        let mut exprs = vec![];
+        let mut needs_sep = false;
+        loop {
+            match toks.peek().copied() {
+                tok if tok.map(|t| t.0) == t => {
+                    toks.next();
+                    return Ok(exprs);
+                }
+                Some((Tok::Separator, _, _)) => {
+                    toks.next();
+                    needs_sep = false;
+                }
+                Some((_, i, s)) if needs_sep => return Err(E(i, Some((i, s)), Exp::Sep)),
+                _ => match _expr(toks) {
+                    Ok(expr) => {
+                        exprs.push(expr);
+                        needs_sep = true;
+                    }
+                    Err(E(_, tok, Exp::Value)) => match t {
+                        Some(Tok::RParen) => return Err(E(i, tok, Exp::RParen)),
+                        _ => return Err(E(i, tok, Exp::RBrace)),
+                    },
+                    Err(e) => return Err(e),
+                },
+            }
+        }
     }
     let mut toks = scan(code).into_iter().peekable();
     match _exprs(&mut toks, 0, None) {
-        Ok(elems) => Ok(Prg(elems)),
-        Err(Error(i, actual, e)) => Err(msg(e, i, actual, &code)),
+        Ok(exprs) => Ok(Prg(exprs)),
+        Err(E(i, actual, expected)) => {
+            fn pos_at(i: usize, code: &str) -> String {
+                let (mut line, mut col) = (1, 1);
+                for c in code.chars().take(i) {
+                    if c == '\n' {
+                        line += 1;
+                        col = 0;
+                    }
+                    col += 1;
+                }
+                format!("line {line}, col {col}")
+            }
+            let p = pos_at(i, code);
+            let expected = match expected {
+                Exp::RParen => format!("the '(' at {p} to be closed with ')'"),
+                Exp::RBrace => format!("the '{{' at {p} to be closed with '}}'"),
+                Exp::Sep => format!("a ',' or '\\n' to separate the expressions starting at {p}"),
+                Exp::Value => format!("a value"),
+                Exp::InfixFn(f) => format!("all infix functions starting at {p} to be named '{f}'"),
+                Exp::InfixArg(f) => format!("an infix argument after the function '{f}' at {p}"),
+                Exp::KeywordArg(k) => format!("an argument after the keyword '{k}' at {p}"),
+            };
+            let instead = match actual {
+                None => "but the code just ended".to_string(),
+                Some((j, s)) => format!("but found '{s}' at {}", pos_at(j, code)),
+            };
+            Err(format!("Expected {expected}, {instead}"))
+        }
     }
 }
 
@@ -214,7 +205,7 @@ impl<'code> Ast<'code> {
             Ast::Var(_) | Ast::String(_) | Ast::Binding(_) => 1,
             Ast::Block(xs) => xs.iter().map(|x| x.size()).sum::<usize>() + 1,
             Ast::PrefixCall(f, xs) => f.size() + xs.iter().map(|x| x.size()).sum::<usize>(),
-            Ast::InfixCall(a, _, xs) => a.size() + 1 + xs.iter().map(|x| x.size()).sum::<usize>(),
+            Ast::InfixCall(_, xs) => 1 + xs.iter().map(|x| x.size()).sum::<usize>(),
             Ast::KeywordCall(xs) => xs.iter().map(|(_, x)| x.size() + 1).sum(),
         }
     }
@@ -234,9 +225,9 @@ impl<'code> Ast<'code> {
             (Ast::Block(xs), true) => "{".to_string() + &multi_line(xs, lvl + 1) + "}",
             (Ast::PrefixCall(f, xs), false) => f.pretty(lvl) + "(" + &one_line(xs, lvl + 1) + ")",
             (Ast::PrefixCall(f, xs), true) => f.pretty(lvl) + "(" + &multi_line(xs, lvl + 1) + ")",
-            (Ast::InfixCall(a, f, args), _) => {
-                let args = once(a.as_ref()).chain(args.iter()).map(|a| match a {
-                    Ast::KeywordCall(_) | Ast::InfixCall(_, _, _) => format!("({})", a.pretty(lvl)),
+            (Ast::InfixCall(f, args), _) => {
+                let args = args.iter().map(|a| match a {
+                    Ast::KeywordCall(_) | Ast::InfixCall(_, _) => format!("({})", a.pretty(lvl)),
                     _ => a.pretty(lvl),
                 });
                 args.collect::<Vec<_>>().join(&format!(" {f} "))
