@@ -219,86 +219,34 @@ impl<'code> Ast<'code> {
         }
     }
 
-    fn pretty(&self, buf: &mut String, lvl: usize) {
-        fn indent(buf: &mut String, lvl: usize) {
-            for _ in 0..lvl {
-                buf.push_str("  ");
-            }
+    fn pretty(&self, lvl: usize) -> String {
+        fn one_line<'c>(xs: &[Ast<'c>], lvl: usize) -> String {
+            let xs = xs.iter().map(|x| x.pretty(lvl));
+            xs.collect::<Vec<_>>().join(", ")
         }
-        fn pretty_exprs<'c>(exprs: &[Ast<'c>], buf: &mut String, lvl: usize, is_multiline: bool) {
-            if is_multiline {
-                for expr in exprs {
-                    buf.push('\n');
-                    indent(buf, lvl + 1);
-                    expr.pretty(buf, lvl + 1);
-                }
-                buf.push('\n');
-                indent(buf, lvl);
-            } else {
-                for (i, expr) in exprs.iter().enumerate() {
-                    if i != 0 {
-                        buf.push_str(", ");
-                    }
-                    expr.pretty(buf, lvl);
-                }
-            }
+        fn multi_line<'c>(xs: &[Ast<'c>], lvl: usize) -> String {
+            let xs = xs.iter().map(|x| "  ".repeat(lvl) + &x.pretty(lvl) + "\n");
+            "\n".to_string() + &xs.collect::<String>() + &"  ".repeat(lvl - 1)
         }
-        let is_multiline = self.size() > 10;
-        match self {
-            Ast::Var(s) | Ast::String(s) | Ast::Binding(s) => buf.push_str(s),
-            Ast::Block(elems) => {
-                buf.push('{');
-                if !is_multiline {
-                    buf.push(' ');
-                }
-                pretty_exprs(elems, buf, lvl, is_multiline);
-                if !is_multiline {
-                    buf.push(' ');
-                }
-                buf.push('}');
+        match (self, self.size() >= 10) {
+            (Ast::Var(s) | Ast::String(s) | Ast::Binding(s), _) => s.to_string(),
+            (Ast::Block(xs), false) => "{ ".to_string() + &one_line(xs, lvl + 1) + " }",
+            (Ast::Block(xs), true) => "{".to_string() + &multi_line(xs, lvl + 1) + "}",
+            (Ast::PrefixCall(f, xs), false) => f.pretty(lvl) + "(" + &one_line(xs, lvl + 1) + ")",
+            (Ast::PrefixCall(f, xs), true) => f.pretty(lvl) + "(" + &multi_line(xs, lvl + 1) + ")",
+            (Ast::InfixCall(a, f, args), _) => {
+                let args = once(a.as_ref()).chain(args.iter()).map(|a| match a {
+                    Ast::KeywordCall(_) | Ast::InfixCall(_, _, _) => format!("({})", a.pretty(lvl)),
+                    _ => a.pretty(lvl),
+                });
+                args.collect::<Vec<_>>().join(&format!(" {f} "))
             }
-            Ast::PrefixCall(f, args) => {
-                f.pretty(buf, lvl);
-                buf.push('(');
-                pretty_exprs(args, buf, lvl, is_multiline);
-                buf.push(')');
-            }
-            Ast::InfixCall(arg, f, args) => {
-                if let Ast::KeywordCall(_) | Ast::InfixCall(_, _, _) = arg.as_ref() {
-                    buf.push('(');
-                    arg.pretty(buf, lvl);
-                    buf.push(')');
-                } else {
-                    arg.pretty(buf, lvl);
-                }
-                for arg in args {
-                    buf.push(' ');
-                    buf.push_str(f);
-                    buf.push(' ');
-                    if let Ast::KeywordCall(_) | Ast::InfixCall(_, _, _) = arg {
-                        buf.push('(');
-                        arg.pretty(buf, lvl);
-                        buf.push(')');
-                    } else {
-                        arg.pretty(buf, lvl);
-                    }
-                }
-            }
-            Ast::KeywordCall(args) => {
-                for (i, (keyword, arg)) in args.iter().enumerate() {
-                    if i != 0 {
-                        buf.push(' ');
-                    }
-                    buf.push_str(keyword);
-                    buf.push(' ');
-                    if let Ast::KeywordCall(_) = arg {
-                        buf.push('(');
-                        arg.pretty(buf, lvl);
-                        buf.push(')');
-                    } else {
-                        arg.pretty(buf, lvl);
-                    }
-                }
+            (Ast::KeywordCall(elems), _) => {
+                let args = elems.iter().map(|(k, arg)| match arg {
+                    Ast::KeywordCall(_) => format!("{k} ({})", arg.pretty(lvl)),
+                    _ => format!("{k} {}", arg.pretty(lvl)),
+                });
+                args.collect::<Vec<_>>().join(&format!(" "))
             }
         }
     }
@@ -306,15 +254,8 @@ impl<'code> Ast<'code> {
 
 impl<'code> std::fmt::Display for Prg<'code> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, expr) in self.0.iter().enumerate() {
-            if i != 0 {
-                f.write_str("\n\n")?;
-            }
-            let mut buf = String::new();
-            expr.pretty(&mut buf, 0);
-            f.write_str(&buf)?;
-        }
-        Ok(())
+        let elems = self.0.iter().map(|x| x.pretty(0));
+        f.write_str(&elems.collect::<Vec<_>>().join("\n\n"))
     }
 }
 
