@@ -372,141 +372,145 @@ pub struct Bytecode<'code>(Vec<&'code str>, Vec<Op>, usize);
 
 #[derive(Debug, Clone, Copy)]
 enum Op {
-    PushStackVar(usize),
-    PushHeapVar(usize),
-    PushClosure(usize),
+    PushVar(usize),
     PushString(usize),
+    PushClosure(usize),
     Apply,
     Return,
 }
 
+fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
+    match expr {
+        Expr::Var(v) => ops.push(Op::PushVar(v)),
+        Expr::String(s) => ops.push(Op::PushString(s)),
+        Expr::Abs(body) => {
+            let mut f = vec![];
+            compile(*body, &mut f, fns);
+            f.push(Op::Return);
+            ops.push(Op::PushClosure(fns.len()));
+            fns.extend(f);
+        }
+        Expr::App(f, arg) => {
+            compile(*f, ops, fns);
+            compile(*arg, ops, fns);
+            ops.push(Op::Apply);
+        }
+        Expr::If => todo!(),
+        Expr::Pop => todo!(),
+    }
+}
+
 impl<'code> Prg<'code> {
     pub fn compile(self) -> Result<Bytecode<'code>, String> {
-        fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
-            let s = format!("{expr:?}");
-            match expr {
-                Expr::Var(v) => match (v, args) {
-                    (0, _) => ops.push(Op::PushStackVar(0)),
-                    (v, 0) => ops.push(Op::PushHeapVar(v)),
-                    _ => ops.push(Op::PushStackVar(v)),
-                },
-                Expr::String(s) => ops.push(Op::PushString(s)),
-                Expr::Abs(body) => {
-                    let mut fn_ops = vec![];
-                    compile(*body, &mut fn_ops, fns);
-                    fn_ops.push(Op::Return);
-                    println!("{}: {args} args, {s:?} -> {fn_ops:?}", fns.len());
-                    ops.push(Op::PushClosure(fns.len()));
-                    fns.extend(fn_ops);
-                }
-                Expr::App(f, arg) => {
-                    compile(*f, ops, fns, args + 1);
-                    compile(*arg, ops, fns, args);
-                    ops.push(Op::Apply);
-                }
-                Expr::If => todo!(),
-                Expr::Pop => todo!(),
-            }
-        }
-        let mut main = vec![];
-        let mut fns = vec![];
         let (expr, strs) = desugar(self)?;
-        println!("{expr:#?}");
-        compile(expr, &mut main, &mut fns, 1);
+        let mut ops = vec![];
+        let mut fns = vec![];
+        compile(expr, &mut ops, &mut fns);
         let start = fns.len();
-        fns.extend(main);
+        fns.extend(ops);
         Ok(Bytecode(strs, fns, start))
     }
 }
 
 #[derive(Clone)]
 pub enum V {
-    Closure(usize),
     String(usize),
-    Struct(usize, Vec<Rc<V>>),
+    Closure(usize, Vec<V>),
+    Record(usize, Vec<Rc<V>>),
+}
+
+impl Bytecode<'_> {
+    pub fn run(self) -> Result<String, usize> {
+        self.run_with_trace(true)
+    }
+
+    pub fn run_with_trace(self, trace: bool) -> Result<String, usize> {
+        let Self(strs, ops, mut ip) = self;
+        let mut values = vec![];
+        let mut frames = vec![];
+        let mut returns = vec![];
+        while ip < ops.len() {
+            let op = ip;
+            ip += 1;
+            match ops[op] {
+                Op::PushVar(v) => {
+                    let v: &V = &values[frames[frames.len() - 1 - v]];
+                    values.push(v.clone());
+                }
+                Op::PushString(s) => values.push(V::String(s)),
+                Op::PushClosure(c) => values.push(V::Closure(c, vec![])),
+                Op::Apply => match (values.pop().ok_or(op)?, values.pop().ok_or(op)?) {
+                    (arg, V::Closure(c, closed_over)) => {
+                        // TODO: if the next op is an Op::Return, we might want to do TCO
+                        let args = closed_over.len();
+                        for v in closed_over {
+                            frames.push(values.len());
+                            values.push(v.clone());
+                        }
+                        frames.push(values.len());
+                        values.push(arg);
+                        returns.push((args + 1, ip));
+                        ip = c;
+                    }
+                    (arg, V::String(s)) => values.push(V::Record(s, vec![Rc::new(arg)])),
+                    (arg, V::Record(s, mut items)) => {
+                        items.push(Rc::new(arg));
+                        values.push(V::Record(s, items))
+                    }
+                },
+                Op::Return => {
+                    let (args, ret) = returns.pop().ok_or(op)?;
+                    let mut v = values.pop().ok_or(op)?;
+                    if let V::Closure(_, closed_over) = &mut v {
+                        for f in &frames[frames.len() - args..] {
+                            closed_over.push(values[*f].clone());
+                        }
+                    }
+                    values.truncate(frames[frames.len() - args]);
+                    frames.truncate(frames.len() - args);
+                    values.push(v);
+                    ip = ret;
+                }
+            }
+            if trace {
+                println!("==> {op}: {:?}", ops[op]);
+                for v in &values {
+                    println!("  {}", pretty(v, &strs));
+                }
+                if ip != op + 1 {
+                    println!("====> jump to {ip}");
+                }
+            }
+        }
+        fn pretty(v: &V, strs: &[&str]) -> String {
+            match v {
+                V::String(s) => strs[*s].to_string(),
+                V::Closure(c, vs) => {
+                    let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+                    format!("{c} [{}]", closed.join(", "))
+                }
+                V::Record(s, vs) => {
+                    let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+                    format!("{}({})", pretty(&V::String(*s), strs), items.join(", "))
+                }
+            }
+        }
+        Ok(pretty(&values.pop().ok_or(ip)?, &strs))
+    }
 }
 
 impl std::fmt::Display for Bytecode<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self(strs, ops, _) = self;
-        for (i, str) in strs.iter().enumerate() {
+        for (i, str) in self.0.iter().enumerate() {
             write!(f, "{i:05} -> {str}\n")?;
         }
-        for (i, op) in ops.iter().enumerate() {
+        for (i, op) in self.1.iter().enumerate() {
             write!(f, "\n{i:05}: {op:?}")?;
             if let Op::Return = op {
                 f.write_str("\n")?;
             }
         }
-        Ok(())
-    }
-}
-
-impl Bytecode<'_> {
-    pub fn run(self) -> Result<String, usize> {
-        let Self(strs, ops, mut ip) = self;
-        let mut stack = vec![];
-        let mut frames = vec![];
-        while ip < ops.len() {
-            let op = ip;
-            ip += 1;
-            for v in stack.iter() {
-                println!("  {}", pretty(v, &strs))
-            }
-            println!("{op}:{:?} -->", ops[op]);
-            match ops[op] {
-                Op::PushStackVar(v) => {
-                    let (frame, _) = frames.iter().rev().skip(v).next().ok_or(op)?;
-                    let v: &V = &stack[*frame];
-                    stack.push(v.clone());
-                }
-                Op::PushHeapVar(_) => todo!(),
-                Op::PushClosure(f) => stack.push(V::Closure(f)),
-                Op::PushString(s) => stack.push(V::String(s)),
-                Op::Apply => match (stack.pop().ok_or(op)?, stack.pop().ok_or(op)?) {
-                    (arg, V::Closure(f)) => {
-                        frames.push((stack.len(), ip));
-                        stack.push(arg);
-                        ip = f;
-                    }
-                    (arg, V::String(s)) => stack.push(V::Struct(s, vec![Rc::new(arg)])),
-                    (arg, V::Struct(s, mut items)) => {
-                        items.push(Rc::new(arg));
-                        stack.push(V::Struct(s, items))
-                    }
-                },
-                Op::Return => {
-                    let ret_value = stack.pop().ok_or(op)?;
-                    let (frame, ret) = frames.pop().ok_or(op)?;
-                    stack.truncate(frame);
-                    stack.push(ret_value);
-                    ip = ret;
-                }
-            }
-            if ip != op + 1 {
-                println!("===> jmp to {ip}");
-            }
-        }
-        fn pretty(v: &V, strs: &[&str]) -> String {
-            match v {
-                V::Closure(f) => f.to_string(),
-                V::String(s) => match strs.iter().enumerate().find(|(i, _)| i == s) {
-                    Some((_, s)) => s.to_string(),
-                    None => panic!("Could not find interned string corresponding to index {s}"),
-                },
-                V::Struct(f, items) => {
-                    let items = items
-                        .into_iter()
-                        .map(|x| pretty(x, strs))
-                        .collect::<Vec<_>>();
-                    pretty(&V::String(*f), strs) + "(" + &items.join(", ") + ")"
-                }
-            }
-        }
-        match stack.pop() {
-            None => Err(ip),
-            Some(v) => Ok(pretty(&v, &strs)),
-        }
+        f.write_str("\n")
     }
 }
 
@@ -724,13 +728,87 @@ if: x == Foo do: Pair(x, x) else: Error";
     }
 
     #[test]
-    fn eval_compound() {
+    fn eval_record() {
         let code = "Foo(Bar, Baz)";
         let parsed = parse(code).unwrap();
         let bytecode = parsed.compile().unwrap();
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Foo(Bar, Baz)");
+    }
+
+    #[test]
+    fn eval_raw_app1() {
+        // (\x.x) "Foo"
+        let expr = Expr::App(
+            Box::new(Expr::Abs(Box::new(Expr::Var(0)))),
+            Box::new(Expr::String(0)),
+        );
+        let mut ops = vec![];
+        let mut fns = vec![];
+        compile(expr, &mut ops, &mut fns);
+        let start = fns.len();
+        fns.extend(ops);
+        let bytecode = Bytecode(vec!["Foo"], fns, start);
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo");
+    }
+
+    #[test]
+    fn eval_raw_app2() {
+        // ((\x.\y.y) "Foo") "Bar"
+        let expr = Expr::App(
+            Box::new(Expr::App(
+                Box::new(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Var(0)))))),
+                Box::new(Expr::String(0)),
+            )),
+            Box::new(Expr::String(1)),
+        );
+        let mut ops = vec![];
+        let mut fns = vec![];
+        compile(expr, &mut ops, &mut fns);
+        let start = fns.len();
+        fns.extend(ops);
+        let bytecode = Bytecode(vec!["Foo", "Bar"], fns, start);
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Bar");
+    }
+
+    #[test]
+    fn eval_raw_app3() {
+        // (((\x.\y.\z.Vec(z, x, z)) "Foo") "Bar") "Baz"
+        let expr = Expr::App(
+            Box::new(Expr::App(
+                Box::new(Expr::App(
+                    Box::new(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Abs(
+                        Box::new(Expr::App(
+                            Box::new(Expr::App(
+                                Box::new(Expr::App(
+                                    Box::new(Expr::String(3)),
+                                    Box::new(Expr::Var(0)),
+                                )),
+                                Box::new(Expr::Var(2)),
+                            )),
+                            Box::new(Expr::Var(0)),
+                        )),
+                    )))))),
+                    Box::new(Expr::String(0)),
+                )),
+                Box::new(Expr::String(1)),
+            )),
+            Box::new(Expr::String(2)),
+        );
+        let mut ops = vec![];
+        let mut fns = vec![];
+        compile(expr, &mut ops, &mut fns);
+        let start = fns.len();
+        fns.extend(ops);
+        let bytecode = Bytecode(vec!["Foo", "Bar", "Baz", "Vec"], fns, start);
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
     }
 
     #[test]
