@@ -391,8 +391,8 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             fns.extend(f);
         }
         Expr::App(f, arg) => {
-            compile(*f, ops, fns);
             compile(*arg, ops, fns);
+            compile(*f, ops, fns);
             ops.push(Op::Apply);
         }
         Expr::If => todo!(),
@@ -412,7 +412,7 @@ impl<'code> Prg<'code> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum V {
     String(usize),
     Closure(usize, Vec<V>),
@@ -426,50 +426,49 @@ impl Bytecode<'_> {
 
     pub fn run_with_trace(self, trace: bool) -> Result<String, usize> {
         let Self(strs, ops, mut ip) = self;
+        let mut vars = vec![];
         let mut values = vec![];
         let mut frames = vec![];
-        let mut returns = vec![];
         while ip < ops.len() {
             let op = ip;
             ip += 1;
             match ops[op] {
                 Op::PushVar(v) => {
-                    let v: &V = &values[frames[frames.len() - 1 - v]];
+                    let v: &V = &vars[vars.len() - 1 - v];
                     values.push(v.clone());
                 }
                 Op::PushString(s) => values.push(V::String(s)),
                 Op::PushClosure(c) => values.push(V::Closure(c, vec![])),
                 Op::Apply => match (values.pop().ok_or(op)?, values.pop().ok_or(op)?) {
-                    (arg, V::Closure(c, closed_over)) => {
+                    (V::Closure(c, captured), arg) => {
                         // TODO: if the next op is an Op::Return, we might want to do TCO
-                        let args = closed_over.len();
-                        for v in closed_over {
-                            frames.push(values.len());
-                            values.push(v.clone());
-                        }
-                        frames.push(values.len());
-                        values.push(arg);
-                        returns.push((args + 1, ip));
+                        frames.push((captured.len() + 1, ip));
+                        vars.extend(captured);
+                        vars.push(arg);
                         ip = c;
                     }
-                    (arg, V::String(s)) => values.push(V::Record(s, vec![Rc::new(arg)])),
-                    (arg, V::Record(s, mut items)) => {
+                    (V::String(s), arg) => values.push(V::Record(s, vec![Rc::new(arg)])),
+                    (V::Record(s, mut items), arg) => {
                         items.push(Rc::new(arg));
                         values.push(V::Record(s, items))
                     }
                 },
                 Op::Return => {
-                    let (args, ret) = returns.pop().ok_or(op)?;
-                    let mut v = values.pop().ok_or(op)?;
-                    if let V::Closure(_, closed_over) = &mut v {
-                        for f in &frames[frames.len() - args..] {
-                            closed_over.push(values[*f].clone());
+                    let (args, ret) = frames.pop().ok_or(op)?;
+                    match (values.last_mut(), ops.get(ret)) {
+                        (Some(V::Closure(c, captured)), Some(Op::Apply)) => {
+                            ip = *c;
+                            vars.splice(vars.len() - args..vars.len() - args, captured.drain(..));
+                            let _closure = values.pop();
+                            vars.push(values.pop().ok_or(ret)?);
+                            frames.push((args + 1, ret + 1));
                         }
+                        (Some(V::Closure(_, captured)), _) => {
+                            captured.extend(vars.drain(vars.len() - args..));
+                            ip = ret;
+                        }
+                        _ => ip = ret,
                     }
-                    values.truncate(frames[frames.len() - args]);
-                    frames.truncate(frames.len() - args);
-                    values.push(v);
-                    ip = ret;
                 }
             }
             if trace {
