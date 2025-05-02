@@ -1,6 +1,7 @@
 use std::{
     cmp::max,
     iter::{Peekable, once},
+    rc::Rc,
     vec::IntoIter,
 };
 
@@ -263,7 +264,6 @@ enum Expr {
     String(usize),
     Abs(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
-    Fn,
     If,
     Pop,
 }
@@ -294,7 +294,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
         match ast {
             A::Var(v) => match resolve_var(c, v) {
                 Some((v, _)) => Ok(Expr::Var(v)),
-                None if v == "=>" => Ok(Expr::Fn),
+                None if v == "=>" => Ok(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Var(0)))))),
                 None if v == "if" => Ok(Expr::If),
                 None if v == "pop" => Ok(Expr::Pop),
                 None => Err((pos, E::UnboundVar(v.to_string()))),
@@ -357,81 +357,83 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
         strs: vec![],
         bindings: vec![],
     };
-    let nil = resolve_str(&mut c, "Nil");
     match desugar(Ast(0, A::Block(block)), &mut c) {
-        Ok(expr) => Ok((
-            Expr::App(Box::new(expr), Box::new(Expr::String(nil))),
-            c.strs,
-        )),
         Err((i, e)) => match e {
             E::UnboundVar(v) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
             E::EmptyBlock => Err(format!("Empty block at {}", pos_at(i, code))),
         },
+        Ok(Expr::Abs(body)) => Ok((*body, c.strs)),
+        Ok(_) => panic!("Expected the main block to be desugared to an abstraction"),
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Bytecode<'code>(Vec<Op>, usize, Vec<&'code str>, &'code str);
+pub struct Bytecode<'code>(Vec<&'code str>, Vec<Op>, usize);
 
 #[derive(Debug, Clone, Copy)]
 enum Op {
-    PushFn(usize),
+    PushStackVar(usize),
+    PushHeapVar(usize),
+    PushClosure(usize),
     PushString(usize),
-    BuiltInFn,
-    Call,
+    Apply,
     Return,
 }
 
 impl<'code> Prg<'code> {
     pub fn compile(self) -> Result<Bytecode<'code>, String> {
         fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
+            let s = format!("{expr:?}");
             match expr {
-                Expr::Var(_) => todo!(),
+                Expr::Var(v) => match (v, args) {
+                    (0, _) => ops.push(Op::PushStackVar(0)),
+                    (v, 0) => ops.push(Op::PushHeapVar(v)),
+                    _ => ops.push(Op::PushStackVar(v)),
+                },
                 Expr::String(s) => ops.push(Op::PushString(s)),
-                Expr::Abs(expr) => {
+                Expr::Abs(body) => {
                     let mut fn_ops = vec![];
-                    compile(*expr, &mut fn_ops, fns);
+                    compile(*body, &mut fn_ops, fns);
                     fn_ops.push(Op::Return);
-                    let f = fns.len();
+                    println!("{}: {args} args, {s:?} -> {fn_ops:?}", fns.len());
+                    ops.push(Op::PushClosure(fns.len()));
                     fns.extend(fn_ops);
-                    ops.push(Op::PushFn(f));
                 }
                 Expr::App(f, arg) => {
-                    compile(*arg, ops, fns);
-                    compile(*f, ops, fns);
-                    ops.push(Op::Call);
+                    compile(*f, ops, fns, args + 1);
+                    compile(*arg, ops, fns, args);
+                    ops.push(Op::Apply);
                 }
-                Expr::Fn => ops.push(Op::BuiltInFn),
                 Expr::If => todo!(),
                 Expr::Pop => todo!(),
             }
         }
-        let code = self.1;
         let mut main = vec![];
         let mut fns = vec![];
         let (expr, strs) = desugar(self)?;
-        compile(expr, &mut main, &mut fns);
-        let ip = fns.len();
+        println!("{expr:#?}");
+        compile(expr, &mut main, &mut fns, 1);
+        let start = fns.len();
         fns.extend(main);
-        Ok(Bytecode(fns, ip, strs, code))
+        Ok(Bytecode(strs, fns, start))
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub enum V {
-    Fn(usize),
+    Closure(usize),
     String(usize),
-    Compound(Box<V>, Vec<V>),
+    Struct(usize, Vec<Rc<V>>),
 }
 
 impl std::fmt::Display for Bytecode<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self(ops, _, strs, _) = self;
+        let Self(strs, ops, _) = self;
         for (i, str) in strs.iter().enumerate() {
-            write!(f, "{i:#6} -> {str}\n")?;
+            write!(f, "{i:05} -> {str}\n")?;
         }
         for (i, op) in ops.iter().enumerate() {
-            write!(f, "\n{i:#6}: {op:?}")?;
+            write!(f, "\n{i:05}: {op:?}")?;
             if let Op::Return = op {
                 f.write_str("\n")?;
             }
@@ -441,67 +443,70 @@ impl std::fmt::Display for Bytecode<'_> {
 }
 
 impl Bytecode<'_> {
-    pub fn run(self) -> Option<String> {
+    pub fn run(self) -> Result<String, usize> {
+        let Self(strs, ops, mut ip) = self;
+        let mut stack = vec![];
+        let mut frames = vec![];
+        while ip < ops.len() {
+            let op = ip;
+            ip += 1;
+            for v in stack.iter() {
+                println!("  {}", pretty(v, &strs))
+            }
+            println!("{op}:{:?} -->", ops[op]);
+            match ops[op] {
+                Op::PushStackVar(v) => {
+                    let (frame, _) = frames.iter().rev().skip(v).next().ok_or(op)?;
+                    let v: &V = &stack[*frame];
+                    stack.push(v.clone());
+                }
+                Op::PushHeapVar(_) => todo!(),
+                Op::PushClosure(f) => stack.push(V::Closure(f)),
+                Op::PushString(s) => stack.push(V::String(s)),
+                Op::Apply => match (stack.pop().ok_or(op)?, stack.pop().ok_or(op)?) {
+                    (arg, V::Closure(f)) => {
+                        frames.push((stack.len(), ip));
+                        stack.push(arg);
+                        ip = f;
+                    }
+                    (arg, V::String(s)) => stack.push(V::Struct(s, vec![Rc::new(arg)])),
+                    (arg, V::Struct(s, mut items)) => {
+                        items.push(Rc::new(arg));
+                        stack.push(V::Struct(s, items))
+                    }
+                },
+                Op::Return => {
+                    let ret_value = stack.pop().ok_or(op)?;
+                    let (frame, ret) = frames.pop().ok_or(op)?;
+                    stack.truncate(frame);
+                    stack.push(ret_value);
+                    ip = ret;
+                }
+            }
+            if ip != op + 1 {
+                println!("===> jmp to {ip}");
+            }
+        }
         fn pretty(v: &V, strs: &[&str]) -> String {
             match v {
-                V::Fn(f) => f.to_string(),
+                V::Closure(f) => f.to_string(),
                 V::String(s) => match strs.iter().enumerate().find(|(i, _)| i == s) {
                     Some((_, s)) => s.to_string(),
                     None => panic!("Could not find interned string corresponding to index {s}"),
                 },
-                V::Compound(f, items) => {
+                V::Struct(f, items) => {
                     let items = items
                         .into_iter()
                         .map(|x| pretty(x, strs))
                         .collect::<Vec<_>>();
-                    pretty(f, strs) + "(" + &items.join(", ") + ")"
+                    pretty(&V::String(*f), strs) + "(" + &items.join(", ") + ")"
                 }
             }
         }
-        let Self(ops, mut ip, strs, _) = self;
-        let mut values = vec![];
-        let mut calls = vec![];
-        println!("\n*** TRACE: ***\n");
-        while ip < ops.len() {
-            match ops[ip] {
-                Op::PushFn(f) => values.push(V::Fn(f)),
-                Op::PushString(s) => values.push(V::String(s)),
-                Op::BuiltInFn => {
-                    let f = values.pop()?;
-                    let arg = values.pop()?;
-                    match (f, arg) {
-                        (V::Fn(f), V::String(_)) => {
-                            calls.push(ip + 1);
-                            ip = f;
-                            continue;
-                        }
-                        _ => values.push(V::String(0)),
-                    }
-                }
-                Op::Call => match values.pop()? {
-                    V::Fn(f) => {
-                        calls.push(ip + 1);
-                        ip = f;
-                        continue;
-                    }
-                    V::String(s) => {
-                        let arg = values.pop()?;
-                        values.push(V::Compound(Box::new(V::String(s)), vec![arg]))
-                    }
-                    V::Compound(f, mut items) => {
-                        items.push(values.pop()?);
-                        values.push(V::Compound(f, items))
-                    }
-                },
-                Op::Return => ip = calls.pop().unwrap(),
-            }
-            ip += 1;
-            println!("{}:", ip - 1);
-            for v in values.iter() {
-                println!("  {}", pretty(&v, &strs));
-            }
+        match stack.pop() {
+            None => Err(ip),
+            Some(v) => Ok(pretty(&v, &strs)),
         }
-        values.pop().map(|v| pretty(&v, &strs))
     }
 }
 
@@ -729,12 +734,42 @@ if: x == Foo do: Pair(x, x) else: Error";
     }
 
     #[test]
-    fn eval_fn_app() {
+    fn eval_fn_app1() {
         let code = "('x => { Bar })(Foo)";
         let parsed = parse(code).unwrap();
         let bytecode = parsed.compile().unwrap();
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Bar");
+    }
+
+    #[test]
+    fn eval_fn_app2() {
+        let code = "('x => { x })(Foo)";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo");
+    }
+
+    #[test]
+    fn eval_fn_app3() {
+        let code = "('x => { 'y => { x } })(Foo, Bar)";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo");
+    }
+
+    #[test]
+    fn eval_fn_app4() {
+        let code = "('x => { 'y => { 'z => { Vec(z, x, z) } } })(Foo, Bar, Baz)";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
     }
 }
