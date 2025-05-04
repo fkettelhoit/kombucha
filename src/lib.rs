@@ -58,9 +58,14 @@ enum A<'code> {
     String(&'code str),
     Binding(&'code str),
     Block(Vec<Ast<'code>>),
-    PrefixCall(Box<Ast<'code>>, Vec<Ast<'code>>),
-    InfixCall(&'code str, Vec<Ast<'code>>),
-    KeywordCall(Vec<(&'code str, Ast<'code>)>),
+    Call(Call<'code>, Vec<Ast<'code>>),
+}
+
+#[derive(Debug, Clone)]
+enum Call<'code> {
+    Infix(&'code str),
+    Prefix(Box<Ast<'code>>),
+    Keyword(Vec<&'code str>),
 }
 
 #[derive(Debug, Clone)]
@@ -94,16 +99,18 @@ pub fn parse(code: &str) -> Result<Prg<'_>, String> {
         let Some((Tok::Keyword, pos, _)) = toks.peek().copied() else {
             return _infix(toks);
         };
+        let mut keywords = vec![];
         let mut args = vec![];
         while let Some((Tok::Keyword, i, s)) = toks.peek().copied() {
             toks.next();
+            keywords.push(s);
             match _infix(toks) {
-                Ok(arg) => args.push((s, arg)),
+                Ok(arg) => args.push(arg),
                 Err(E(_, tok, _E::Value)) => return Err(E(i, tok, _E::KeywordArg(s))),
                 Err(e) => return Err(e),
             }
         }
-        Ok(Ast(pos, A::KeywordCall(args)))
+        Ok(Ast(pos, A::Call(Call::Keyword(keywords), args)))
     }
     fn _infix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, E<'c>> {
         let expr = _prefix(toks)?;
@@ -122,15 +129,15 @@ pub fn parse(code: &str) -> Result<Prg<'_>, String> {
                 Err(e) => return Err(e),
             }
         }
-        Ok(Ast(i, A::InfixCall(f, args)))
+        Ok(Ast(i, A::Call(Call::Infix(f), args)))
     }
     fn _prefix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, E<'c>> {
         let mut expr = _value(toks)?;
         let pos = expr.0;
         while let Some((Tok::LParen, i, _)) = toks.peek().copied() {
             toks.next();
-            let f = A::PrefixCall(Box::new(expr), _exprs(toks, i, Some(Tok::RParen))?);
-            expr = Ast(pos, f);
+            let args = _exprs(toks, i, Some(Tok::RParen))?;
+            expr = Ast(pos, A::Call(Call::Prefix(Box::new(expr)), args));
         }
         Ok(expr)
     }
@@ -212,9 +219,8 @@ impl Ast<'_> {
         match &self.1 {
             A::Var(_) | A::String(_) | A::Binding(_) => 1,
             A::Block(xs) => xs.iter().map(|x| x.size()).sum::<usize>() + 1,
-            A::PrefixCall(f, xs) => f.size() + xs.iter().map(|x| x.size()).sum::<usize>(),
-            A::InfixCall(_, xs) => 1 + xs.iter().map(|x| x.size()).sum::<usize>(),
-            A::KeywordCall(xs) => xs.iter().map(|(_, x)| x.size() + 1).sum(),
+            A::Call(Call::Prefix(f), xs) => f.size() + xs.iter().map(|x| x.size()).sum::<usize>(),
+            A::Call(_, xs) => 1 + xs.iter().map(|x| x.size()).sum::<usize>(),
         }
     }
 
@@ -231,20 +237,27 @@ impl Ast<'_> {
             (A::Var(s) | A::String(s) | A::Binding(s), _) => s.to_string(),
             (A::Block(xs), false) => "{ ".to_string() + &one_line(xs, lvl + 1) + " }",
             (A::Block(xs), true) => "{".to_string() + &multi_line(xs, lvl + 1) + "}",
-            (A::PrefixCall(f, xs), false) => f.pretty(lvl) + "(" + &one_line(xs, lvl + 1) + ")",
-            (A::PrefixCall(f, xs), true) => f.pretty(lvl) + "(" + &multi_line(xs, lvl + 1) + ")",
-            (A::InfixCall(f, args), _) => {
+            (A::Call(Call::Prefix(f), xs), false) => {
+                f.pretty(lvl) + "(" + &one_line(xs, lvl + 1) + ")"
+            }
+            (A::Call(Call::Prefix(f), xs), true) => {
+                f.pretty(lvl) + "(" + &multi_line(xs, lvl + 1) + ")"
+            }
+            (A::Call(Call::Infix(f), args), _) => {
                 let args = args.iter().map(|a| match a.1 {
-                    A::KeywordCall(_) | A::InfixCall(_, _) => format!("({})", a.pretty(lvl)),
+                    A::Call(Call::Keyword(_) | Call::Infix(_), _) => format!("({})", a.pretty(lvl)),
                     _ => a.pretty(lvl),
                 });
                 args.collect::<Vec<_>>().join(&format!(" {f} "))
             }
-            (A::KeywordCall(items), _) => {
-                let args = items.iter().map(|(k, arg)| match arg.1 {
-                    A::KeywordCall(_) => format!("{k} ({})", arg.pretty(lvl)),
-                    _ => format!("{k} {}", arg.pretty(lvl)),
-                });
+            (A::Call(Call::Keyword(keywords), items), _) => {
+                let args = keywords
+                    .iter()
+                    .zip(items.iter())
+                    .map(|(k, arg)| match arg.1 {
+                        A::Call(Call::Keyword(_), _) => format!("{k} ({})", arg.pretty(lvl)),
+                        _ => format!("{k} {}", arg.pretty(lvl)),
+                    });
                 args.collect::<Vec<_>>().join(" ")
             }
         }
@@ -278,92 +291,98 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
         strs: Vec<&'c str>,
         bindings: Vec<&'c str>,
     }
-    fn resolve_var<'c>(c: &Ctx<'c>, v: &str) -> Option<(usize, &'c str)> {
-        c.vars.iter().copied().rev().enumerate().find(|x| x.1 == v)
+    fn resolve_var(v: &str, ctx: &Ctx) -> Option<usize> {
+        ctx.vars.iter().rev().position(|x| *x == v)
     }
-    fn resolve_str<'c>(c: &mut Ctx<'c>, s: &'c str) -> usize {
-        match c.strs.iter().copied().rev().enumerate().find(|x| x.1 == s) {
-            Some((i, _)) => i,
-            None => {
-                c.strs.push(s);
-                c.strs.len() - 1
+    fn resolve_str<'c>(s: &'c str, ctx: &mut Ctx<'c>) -> usize {
+        ctx.strs.iter().position(|x| *x == s).unwrap_or_else(|| {
+            ctx.strs.push(s);
+            ctx.strs.len() - 1
+        })
+    }
+    fn fold<'c>(
+        x: Ast<'c>,
+        mut xs: IntoIter<Ast<'c>>,
+        ctx: &mut Ctx<'c>,
+    ) -> Result<Expr, (usize, E)> {
+        let x = desugar(x, ctx)?;
+        let bindings = ctx.bindings.len();
+        match (xs.next(), bindings) {
+            (None, _) => Ok(x),
+            (Some(next), 0) => {
+                ctx.vars.push("");
+                let rest = Expr::Abs(Box::new(fold(next, xs, ctx)?));
+                ctx.vars.pop();
+                Ok(Expr::App(Box::new(rest), Box::new(x)))
+            }
+            (Some(next), 1..) => {
+                ctx.vars.extend(ctx.bindings.drain(..));
+                let rest = (0..bindings).fold(fold(next, xs, ctx)?, |x, _| Expr::Abs(Box::new(x)));
+                ctx.vars.truncate(ctx.vars.len() - bindings);
+                Ok(Expr::App(Box::new(x), Box::new(rest)))
             }
         }
     }
-    fn desugar<'c>(Ast(pos, ast): Ast<'c>, c: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
+    fn desugar<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
         match ast {
-            A::Var(v) => match resolve_var(c, v) {
-                Some((v, _)) => Ok(Expr::Var(v)),
+            A::Var(v) => match resolve_var(v, ctx) {
+                Some(v) => Ok(Expr::Var(v)),
+                None if v == "=" => Ok(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Abs(
+                    Box::new(Expr::App(Box::new(Expr::Var(0)), Box::new(Expr::Var(1)))),
+                )))))),
                 None if v == "=>" => Ok(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Var(0)))))),
                 None if v == "if" => Ok(Expr::If),
                 None if v == "pop" => Ok(Expr::Pop),
                 None => Err((pos, E::UnboundVar(v.to_string()))),
             },
-            A::String(s) => Ok(Expr::String(resolve_str(c, s))),
-            A::Binding(s) => {
-                c.bindings.push(&s[1..]);
-                Ok(Expr::String(resolve_str(c, &s[1..])))
+            A::String(s) => Ok(Expr::String(resolve_str(s, ctx))),
+            A::Binding(b) => {
+                ctx.bindings.push(&b[1..]);
+                Ok(Expr::String(resolve_str(&b[1..], ctx)))
             }
             A::Block(items) => {
-                let mut desugared = vec![];
-                for ast in items {
-                    let bindings = c.bindings.len();
-                    c.vars.extend(c.bindings.drain(..));
-                    if bindings == 0 {
-                        c.vars.push("")
-                    }
-                    desugared.push((bindings, desugar(ast, c)?));
+                let mut items = items.into_iter();
+                let bindings = ctx.bindings.len();
+                ctx.vars.extend(ctx.bindings.drain(..));
+                if bindings == 0 {
+                    ctx.vars.push("");
                 }
-                let Some((bindings, mut expr)) = desugared.pop() else {
+                let Some(x) = items.next() else {
                     return Err((pos, E::EmptyBlock));
                 };
-                expr = (0..max(1, bindings)).fold(expr, |x, _| Expr::Abs(Box::new(x)));
-                for (bindings, item) in desugared.into_iter().rev() {
-                    if bindings == 0 {
-                        expr = Expr::App(Box::new(Expr::Abs(Box::new(expr))), Box::new(item));
-                    } else {
-                        let app = Expr::App(Box::new(item), Box::new(expr));
-                        expr = (0..bindings).fold(app, |x, _| Expr::Abs(Box::new(x)));
-                    }
+                let mut expr = fold(x, items, ctx)?;
+                for _ in 0..max(1, bindings) {
+                    ctx.vars.pop();
+                    expr = Expr::Abs(Box::new(expr))
                 }
                 Ok(expr)
             }
-            A::PrefixCall(f, args) => app(desugar(*f, c)?, args, c),
-            A::InfixCall(f, args) => app(desugar(Ast(pos, A::Var(f)), c)?, args, c),
-            A::KeywordCall(items) => {
-                let mut f = String::new();
-                let mut args = vec![];
-                for (keyword, arg) in items {
-                    f += keyword;
-                    args.push(arg);
-                }
-                let Some((v, _)) = resolve_var(c, &f) else {
-                    return Err((pos, E::UnboundVar(f)));
+            A::Call(call, args) => {
+                let mut f = match call {
+                    Call::Infix(f) => desugar(Ast(pos, A::Var(f)), ctx)?,
+                    Call::Prefix(f) => desugar(*f, ctx)?,
+                    Call::Keyword(keywords) => match resolve_var(&keywords.join(""), ctx) {
+                        Some(v) => Expr::Var(v),
+                        None => return Err((pos, E::UnboundVar(keywords.join("")))),
+                    },
                 };
-                app(Expr::Var(v), args, c)
+                for arg in args {
+                    f = Expr::App(Box::new(f), Box::new(desugar(arg, ctx)?));
+                }
+                Ok(f)
             }
         }
     }
-    fn app<'c>(mut f: Expr, args: Vec<Ast<'c>>, c: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
-        let outer_bindings = std::mem::replace(&mut c.bindings, vec![]);
-        for arg in args {
-            f = Expr::App(Box::new(f), Box::new(desugar(arg, c)?))
-        }
-        c.bindings.splice(0..0, outer_bindings);
-        Ok(f)
-    }
-    let mut c = Ctx {
+    let mut ctx = Ctx {
         vars: vec![],
         strs: vec![],
         bindings: vec![],
     };
-    match desugar(Ast(0, A::Block(block)), &mut c) {
-        Err((i, e)) => match e {
-            E::UnboundVar(v) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
-            E::EmptyBlock => Err(format!("Empty block at {}", pos_at(i, code))),
-        },
-        Ok(Expr::Abs(body)) => Ok((*body, c.strs)),
-        Ok(_) => panic!("Expected the main block to be desugared to an abstraction"),
+    match desugar(Ast(0, A::Block(block)), &mut ctx) {
+        Err((i, E::UnboundVar(v))) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
+        Err((i, E::EmptyBlock)) => Err(format!("Empty block at {}", pos_at(i, code))),
+        Ok(Expr::Abs(body)) => Ok((*body, ctx.strs)),
+        Ok(_) => panic!("Expected the main block to be desugared to an abstraction!"),
     }
 }
 
@@ -374,7 +393,7 @@ pub struct Bytecode<'code>(Vec<&'code str>, Vec<Op>, usize);
 enum Op {
     PushVar(usize),
     PushString(usize),
-    PushClosure(usize),
+    PushFn(usize),
     Apply,
     Return,
 }
@@ -387,7 +406,7 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             let mut f = vec![];
             compile(*body, &mut f, fns);
             f.push(Op::Return);
-            ops.push(Op::PushClosure(fns.len()));
+            ops.push(Op::PushFn(fns.len()));
             fns.extend(f);
         }
         Expr::App(f, arg) => {
@@ -414,9 +433,10 @@ impl<'code> Prg<'code> {
 
 #[derive(Debug, Clone)]
 pub enum V {
+    Fn(usize, usize),
     String(usize),
-    Closure(usize, Vec<V>),
     Record(usize, Vec<Rc<V>>),
+    Closure(usize, Rc<Vec<V>>),
 }
 
 impl Bytecode<'_> {
@@ -438,41 +458,69 @@ impl Bytecode<'_> {
                     values.push(v.clone());
                 }
                 Op::PushString(s) => values.push(V::String(s)),
-                Op::PushClosure(c) => values.push(V::Closure(c, vec![])),
-                Op::Apply => match (values.pop().ok_or(op)?, values.pop().ok_or(op)?) {
-                    (V::Closure(c, captured), arg) => {
-                        // TODO: if the next op is an Op::Return, we might want to do TCO
-                        frames.push((captured.len() + 1, ip));
-                        vars.extend(captured);
-                        vars.push(arg);
-                        ip = c;
+                Op::PushFn(c) => values.push(V::Fn(c, frames.len())),
+                Op::Apply => {
+                    let (f, mut arg) = (values.pop().ok_or(op)?, values.pop().ok_or(op)?);
+                    if let V::Fn(c, f) = arg {
+                        if f == frames.len() {
+                            arg = V::Closure(c, Rc::new(vars.clone()));
+                        }
                     }
-                    (V::String(s), arg) => values.push(V::Record(s, vec![Rc::new(arg)])),
-                    (V::Record(s, mut items), arg) => {
-                        items.push(Rc::new(arg));
-                        values.push(V::Record(s, items))
+                    match (f, arg) {
+                        (V::Closure(c, captured), arg) => {
+                            // TODO: if the next op is an Op::Return, we might want to do TCO
+                            frames.push((captured.len() + 1, ip));
+                            vars.extend(captured.iter().cloned());
+                            vars.push(arg);
+                            ip = c;
+                        }
+                        (V::Fn(c, _), arg) => {
+                            frames.push((1, ip));
+                            vars.push(arg);
+                            ip = c;
+                        }
+                        (V::String(s), arg) => values.push(V::Record(s, vec![Rc::new(arg)])),
+                        (V::Record(s, mut items), arg) => {
+                            items.push(Rc::new(arg));
+                            values.push(V::Record(s, items))
+                        }
                     }
-                },
+                }
                 Op::Return => {
                     let (args, ret) = frames.pop().ok_or(op)?;
-                    match (values.last_mut(), ops.get(ret)) {
-                        (Some(V::Closure(c, captured)), Some(Op::Apply)) => {
-                            ip = *c;
-                            vars.splice(vars.len() - args..vars.len() - args, captured.drain(..));
-                            let _closure = values.pop();
-                            vars.push(values.pop().ok_or(ret)?);
+                    match (values.last().cloned(), ops.get(ret)) {
+                        (Some(V::Fn(c, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
+                            let _f = values.pop();
+                            let mut arg = values.pop().ok_or(op)?;
+                            if let V::Fn(c, f) = arg {
+                                if f == frames.len() {
+                                    let captured = Rc::new(vars[..vars.len() - args].to_vec());
+                                    arg = V::Closure(c, captured);
+                                }
+                            }
                             frames.push((args + 1, ret + 1));
+                            vars.push(arg);
+                            ip = c;
                         }
-                        (Some(V::Closure(_, captured)), _) => {
-                            captured.extend(vars.drain(vars.len() - args..));
-                            ip = ret;
+                        (Some(V::Fn(c, f)), _) if f == frames.len() + 1 => {
+                            let _f = values.pop();
+                            values.push(V::Closure(c, Rc::new(vars.clone())));
+                            vars.truncate(vars.len() - args);
+                            ip = ret
                         }
-                        _ => ip = ret,
+                        _ => {
+                            // TODO: can I find a test case that fails if I remove the following truncate()?
+                            vars.truncate(vars.len() - args);
+                            ip = ret
+                        }
                     }
                 }
             }
             if trace {
                 println!("==> {op}: {:?}", ops[op]);
+                for (i, v) in vars.iter().rev().enumerate() {
+                    println!("        {i}: {}", pretty(v, &strs));
+                }
                 for v in &values {
                     println!("  {}", pretty(v, &strs));
                 }
@@ -484,6 +532,7 @@ impl Bytecode<'_> {
         fn pretty(v: &V, strs: &[&str]) -> String {
             match v {
                 V::String(s) => strs[*s].to_string(),
+                V::Fn(c, frame) => format!("{c}(frame:{frame})"),
                 V::Closure(c, vs) => {
                     let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
                     format!("{c} [{}]", closed.join(", "))
@@ -848,5 +897,17 @@ if: x == Foo do: Pair(x, x) else: Error";
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
+    }
+
+    #[test]
+    fn eval_block() {
+        let code = "'x = Foo, 'y = Bar, Pair(x, y)";
+        let parsed = parse(code).unwrap();
+        let desugared = desugar(parsed.clone()).unwrap();
+        println!("{:#?}", desugared);
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Pair(Foo, Bar)");
     }
 }
