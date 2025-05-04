@@ -509,7 +509,6 @@ impl Bytecode<'_> {
                             ip = ret
                         }
                         _ => {
-                            // TODO: can I find a test case that fails if I remove the following truncate()?
                             vars.truncate(vars.len() - args);
                             ip = ret
                         }
@@ -857,6 +856,30 @@ if: x == Foo do: Pair(x, x) else: Error";
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
+    }
+
+    #[test]
+    fn eval_raw_app4() {
+        // (\x.(x(\x."Foo")"Bar")) "Baz"
+        let expr = Expr::App(
+            Box::new(Expr::Abs(Box::new(Expr::App(
+                Box::new(Expr::Var(0)),
+                Box::new(Expr::App(
+                    Box::new(Expr::Abs(Box::new(Expr::String(0)))),
+                    Box::new(Expr::String(1)),
+                )),
+            )))),
+            Box::new(Expr::String(2)),
+        );
+        let mut ops = vec![];
+        let mut fns = vec![];
+        compile(expr, &mut ops, &mut fns);
+        let start = fns.len();
+        fns.extend(ops);
+        let bytecode = Bytecode(vec!["Foo", "Bar", "Baz"], fns, start);
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Baz(Foo)");
     }
 
     #[test]
