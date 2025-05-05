@@ -370,26 +370,34 @@ pub struct Bytecode<'code>(Vec<&'code str>, Vec<Op>, usize);
 enum Op {
     PushVar(usize),
     PushString(usize),
-    PushFn(usize),
+    PushFn(usize, usize),
     Apply,
     Return,
 }
 
-fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
+fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
     match expr {
-        Expr::Var(v) => ops.push(Op::PushVar(v)),
-        Expr::String(s) => ops.push(Op::PushString(s)),
+        Expr::Var(v) => {
+            ops.push(Op::PushVar(v));
+            v
+        }
+        Expr::String(s) => {
+            ops.push(Op::PushString(s));
+            0
+        }
         Expr::Abs(body) => {
             let mut f = vec![];
-            compile(*body, &mut f, fns);
+            let captured = compile(*body, &mut f, fns);
             f.push(Op::Return);
-            ops.push(Op::PushFn(fns.len()));
+            ops.push(Op::PushFn(fns.len(), captured));
             fns.extend(f);
+            if captured == 0 { 0 } else { captured - 1 }
         }
         Expr::App(f, arg) => {
-            compile(*arg, ops, fns);
-            compile(*f, ops, fns);
+            let a = compile(*arg, ops, fns);
+            let b = compile(*f, ops, fns);
             ops.push(Op::Apply);
+            max(a, b)
         }
         Expr::If => todo!(),
         Expr::Pop => todo!(),
@@ -410,7 +418,7 @@ impl<'code> Prg<'code> {
 
 #[derive(Debug, Clone)]
 pub enum V {
-    Fn(usize, usize),
+    Fn(usize, usize, usize),
     String(usize),
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
@@ -435,12 +443,12 @@ impl Bytecode<'_> {
                     values.push(v.clone());
                 }
                 Op::PushString(s) => values.push(V::String(s)),
-                Op::PushFn(c) => values.push(V::Fn(c, frames.len())),
+                Op::PushFn(code, captured) => values.push(V::Fn(code, captured, frames.len())),
                 Op::Apply => {
                     let (f, mut arg) = (values.pop().ok_or(op)?, values.pop().ok_or(op)?);
-                    if let V::Fn(c, f) = arg {
+                    if let V::Fn(c, v, f) = arg {
                         if f == frames.len() {
-                            arg = V::Closure(c, Rc::new(vars.clone()));
+                            arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
                         }
                     }
                     match (f, arg) {
@@ -451,7 +459,7 @@ impl Bytecode<'_> {
                             vars.push(arg);
                             ip = c;
                         }
-                        (V::Fn(c, _), arg) => {
+                        (V::Fn(c, _, _), arg) => {
                             frames.push((1, ip));
                             vars.push(arg);
                             ip = c;
@@ -466,12 +474,13 @@ impl Bytecode<'_> {
                 Op::Return => {
                     let (args, ret) = frames.pop().ok_or(op)?;
                     match (values.last().cloned(), ops.get(ret)) {
-                        (Some(V::Fn(c, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
+                        (Some(V::Fn(c, _, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
                             let _f = values.pop();
                             let mut arg = values.pop().ok_or(op)?;
-                            if let V::Fn(c, f) = arg {
+                            if let V::Fn(c, v, f) = arg {
                                 if f == frames.len() {
-                                    let captured = Rc::new(vars[..vars.len() - args].to_vec());
+                                    let max_var = vars.len() - args;
+                                    let captured = Rc::new(vars[max_var - v..max_var].to_vec());
                                     arg = V::Closure(c, captured);
                                 }
                             }
@@ -479,9 +488,9 @@ impl Bytecode<'_> {
                             vars.push(arg);
                             ip = c;
                         }
-                        (Some(V::Fn(c, f)), _) if f == frames.len() + 1 => {
+                        (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
                             let _f = values.pop();
-                            values.push(V::Closure(c, Rc::new(vars.clone())));
+                            values.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
                             vars.truncate(vars.len() - args);
                             ip = ret
                         }
@@ -508,7 +517,7 @@ impl Bytecode<'_> {
         fn pretty(v: &V, strs: &[&str]) -> String {
             match v {
                 V::String(s) => strs[*s].to_string(),
-                V::Fn(c, frame) => format!("{c}(frame:{frame})"),
+                V::Fn(c, v, frame) => format!("{c}(captured:{v},frame:{frame})"),
                 V::Closure(c, vs) => {
                     let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
                     format!("{c} [{}]", closed.join(", "))
