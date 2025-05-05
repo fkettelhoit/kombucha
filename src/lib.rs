@@ -278,8 +278,8 @@ enum Expr {
     String(usize),
     Abs(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
+    Pop(Box<Expr>, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
-    Pop,
 }
 
 fn abs(body: Expr) -> Expr {
@@ -316,13 +316,17 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 Some(v) => Ok(Expr::Var(v)),
                 None if v == "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
                 None if v == "=>" => Ok(abs(abs(Expr::Var(0)))),
+                None if v == "pop" => Ok(abs(abs(abs(Expr::Pop(
+                    Box::new(Expr::Var(2)),
+                    Box::new(Expr::Var(1)),
+                    Box::new(Expr::Var(0)),
+                ))))),
                 None if v == "if" => Ok(abs(abs(abs(abs(Expr::If(
                     Box::new(Expr::Var(3)),
                     Box::new(Expr::Var(2)),
                     Box::new(Expr::Var(1)),
                     Box::new(Expr::Var(0)),
                 )))))),
-                None if v == "pop" => Ok(Expr::Pop),
                 None => Err((pos, E::UnboundVar(v.to_string()))),
             },
             A::String(s) => Ok(Expr::String(resolve_str(s, ctx))),
@@ -387,6 +391,7 @@ enum Op {
     PushFn(usize, usize),
     Apply,
     Return,
+    Pop,
     If,
 }
 
@@ -414,6 +419,14 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             ops.push(Op::Apply);
             max(a, b)
         }
+        Expr::Pop(v, t, f) => {
+            let f = compile(*f, ops, fns);
+            let t = compile(*t, ops, fns);
+            let v = compile(*v, ops, fns);
+            ops.push(Op::Pop);
+            ops.push(Op::Apply);
+            v.max(t).max(f)
+        }
         Expr::If(a, b, t, f) => {
             let f = compile(*f, ops, fns);
             let t = compile(*t, ops, fns);
@@ -422,7 +435,6 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             ops.push(Op::If);
             a.max(b).max(t).max(f)
         }
-        Expr::Pop => todo!(),
     }
 }
 
@@ -538,6 +550,20 @@ impl Vm<'_> {
                     }
                 }
             }
+            Op::Pop => match (temps.pop()?, temps.pop()?, temps.pop()?) {
+                (V::Record(f, mut xs), t, _) => {
+                    let x = xs.pop()?;
+                    temps.push(x.as_ref().clone());
+                    temps.push(V::Record(f, xs));
+                    temps.push(t);
+                    self.ip -= 1;
+                    self.eval_op(Op::Apply)?;
+                }
+                (_, _, f) => {
+                    temps.push(V::String(0));
+                    temps.push(f);
+                }
+            },
             Op::If => {
                 let branch = match (temps.pop()?, temps.pop()?, temps.pop()?, temps.pop()?) {
                     (V::String(a), V::String(b), t, _) if a == b => t,
@@ -1028,5 +1054,58 @@ if: x == Foo do: Pair(x, x) else: Error";
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Pair(True, False)");
+    }
+
+    #[test]
+    fn eval_raw_pop() {
+        // pop(Foo(Bar), 'f => { 'x => { x } }, { Error })
+        let foo_bar = app(Expr::String(0), Expr::String(1));
+        let t = abs(abs(Expr::Var(0)));
+        let f = abs(Expr::String(2));
+        let pop_fn = abs(abs(abs(Expr::Pop(
+            Box::new(Expr::Var(2)),
+            Box::new(Expr::Var(1)),
+            Box::new(Expr::Var(0)),
+        ))));
+        let expr = app(app(app(pop_fn, foo_bar), t), f);
+        let mut ops = vec![];
+        let mut fns = vec![];
+        compile(expr, &mut ops, &mut fns);
+        let start = fns.len();
+        fns.extend(ops);
+        let bytecode = Vm::new(vec!["Foo", "Bar", "Error"], fns, start);
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Bar");
+    }
+
+    #[test]
+    fn eval_pop1() {
+        let code = "pop(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Baz");
+    }
+
+    #[test]
+    fn eval_pop2() {
+        let code = "pop(Foo, 'f => { 'x => { x } }, { Error })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Error");
+    }
+
+    #[test]
+    fn eval_pop3() {
+        let code = "pop(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo(Bar)");
     }
 }
