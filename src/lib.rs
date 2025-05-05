@@ -1,6 +1,7 @@
 use std::{
     cmp::max,
     iter::{Peekable, once},
+    mem,
     rc::Rc,
     vec::IntoIter,
 };
@@ -277,8 +278,16 @@ enum Expr {
     String(usize),
     Abs(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
-    If,
+    If(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
     Pop,
+}
+
+fn abs(body: Expr) -> Expr {
+    Expr::Abs(Box::new(body))
+}
+
+fn app(f: Expr, arg: Expr) -> Expr {
+    Expr::App(Box::new(f), Box::new(arg))
 }
 
 fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String> {
@@ -305,11 +314,14 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
         match ast {
             A::Var(v) => match resolve_var(v, ctx) {
                 Some(v) => Ok(Expr::Var(v)),
-                None if v == "=" => Ok(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Abs(
-                    Box::new(Expr::App(Box::new(Expr::Var(0)), Box::new(Expr::Var(1)))),
+                None if v == "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
+                None if v == "=>" => Ok(abs(abs(Expr::Var(0)))),
+                None if v == "if" => Ok(abs(abs(abs(abs(Expr::If(
+                    Box::new(Expr::Var(3)),
+                    Box::new(Expr::Var(2)),
+                    Box::new(Expr::Var(1)),
+                    Box::new(Expr::Var(0)),
                 )))))),
-                None if v == "=>" => Ok(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Var(0)))))),
-                None if v == "if" => Ok(Expr::If),
                 None if v == "pop" => Ok(Expr::Pop),
                 None => Err((pos, E::UnboundVar(v.to_string()))),
             },
@@ -334,11 +346,15 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                     let (f, arg) = if bindings == 0 { (expr, x) } else { (x, expr) };
                     let app = Expr::App(Box::new(f), Box::new(arg));
                     expr = (0..max(1, prev_bindings)).fold(app, |x, _| Expr::Abs(Box::new(x)));
+                    ctx.vars.truncate(ctx.vars.len() - bindings);
                     bindings = prev_bindings;
                 }
+                ctx.vars.truncate(ctx.vars.len() - bindings);
+                ctx.bindings.clear();
                 Ok(expr)
             }
             A::Call(call, args) => {
+                let bindings = mem::replace(&mut ctx.bindings, vec![]);
                 let mut f = match call {
                     Call::Infix(f) => desugar(Ast(pos, A::Var(f)), ctx)?,
                     Call::Prefix(f) => desugar(*f, ctx)?,
@@ -350,6 +366,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 for arg in args {
                     f = Expr::App(Box::new(f), Box::new(desugar(arg, ctx)?));
                 }
+                ctx.bindings.splice(0..0, bindings);
                 Ok(f)
             }
         }
@@ -363,9 +380,6 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Bytecode<'code>(Vec<&'code str>, Vec<Op>, usize);
-
 #[derive(Debug, Clone, Copy)]
 enum Op {
     PushVar(usize),
@@ -373,6 +387,7 @@ enum Op {
     PushFn(usize, usize),
     Apply,
     Return,
+    If,
 }
 
 fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
@@ -399,20 +414,50 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             ops.push(Op::Apply);
             max(a, b)
         }
-        Expr::If => todo!(),
+        Expr::If(a, b, t, f) => {
+            let f = compile(*f, ops, fns);
+            let t = compile(*t, ops, fns);
+            let b = compile(*b, ops, fns);
+            let a = compile(*a, ops, fns);
+            ops.push(Op::If);
+            a.max(b).max(t).max(f)
+        }
         Expr::Pop => todo!(),
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Vm<'code> {
+    strings: Vec<&'code str>,
+    bytecode: Vec<Op>,
+    ip: usize,
+    vars: Vec<V>,
+    temps: Vec<V>,
+    frames: Vec<(usize, usize)>,
+}
+
+impl<'code> Vm<'code> {
+    fn new(strings: Vec<&'code str>, bytecode: Vec<Op>, start: usize) -> Self {
+        Vm {
+            strings,
+            bytecode,
+            ip: start,
+            vars: vec![],
+            temps: vec![],
+            frames: vec![],
+        }
+    }
+}
+
 impl<'code> Prg<'code> {
-    pub fn compile(self) -> Result<Bytecode<'code>, String> {
-        let (expr, strs) = desugar(self)?;
-        let mut ops = vec![];
-        let mut fns = vec![];
-        compile(expr, &mut ops, &mut fns);
-        let start = fns.len();
-        fns.extend(ops);
-        Ok(Bytecode(strs, fns, start))
+    pub fn compile(self) -> Result<Vm<'code>, String> {
+        let (expr, strings) = desugar(self)?;
+        let mut main = vec![];
+        let mut bytecode = vec![];
+        compile(expr, &mut main, &mut bytecode);
+        let start = bytecode.len();
+        bytecode.extend(main);
+        Ok(Vm::new(strings, bytecode, start))
     }
 }
 
@@ -424,96 +469,90 @@ pub enum V {
     Closure(usize, Rc<Vec<V>>),
 }
 
-impl Bytecode<'_> {
-    pub fn run(self) -> Result<String, usize> {
-        self.run_with_trace(true)
-    }
-
-    pub fn run_with_trace(self, trace: bool) -> Result<String, usize> {
-        let Self(strs, ops, mut ip) = self;
-        let mut vars = vec![];
-        let mut values = vec![];
-        let mut frames = vec![];
-        while ip < ops.len() {
-            let op = ip;
-            ip += 1;
-            match ops[op] {
-                Op::PushVar(v) => {
-                    let v: &V = &vars[vars.len() - 1 - v];
-                    values.push(v.clone());
-                }
-                Op::PushString(s) => values.push(V::String(s)),
-                Op::PushFn(code, captured) => values.push(V::Fn(code, captured, frames.len())),
-                Op::Apply => {
-                    let (f, mut arg) = (values.pop().ok_or(op)?, values.pop().ok_or(op)?);
-                    if let V::Fn(c, v, f) = arg {
-                        if f == frames.len() {
-                            arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
-                        }
-                    }
-                    match (f, arg) {
-                        (V::Closure(c, captured), arg) => {
-                            // TODO: if the next op is an Op::Return, we might want to do TCO
-                            frames.push((captured.len() + 1, ip));
-                            vars.extend(captured.iter().cloned());
-                            vars.push(arg);
-                            ip = c;
-                        }
-                        (V::Fn(c, _, _), arg) => {
-                            frames.push((1, ip));
-                            vars.push(arg);
-                            ip = c;
-                        }
-                        (V::String(s), arg) => values.push(V::Record(s, vec![Rc::new(arg)])),
-                        (V::Record(s, mut items), arg) => {
-                            items.push(Rc::new(arg));
-                            values.push(V::Record(s, items))
-                        }
+impl Vm<'_> {
+    fn eval_op(&mut self, op: Op) -> Option<()> {
+        let vars = &mut self.vars;
+        let temps = &mut self.temps;
+        let frames = &mut self.frames;
+        self.ip += 1;
+        match op {
+            Op::PushVar(v) => {
+                let v: &V = &vars[vars.len() - 1 - v];
+                temps.push(v.clone());
+            }
+            Op::PushString(s) => temps.push(V::String(s)),
+            Op::PushFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
+            Op::Apply => {
+                let (f, mut arg) = (temps.pop()?, temps.pop()?);
+                if let V::Fn(c, v, f) = arg {
+                    if f == frames.len() {
+                        arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
                     }
                 }
-                Op::Return => {
-                    let (args, ret) = frames.pop().ok_or(op)?;
-                    match (values.last().cloned(), ops.get(ret)) {
-                        (Some(V::Fn(c, _, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
-                            let _f = values.pop();
-                            let mut arg = values.pop().ok_or(op)?;
-                            if let V::Fn(c, v, f) = arg {
-                                if f == frames.len() {
-                                    let max_var = vars.len() - args;
-                                    let captured = Rc::new(vars[max_var - v..max_var].to_vec());
-                                    arg = V::Closure(c, captured);
-                                }
-                            }
-                            frames.push((args + 1, ret + 1));
-                            vars.push(arg);
-                            ip = c;
-                        }
-                        (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
-                            let _f = values.pop();
-                            values.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
-                            vars.truncate(vars.len() - args);
-                            ip = ret
-                        }
-                        _ => {
-                            vars.truncate(vars.len() - args);
-                            ip = ret
-                        }
+                match (f, arg) {
+                    (V::Closure(c, captured), arg) => {
+                        // TODO: if the next op is an Op::Return, we might want to do TCO
+                        frames.push((captured.len() + 1, self.ip));
+                        vars.extend(captured.iter().cloned());
+                        vars.push(arg);
+                        self.ip = c;
+                    }
+                    (V::Fn(c, _, _), arg) => {
+                        frames.push((1, self.ip));
+                        vars.push(arg);
+                        self.ip = c;
+                    }
+                    (V::String(s), arg) => temps.push(V::Record(s, vec![Rc::new(arg)])),
+                    (V::Record(s, mut items), arg) => {
+                        items.push(Rc::new(arg));
+                        temps.push(V::Record(s, items))
                     }
                 }
             }
-            if trace {
-                println!("==> {op}: {:?}", ops[op]);
-                for (i, v) in vars.iter().rev().enumerate() {
-                    println!("        {i}: {}", pretty(v, &strs));
+            Op::Return => {
+                let (args, ret) = frames.pop()?;
+                match (temps.last().cloned(), self.bytecode.get(ret)) {
+                    (Some(V::Fn(c, _, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
+                        let _f = temps.pop();
+                        let mut arg = temps.pop()?;
+                        if let V::Fn(c, v, f) = arg {
+                            if f == frames.len() {
+                                let max_var = vars.len() - args;
+                                let captured = Rc::new(vars[max_var - v..max_var].to_vec());
+                                arg = V::Closure(c, captured);
+                            }
+                        }
+                        frames.push((args + 1, ret + 1));
+                        vars.push(arg);
+                        self.ip = c;
+                    }
+                    (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
+                        let _f = temps.pop();
+                        temps.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
+                        vars.truncate(vars.len() - args);
+                        self.ip = ret
+                    }
+                    _ => {
+                        vars.truncate(vars.len() - args);
+                        self.ip = ret
+                    }
                 }
-                for v in &values {
-                    println!("  {}", pretty(v, &strs));
-                }
-                if ip != op + 1 {
-                    println!("====> jump to {ip}");
-                }
+            }
+            Op::If => {
+                let branch = match (temps.pop()?, temps.pop()?, temps.pop()?, temps.pop()?) {
+                    (V::String(a), V::String(b), t, _) if a == b => t,
+                    (_, _, _, f) => f,
+                };
+                temps.push(V::String(0));
+                temps.push(branch);
+                self.ip -= 1;
+                self.eval_op(Op::Apply)?;
             }
         }
+        Some(())
+    }
+
+    pub fn run(mut self) -> Result<String, usize> {
         fn pretty(v: &V, strs: &[&str]) -> String {
             match v {
                 V::String(s) => strs[*s].to_string(),
@@ -528,16 +567,26 @@ impl Bytecode<'_> {
                 }
             }
         }
-        Ok(pretty(&values.pop().ok_or(ip)?, &strs))
+        while let Some(op) = self.bytecode.get(self.ip).copied() {
+            println!("==> {}: {:?}", self.ip, op);
+            self.eval_op(op).ok_or(self.ip)?;
+            for (i, v) in self.vars.iter().rev().enumerate() {
+                println!("        {i}: {}", pretty(v, &self.strings));
+            }
+            for v in &self.temps {
+                println!("  {}", pretty(v, &self.strings));
+            }
+        }
+        Ok(pretty(&self.temps.pop().ok_or(self.ip)?, &self.strings))
     }
 }
 
-impl std::fmt::Display for Bytecode<'_> {
+impl std::fmt::Display for Vm<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, str) in self.0.iter().enumerate() {
+        for (i, str) in self.strings.iter().enumerate() {
             write!(f, "{i:05} -> {str}\n")?;
         }
-        for (i, op) in self.1.iter().enumerate() {
+        for (i, op) in self.bytecode.iter().enumerate() {
             write!(f, "\n{i:05}: {op:?}")?;
             if let Op::Return = op {
                 f.write_str("\n")?;
@@ -782,7 +831,7 @@ if: x == Foo do: Pair(x, x) else: Error";
         compile(expr, &mut ops, &mut fns);
         let start = fns.len();
         fns.extend(ops);
-        let bytecode = Bytecode(vec!["Foo"], fns, start);
+        let bytecode = Vm::new(vec!["Foo"], fns, start);
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Foo");
@@ -803,7 +852,7 @@ if: x == Foo do: Pair(x, x) else: Error";
         compile(expr, &mut ops, &mut fns);
         let start = fns.len();
         fns.extend(ops);
-        let bytecode = Bytecode(vec!["Foo", "Bar"], fns, start);
+        let bytecode = Vm::new(vec!["Foo", "Bar"], fns, start);
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Bar");
@@ -838,7 +887,7 @@ if: x == Foo do: Pair(x, x) else: Error";
         compile(expr, &mut ops, &mut fns);
         let start = fns.len();
         fns.extend(ops);
-        let bytecode = Bytecode(vec!["Foo", "Bar", "Baz", "Vec"], fns, start);
+        let bytecode = Vm::new(vec!["Foo", "Bar", "Baz", "Vec"], fns, start);
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
@@ -862,7 +911,7 @@ if: x == Foo do: Pair(x, x) else: Error";
         compile(expr, &mut ops, &mut fns);
         let start = fns.len();
         fns.extend(ops);
-        let bytecode = Bytecode(vec!["Foo", "Bar", "Baz"], fns, start);
+        let bytecode = Vm::new(vec!["Foo", "Bar", "Baz"], fns, start);
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Baz(Foo)");
@@ -909,14 +958,75 @@ if: x == Foo do: Pair(x, x) else: Error";
     }
 
     #[test]
-    fn eval_block() {
+    fn eval_block1() {
         let code = "'x = Foo, 'y = Bar, Pair(x, y)";
         let parsed = parse(code).unwrap();
-        let desugared = desugar(parsed.clone()).unwrap();
-        println!("{:#?}", desugared);
         let bytecode = parsed.compile().unwrap();
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Pair(Foo, Bar)");
+    }
+
+    #[test]
+    fn eval_block2() {
+        let code = "'f = ('x => { Foo(x) }), f(Bar)";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo(Bar)");
+    }
+
+    #[test]
+    fn eval_raw_if() {
+        // if(Foo, Foo, { True }, { False })
+        let t = abs(Expr::String(1));
+        let f = abs(Expr::String(2));
+        let if_fn = abs(abs(abs(abs(Expr::If(
+            Box::new(Expr::Var(3)),
+            Box::new(Expr::Var(2)),
+            Box::new(Expr::Var(1)),
+            Box::new(Expr::Var(0)),
+        )))));
+        let expr = app(app(app(app(if_fn, Expr::String(0)), Expr::String(0)), t), f);
+        let mut ops = vec![];
+        let mut fns = vec![];
+        compile(expr, &mut ops, &mut fns);
+        let start = fns.len();
+        fns.extend(ops);
+        let bytecode = Vm::new(vec!["Foo", "True", "False"], fns, start);
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "True");
+    }
+
+    #[test]
+    fn eval_if1() {
+        let code = "if(Foo, Bar, { True }, { False })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "False");
+    }
+
+    #[test]
+    fn eval_if2() {
+        let code = "'f = ('x => { if(x, Bar, { True }, { False }) }), f(Bar)";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "True");
+    }
+
+    #[test]
+    fn eval_if3() {
+        let code = "'f = ('x => { if(x, Foo, { True }, { False }) }), Pair(f(Foo), f(Bar))";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Pair(True, False)");
     }
 }
