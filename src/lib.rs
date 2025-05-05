@@ -286,6 +286,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
         UnboundVar(String),
         EmptyBlock,
     }
+    #[derive(Default)]
     struct Ctx<'c> {
         vars: Vec<&'c str>,
         strs: Vec<&'c str>,
@@ -299,29 +300,6 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
             ctx.strs.push(s);
             ctx.strs.len() - 1
         })
-    }
-    fn fold<'c>(
-        x: Ast<'c>,
-        mut xs: IntoIter<Ast<'c>>,
-        ctx: &mut Ctx<'c>,
-    ) -> Result<Expr, (usize, E)> {
-        let x = desugar(x, ctx)?;
-        let bindings = ctx.bindings.len();
-        match (xs.next(), bindings) {
-            (None, _) => Ok(x),
-            (Some(next), 0) => {
-                ctx.vars.push("");
-                let rest = Expr::Abs(Box::new(fold(next, xs, ctx)?));
-                ctx.vars.pop();
-                Ok(Expr::App(Box::new(rest), Box::new(x)))
-            }
-            (Some(next), 1..) => {
-                ctx.vars.extend(ctx.bindings.drain(..));
-                let rest = (0..bindings).fold(fold(next, xs, ctx)?, |x, _| Expr::Abs(Box::new(x)));
-                ctx.vars.truncate(ctx.vars.len() - bindings);
-                Ok(Expr::App(Box::new(x), Box::new(rest)))
-            }
-        }
     }
     fn desugar<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
         match ast {
@@ -341,19 +319,22 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 Ok(Expr::String(resolve_str(&b[1..], ctx)))
             }
             A::Block(items) => {
-                let mut items = items.into_iter();
-                let bindings = ctx.bindings.len();
-                ctx.vars.extend(ctx.bindings.drain(..));
-                if bindings == 0 {
-                    ctx.vars.push("");
+                let mut desugared = vec![];
+                for ast in items {
+                    let bindings = ctx.bindings.len();
+                    ctx.vars.extend(ctx.bindings.drain(..));
+                    if bindings == 0 {
+                        ctx.vars.push("")
+                    }
+                    desugared.push((bindings, desugar(ast, ctx)?));
                 }
-                let Some(x) = items.next() else {
-                    return Err((pos, E::EmptyBlock));
-                };
-                let mut expr = fold(x, items, ctx)?;
-                for _ in 0..max(1, bindings) {
-                    ctx.vars.pop();
-                    expr = Expr::Abs(Box::new(expr))
+                let (mut bindings, mut expr) = desugared.pop().ok_or((pos, E::EmptyBlock))?;
+                expr = (0..max(1, bindings)).fold(expr, |x, _| Expr::Abs(Box::new(x)));
+                for (prev_bindings, x) in desugared.into_iter().rev() {
+                    let (f, arg) = if bindings == 0 { (expr, x) } else { (x, expr) };
+                    let app = Expr::App(Box::new(f), Box::new(arg));
+                    expr = (0..max(1, prev_bindings)).fold(app, |x, _| Expr::Abs(Box::new(x)));
+                    bindings = prev_bindings;
                 }
                 Ok(expr)
             }
@@ -373,16 +354,12 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
             }
         }
     }
-    let mut ctx = Ctx {
-        vars: vec![],
-        strs: vec![],
-        bindings: vec![],
-    };
+    let mut ctx = Ctx::default();
     match desugar(Ast(0, A::Block(block)), &mut ctx) {
         Err((i, E::UnboundVar(v))) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
         Err((i, E::EmptyBlock)) => Err(format!("Empty block at {}", pos_at(i, code))),
         Ok(Expr::Abs(body)) => Ok((*body, ctx.strs)),
-        Ok(_) => panic!("Expected the main block to be desugared to an abstraction!"),
+        Ok(_) => unreachable!("Expected the main block to be desugared to an abstraction!"),
     }
 }
 
@@ -860,7 +837,7 @@ if: x == Foo do: Pair(x, x) else: Error";
 
     #[test]
     fn eval_raw_app4() {
-        // (\x.(x(\x."Foo")"Bar")) "Baz"
+        // (\x.(x(\x."Foo") "Bar")) "Baz"
         let expr = Expr::App(
             Box::new(Expr::Abs(Box::new(Expr::App(
                 Box::new(Expr::Var(0)),
