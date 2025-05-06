@@ -277,6 +277,7 @@ enum Expr {
     Var(usize),
     String(usize),
     Abs(Box<Expr>),
+    Rec(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
     Pop(Box<Expr>, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
@@ -316,6 +317,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 Some(v) => Ok(Expr::Var(v)),
                 None if v == "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
                 None if v == "=>" => Ok(abs(abs(Expr::Var(0)))),
+                None if v == "~>" => Ok(abs(abs(Expr::Rec(Box::new(Expr::Var(0)))))),
                 None if v == "pop" => Ok(abs(abs(abs(Expr::Pop(
                     Box::new(Expr::Var(2)),
                     Box::new(Expr::Var(1)),
@@ -389,6 +391,7 @@ enum Op {
     PushVar(usize),
     PushString(usize),
     PushFn(usize, usize),
+    Rec,
     Apply,
     Return,
     Pop,
@@ -413,6 +416,11 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             fns.extend(f);
             if captured == 0 { 0 } else { captured - 1 }
         }
+        Expr::Rec(body) => {
+            let f = compile(*body, ops, fns);
+            ops.push(Op::Rec);
+            f
+        }
         Expr::App(f, arg) => {
             let a = compile(*arg, ops, fns);
             let b = compile(*f, ops, fns);
@@ -425,6 +433,7 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             let v = compile(*v, ops, fns);
             ops.push(Op::Pop);
             ops.push(Op::Apply);
+            ops.push(Op::Apply);
             v.max(t).max(f)
         }
         Expr::If(a, b, t, f) => {
@@ -433,6 +442,7 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             let b = compile(*b, ops, fns);
             let a = compile(*a, ops, fns);
             ops.push(Op::If);
+            ops.push(Op::Apply);
             a.max(b).max(t).max(f)
         }
     }
@@ -479,6 +489,7 @@ pub enum V {
     String(usize),
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
+    Recursive(usize, Rc<Vec<V>>),
 }
 
 impl Vm<'_> {
@@ -494,14 +505,33 @@ impl Vm<'_> {
             }
             Op::PushString(s) => temps.push(V::String(s)),
             Op::PushFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
+            Op::Rec => match temps.pop()? {
+                V::Fn(c, v, _) => {
+                    // TODO: does the frame not matter here? is it always safe to create a closure?
+                    let captured = vars[vars.len() - v..].to_vec();
+                    temps.push(V::Recursive(c, Rc::new(captured)));
+                }
+                V::Closure(c, captured) => {
+                    temps.push(V::Recursive(c, captured));
+                }
+                v => temps.push(v),
+            },
             Op::Apply => {
                 let (f, mut arg) = (temps.pop()?, temps.pop()?);
                 if let V::Fn(c, v, f) = arg {
+                    // TODO: is there a case where an arg could not have f == frames.len()?
                     if f == frames.len() {
                         arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
                     }
                 }
                 match (f, arg) {
+                    (V::Recursive(c, captured), arg) => {
+                        temps.push(arg);
+                        frames.push((captured.len() + 1, self.ip - 1));
+                        vars.extend(captured.iter().cloned());
+                        vars.push(V::Recursive(c, captured));
+                        self.ip = c;
+                    }
                     (V::Closure(c, captured), arg) => {
                         // TODO: if the next op is an Op::Return, we might want to do TCO
                         frames.push((captured.len() + 1, self.ip));
@@ -550,19 +580,30 @@ impl Vm<'_> {
                     }
                 }
             }
-            Op::Pop => match (temps.pop()?, temps.pop()?, temps.pop()?) {
-                (V::Record(f, mut xs), t, _) => {
-                    let x = xs.pop()?;
-                    temps.push(x.as_ref().clone());
-                    temps.push(V::Record(f, xs));
-                    temps.push(t);
-                    self.ip -= 1;
-                    self.eval_op(Op::Apply)?;
+            Op::Pop => match temps.pop()? {
+                V::Recursive(c, captured) => {
+                    frames.push((captured.len() + 1, self.ip - 1));
+                    vars.extend(captured.iter().cloned());
+                    vars.push(V::Recursive(c, captured));
+                    self.ip = c;
                 }
-                (_, _, f) => {
-                    temps.push(V::String(0));
-                    temps.push(f);
-                }
+                v => match (v, temps.pop()?, temps.pop()?) {
+                    (V::Record(f, mut xs), t, _) => {
+                        let x = xs.pop()?;
+                        temps.push(x.as_ref().clone());
+                        temps.push(if xs.is_empty() {
+                            V::String(f)
+                        } else {
+                            V::Record(f, xs)
+                        });
+                        temps.push(t);
+                    }
+                    (_, _, f) => {
+                        temps.push(V::String(0));
+                        temps.push(f);
+                        self.ip += 1;
+                    }
+                },
             },
             Op::If => {
                 let branch = match (temps.pop()?, temps.pop()?, temps.pop()?, temps.pop()?) {
@@ -571,8 +612,6 @@ impl Vm<'_> {
                 };
                 temps.push(V::String(0));
                 temps.push(branch);
-                self.ip -= 1;
-                self.eval_op(Op::Apply)?;
             }
         }
         Some(())
@@ -590,6 +629,10 @@ impl Vm<'_> {
                 V::Record(s, vs) => {
                     let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
                     format!("{}({})", pretty(&V::String(*s), strs), items.join(", "))
+                }
+                V::Recursive(c, vs) => {
+                    let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+                    format!("~>{c} [{}]", closed.join(", "))
                 }
             }
         }
@@ -1107,5 +1150,111 @@ if: x == Foo do: Pair(x, x) else: Error";
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Foo(Bar)");
+    }
+
+    #[test]
+    fn eval_pop4() {
+        let code = "pop(Foo(Bar), 'f => { 'x => { f } }, { Error })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo");
+    }
+
+    #[test]
+    fn eval_raw_pop_rec() {
+        // pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { f } }, { Error })
+        let foo_app_rec = Expr::Rec(Box::new(abs(app(
+            app(Expr::String(0), Expr::String(1)),
+            Expr::Var(0),
+        ))));
+        let t = abs(abs(Expr::Var(1)));
+        let f = abs(Expr::String(2));
+        let pop_fn = abs(abs(abs(Expr::Pop(
+            Box::new(Expr::Var(2)),
+            Box::new(Expr::Var(1)),
+            Box::new(Expr::Var(0)),
+        ))));
+        let expr = app(app(app(pop_fn, foo_app_rec), t), f);
+        let mut ops = vec![];
+        let mut fns = vec![];
+        compile(expr, &mut ops, &mut fns);
+        let start = fns.len();
+        fns.extend(ops);
+        let bytecode = Vm::new(vec!["Cons", "Foo", "Error"], fns, start);
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Cons(Foo)");
+    }
+
+    #[test]
+    fn eval_pop_rec1() {
+        let code = "pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo(Bar)");
+    }
+
+    #[test]
+    fn eval_pop_rec2() {
+        let code = "pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo(Bar)");
+    }
+
+    #[test]
+    fn eval_pop_rec3() {
+        let code = "pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Error }) } }, { Error })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Cons(Foo)");
+    }
+
+    #[test]
+    fn eval_pop_rec4() {
+        let code = "'foo = Foo, pop('r ~> { Cons(foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Error }) } }, { Error })";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Cons(Foo)");
+    }
+
+    #[test]
+    fn eval_apply_rec1() {
+        let code = "'f = ('f ~> { Foo }), f(Bar)";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo(Bar)");
+    }
+
+    #[test]
+    fn eval_apply_rec2() {
+        let code = "'f = ('f ~> { 'x => { Foo(x) } }), f(Bar)";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo(Bar)");
+    }
+
+    #[test]
+    fn eval_apply_rec3() {
+        let code = "'f = ('f ~> { 'xs => { pop(xs, 'xs => { '_ => { f(xs) } }, { xs }) } }), f(Foo(Bar, Baz))";
+        let parsed = parse(code).unwrap();
+        let bytecode = parsed.compile().unwrap();
+        println!("{bytecode}");
+        let v = bytecode.run().unwrap();
+        assert_eq!(v.to_string(), "Foo");
     }
 }
