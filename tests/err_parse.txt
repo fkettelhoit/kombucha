@@ -1,0 +1,105 @@
+{)}
+
+Expected the '{' at line 1, col 1 to be closed with '}', but found ')' at line 1, col 2
+
+---
+
+a + b - c
+
+Expected all infix functions starting at line 1, col 3 to be named '+', but found '-' at line 1, col 7
+
+---
+
+a +
+
+Expected an infix argument after the function '+' at line 1, col 3, but the code just ended
+
+---
+
+f(a +)
+
+Expected an infix argument after the function '+' at line 1, col 5, but found ')' at line 1, col 6
+
+---
+
+f(
+
+Expected the '(' at line 1, col 2 to be closed with ')', but the code just ended
+
+---
+
+f(a
+
+Expected the '(' at line 1, col 2 to be closed with ')', but the code just ended
+
+---
+
+{{a} {b}}
+
+Expected a ',' or '\n' to separate the expressions starting at line 1, col 2, but found '{' at line 1, col 6
+
+---
+
+f({a} {b}
+
+Expected a ',' or '\n' to separate the expressions starting at line 1, col 3, but found '{' at line 1, col 7
+
+---
+
+{f(a)
+
+Expected the '{' at line 1, col 1 to be closed with '}', but the code just ended
+
+---
+
+(
+
+Expected the '(' at line 1, col 1 to be closed with ')', but the code just ended
+
+---
+
+(a
+
+Expected the '(' at line 1, col 1 to be closed with ')', but the code just ended
+
+---
+
+({a} {b})
+
+Expected the '(' at line 1, col 1 to be closed with ')', but found '{' at line 1, col 6
+
+---
+
+({a}, {b})
+
+Expected the '(' at line 1, col 1 to be closed with ')', but found ',' at line 1, col 5
+
+---
+
+a + keyword:
+
+Expected an infix argument after the function '+' at line 1, col 3, but found 'keyword:' at line 1, col 5
+
+---
+
+foo: bar:
+
+Expected an argument after the keyword 'foo:' at line 1, col 1, but found 'bar:' at line 1, col 6
+
+---
+
+a + ,
+
+Expected an infix argument after the function '+' at line 1, col 3, but found ',' at line 1, col 5
+
+---
+
+a + {a, b
+
+Expected the '{' at line 1, col 5 to be closed with '}', but the code just ended
+
+---
+
+a + {a, )
+
+Expected the '{' at line 1, col 5 to be closed with '}', but found ')' at line 1, col 9

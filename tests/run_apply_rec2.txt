@@ -1,0 +1,116 @@
+'f = ('f ~> { 'y = Bar, 'x => { Foo(x) } }), f(Bar)
+
+(=
+  'f
+  (~>
+    'f
+    {
+      (=
+        'y
+        Bar)
+      (=>
+        'x
+        {
+          (Foo
+            x)})}))
+(f
+  Bar)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "f" )
+    ( ( =>
+          =>
+            ~>
+              0
+        "f" )
+      =>
+        ( ( ( =>
+                =>
+                  =>
+                    ( 0
+                      1 )
+              "y" )
+            "Bar" )
+          =>
+            ( ( =>
+                  =>
+                    0
+                "x" )
+              =>
+                ( "Foo"
+                  0 ) ) ) ) )
+  =>
+    ( 0
+      "Bar" ) )
+
+-- STRS:
+00000 -> f
+00001 -> y
+00002 -> Bar
+00003 -> x
+00004 -> Foo
+-- CODE:
+00000: PushString("Bar")
+00001: PushVar(00000)
+00002: Apply
+00003:   Return
+00004: PushVar(00000)
+00005: PushString("Foo")
+00006: Apply
+00007:   Return
+00008: PushVar(00000)
+00009:   Return
+00010: PushFn(00008, 00000)
+00011:   Return
+00012: PushFn(00004, 00000)
+00013: PushString("x")
+00014: PushFn(00010, 00000)
+00015: Apply
+00016: Apply
+00017:   Return
+00018: PushVar(00001)
+00019: PushVar(00000)
+00020: Apply
+00021:   Return
+00022: PushFn(00018, 00001)
+00023:   Return
+00024: PushFn(00022, 00000)
+00025:   Return
+00026: PushFn(00012, 00000)
+00027: PushString("Bar")
+00028: PushString("y")
+00029: PushFn(00024, 00000)
+00030: Apply
+00031: Apply
+00032: Apply
+00033:   Return
+00034: PushVar(00000)
+00035: Rec
+00036:   Return
+00037: PushFn(00034, 00000)
+00038:   Return
+00039: PushVar(00001)
+00040: PushVar(00000)
+00041: Apply
+00042:   Return
+00043: PushFn(00039, 00001)
+00044:   Return
+00045: PushFn(00043, 00000)
+00046:   Return
+00047: PushFn(00000, 00000)
+00048: PushFn(00026, 00000)
+00049: PushString("f")
+00050: PushFn(00037, 00000)
+00051: Apply
+00052: Apply
+00053: PushString("f")
+00054: PushFn(00045, 00000)
+00055: Apply
+00056: Apply
+00057: Apply
+
+Foo(Bar)

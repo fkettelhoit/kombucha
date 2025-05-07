@@ -1,0 +1,17 @@
+Foo(f(Bar))
+
+(Foo
+  (f
+    Bar))
+
+Unbound variable 'f' at line 1, col 5
+
+---
+
+'f => {}
+
+(=>
+  'f
+  {})
+
+Empty block at line 1, col 7

@@ -177,7 +177,7 @@ pub fn parse(code: &str) -> Result<Prg<'_>, String> {
                     toks.next();
                     needs_sep = false;
                 }
-                Some((_, i, s)) if needs_sep => return Err(E(i, Some((i, s)), _E::Sep)),
+                Some((_, j, s)) if needs_sep => return Err(E(i + 1, Some((j, s)), _E::Sep)),
                 _ => match _expr(toks) {
                     Ok(expr) => {
                         exprs.push(expr);
@@ -667,6 +667,8 @@ impl std::fmt::Display for Vm<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::{fs, io::Write, path::Path};
+
     use super::*;
 
     #[test]
@@ -1256,5 +1258,219 @@ if: x == Foo do: Pair(x, x) else: Error";
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Foo");
+    }
+
+    fn pretty_prg<'c>(prg: &Prg<'c>) -> String {
+        fn pretty<'c>(ast: &Ast<'c>, lvl: usize, buf: &mut String) {
+            let indent = "  ";
+            match &ast.1 {
+                A::Var(s) | A::String(s) | A::Binding(s) => buf.push_str(s),
+                A::Block(items) => {
+                    buf.push('{');
+                    for item in items {
+                        buf.push('\n');
+                        buf.push_str(&indent.repeat(lvl + 1));
+                        pretty(&item, lvl + 1, buf);
+                    }
+                    buf.push('}')
+                }
+                A::Call(call, args) => {
+                    buf.push('(');
+                    match call {
+                        Call::Prefix(f) => pretty(&f, lvl, buf),
+                        Call::Infix(f) => buf.push_str(f),
+                        Call::Keyword(f) => buf.push_str(&f.join("")),
+                    }
+                    for arg in args {
+                        buf.push('\n');
+                        buf.push_str(&indent.repeat(lvl + 1));
+                        pretty(&arg, lvl + 1, buf);
+                    }
+                    buf.push(')')
+                }
+            }
+        }
+        let mut buf = String::new();
+        for item in prg.0.iter() {
+            pretty(item, 0, &mut buf);
+            buf.push('\n');
+        }
+        buf
+    }
+
+    fn pretty_expr<'c>(expr: &Expr, strs: &[&'c str]) -> String {
+        fn pretty<'c>(expr: &Expr, strs: &[&'c str], lvl: usize, buf: &mut String) {
+            let indent = "  ";
+            match expr {
+                Expr::Var(v) => buf.push_str(&v.to_string()),
+                Expr::String(s) => buf.push_str(&format!("\"{}\"", strs[*s])),
+                Expr::Abs(expr) => {
+                    buf.push_str("=>\n");
+                    buf.push_str(&indent.repeat(lvl + 1));
+                    pretty(expr, strs, lvl + 1, buf);
+                }
+                Expr::Rec(expr) => {
+                    buf.push_str("~>\n");
+                    buf.push_str(&indent.repeat(lvl + 1));
+                    pretty(expr, strs, lvl + 1, buf);
+                }
+                Expr::App(f, arg) => {
+                    buf.push_str("( ");
+                    pretty(f, strs, lvl + 1, buf);
+                    buf.push('\n');
+                    buf.push_str(&indent.repeat(lvl + 1));
+                    pretty(arg, strs, lvl + 1, buf);
+                    buf.push_str(" )");
+                }
+                Expr::Pop(v, t, f) => {
+                    buf.push_str("( pop");
+                    for expr in [v, t, f] {
+                        buf.push('\n');
+                        buf.push_str(&indent.repeat(lvl + 1));
+                        pretty(expr, strs, lvl + 1, buf);
+                    }
+                    buf.push(')');
+                }
+                Expr::If(a, b, t, f) => {
+                    buf.push_str("( if");
+                    for expr in [a, b, t, f] {
+                        buf.push('\n');
+                        buf.push_str(&indent.repeat(lvl + 1));
+                        pretty(expr, strs, lvl + 1, buf);
+                    }
+                    buf.push(')');
+                }
+            }
+        }
+        let mut buf = String::new();
+        pretty(expr, strs, 0, &mut buf);
+        buf
+    }
+
+    fn pretty_bytecode(vm: &Vm) -> String {
+        let mut buf = String::new();
+        buf.push_str("-- STRS:\n");
+        for (i, str) in vm.strings.iter().enumerate() {
+            buf.push_str(&format!("{i:05} -> {str}\n"));
+        }
+        buf.push_str("-- CODE:\n");
+        for (i, op) in vm.bytecode.iter().enumerate() {
+            match op {
+                Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),
+                Op::PushString(s) => match vm.strings.get(*s) {
+                    Some(s) => buf.push_str(&format!("{i:05}: PushString(\"{s}\")\n")),
+                    None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+                },
+                _ => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+            }
+        }
+        buf
+    }
+
+    #[test]
+    fn run_txt_tests() {
+        let overwrite = false;
+        let test_separator = "\n\n---\n\n";
+        let phase_separator = "\n\n";
+        let tests_dir = Path::new("tests");
+
+        assert!(tests_dir.exists() && tests_dir.is_dir(), "No 'tests' dir!");
+
+        let stages = ["parse", "desugar", "compile", "run"];
+        let mut failed = vec![vec![]; stages.len()];
+
+        let entries = fs::read_dir(tests_dir).expect("Failed to read tests directory");
+        for entry in entries {
+            let entry = entry.expect("Failed to read directory entry");
+            let path = entry.path();
+            if !path.is_file()
+                || path.extension().map_or(true, |ext| ext != "txt")
+                || path.to_str().map_or(true, |p| p.ends_with(".actual.txt"))
+            {
+                continue;
+            }
+            let s = fs::read_to_string(&path).expect(&format!("Failed to read file: {:?}", path));
+            let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+            let mut has_failure = false;
+            let mut actual_phases = vec![];
+            for (i, test) in s.split(test_separator).enumerate() {
+                let i = i + 1;
+                let mut parts = test.split(&phase_separator).peekable();
+
+                let Some(code) = parts.next() else {
+                    eprintln!("No code in {file_name} (test {i})");
+                    continue;
+                };
+                let expected = parts.take(4).collect::<Vec<&str>>();
+                let mut actual = vec![];
+                match parse(code) {
+                    Err(e) => actual.push(e),
+                    Ok(parsed) => {
+                        actual.push(pretty_prg(&parsed));
+                        match desugar(parsed.clone()) {
+                            Err(e) => actual.push(e),
+                            Ok((expr, strs)) => {
+                                actual.push(pretty_expr(&expr, &strs));
+                                match parsed.compile() {
+                                    Err(e) => actual.push(e),
+                                    Ok(vm) => {
+                                        actual.push(pretty_bytecode(&vm));
+                                        match vm.run() {
+                                            Err(e) => actual.push(format!("Error at op {e}")),
+                                            Ok(v) => actual.push(v),
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                actual_phases.push(
+                    code.to_string()
+                        + phase_separator
+                        + &actual
+                            .iter()
+                            .map(|x| x.trim())
+                            .collect::<Vec<_>>()
+                            .join(&phase_separator),
+                );
+                for (phase, (exp, act)) in expected.iter().zip(actual).enumerate() {
+                    let exp = exp.trim().to_string();
+                    let act = act.trim().to_string();
+                    if exp != act {
+                        failed[phase].push((file_name.clone(), i, code.to_string(), exp, act));
+                        has_failure = true;
+                    }
+                }
+            }
+
+            if has_failure {
+                let p = if overwrite {
+                    path
+                } else {
+                    path.with_extension(format!("actual.txt"))
+                };
+                let Ok(mut file) = fs::File::create(&p) else {
+                    eprintln!("Could not create file with actual results for {file_name}");
+                    continue;
+                };
+                if let Err(e) = file.write_all(&actual_phases.join(test_separator).as_bytes()) {
+                    eprintln!("Could not write file: {e}");
+                }
+            }
+        }
+        for (failed, stage) in failed.into_iter().zip(stages) {
+            if !failed.is_empty() {
+                let n = failed.len();
+                eprintln!("{n} test(s) failed while trying to {stage} the code.",);
+                for (file_name, i, code, expected, actual) in failed {
+                    eprintln!("\n--- {file_name} (test {i}) ---\n");
+                    eprintln!("Code:\n{code}\n");
+                    eprintln!("Expected:\n{expected}\n");
+                    eprintln!("Actual:\n{actual}\n");
+                }
+                panic!("Some tests failed while trying to {stage} the code!");
+            }
+        }
     }
 }

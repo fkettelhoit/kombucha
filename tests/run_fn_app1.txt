@@ -1,0 +1,36 @@
+('x => { Bar })(Foo)
+
+((=>
+  'x
+  {
+    Bar})
+  Foo)
+
+( ( ( =>
+        =>
+          0
+      "x" )
+    =>
+      "Bar" )
+  "Foo" )
+
+-- STRS:
+00000 -> x
+00001 -> Bar
+00002 -> Foo
+-- CODE:
+00000: PushString("Bar")
+00001:   Return
+00002: PushVar(00000)
+00003:   Return
+00004: PushFn(00002, 00000)
+00005:   Return
+00006: PushString("Foo")
+00007: PushFn(00000, 00000)
+00008: PushString("x")
+00009: PushFn(00004, 00000)
+00010: Apply
+00011: Apply
+00012: Apply
+
+Bar
