@@ -1102,28 +1102,4 @@ mod tests {
     fn test_run_rec() -> Result<(), String> {
         test(PathBuf::from("tests/run_rec.txt"))
     }
-
-    // #[test]
-    // fn run_txt_tests() -> Result<(), String> {
-    //     let tests_dir = Path::new("tests");
-    //     assert!(tests_dir.exists() && tests_dir.is_dir(), "No 'tests' dir!");
-
-    //     let mut failed = vec![vec![]; STAGES.len()];
-
-    //     let entries = fs::read_dir(tests_dir).expect("Failed to read tests directory");
-    //     for entry in entries {
-    //         let entry = entry.expect("Failed to read directory entry");
-    //         let path = entry.path();
-    //         if !path.is_file()
-    //             || path.extension().map_or(true, |ext| ext != "txt")
-    //             || path.to_str().map_or(true, |p| p.ends_with(".actual.txt"))
-    //         {
-    //             continue;
-    //         }
-    //         for (i, failures) in test_txt(path).into_iter().enumerate() {
-    //             failed[i].extend(failures)
-    //         }
-    //     }
-    //     report(failed)
-    // }
 }
