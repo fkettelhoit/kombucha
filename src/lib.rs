@@ -650,21 +650,6 @@ impl Vm<'_> {
     }
 }
 
-impl std::fmt::Display for Vm<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, str) in self.strings.iter().enumerate() {
-            write!(f, "{i:05} -> {str}\n")?;
-        }
-        for (i, op) in self.bytecode.iter().enumerate() {
-            write!(f, "\n{i:05}: {op:?}")?;
-            if let Op::Return = op {
-                f.write_str("\n")?;
-            }
-        }
-        f.write_str("\n")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::{fs, io::Write, path::PathBuf};
@@ -684,7 +669,7 @@ mod tests {
         let start = fns.len();
         fns.extend(ops);
         let bytecode = Vm::new(vec!["Foo"], fns, start);
-        println!("{bytecode}");
+        println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Foo");
     }
@@ -705,7 +690,7 @@ mod tests {
         let start = fns.len();
         fns.extend(ops);
         let bytecode = Vm::new(vec!["Foo", "Bar"], fns, start);
-        println!("{bytecode}");
+        println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Bar");
     }
@@ -740,7 +725,7 @@ mod tests {
         let start = fns.len();
         fns.extend(ops);
         let bytecode = Vm::new(vec!["Foo", "Bar", "Baz", "Vec"], fns, start);
-        println!("{bytecode}");
+        println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
     }
@@ -764,7 +749,7 @@ mod tests {
         let start = fns.len();
         fns.extend(ops);
         let bytecode = Vm::new(vec!["Foo", "Bar", "Baz"], fns, start);
-        println!("{bytecode}");
+        println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Baz(Foo)");
     }
@@ -787,7 +772,7 @@ mod tests {
         let start = fns.len();
         fns.extend(ops);
         let bytecode = Vm::new(vec!["Foo", "True", "False"], fns, start);
-        println!("{bytecode}");
+        println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "True");
     }
@@ -810,7 +795,7 @@ mod tests {
         let start = fns.len();
         fns.extend(ops);
         let bytecode = Vm::new(vec!["Foo", "Bar", "Error"], fns, start);
-        println!("{bytecode}");
+        println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Bar");
     }
@@ -836,7 +821,7 @@ mod tests {
         let start = fns.len();
         fns.extend(ops);
         let bytecode = Vm::new(vec!["Cons", "Foo", "Error"], fns, start);
-        println!("{bytecode}");
+        println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Cons(Foo)");
     }
