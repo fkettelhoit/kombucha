@@ -1,0 +1,174 @@
+foo
+
+foo
+
+---
+
+Foo
+
+Foo
+
+---
+
+'foo
+
+'foo
+
+---
+
+{ foo, Foo, 'foo }
+
+{
+  foo
+  Foo
+  'foo}
+
+---
+
+f(g(), h(Bar), Baz)
+
+(f
+  (g)
+  (h
+    Bar)
+  Baz)
+
+---
+
+f(g(x)(y)())
+
+(f
+  (((g
+    x)
+    y)))
+
+---
+
+f(x) foo g(y)
+
+(foo
+  (f
+    x)
+  (g
+    y))
+
+---
+
+(a * b) + (c * d)
+
+(+
+  (*
+    a
+    b)
+  (*
+    c
+    d))
+
+---
+
+if: x == y do: {
+    foo()
+} else: Bar
+
+(if:do:else:
+  (==
+    x
+    y)
+  {
+    (foo)}
+  Bar)
+
+---
+
+if: x == y do: (foo: Bar baz: Qux) else: Bar
+
+(if:do:else:
+  (==
+    x
+    y)
+  (foo:baz:
+    Bar
+    Qux)
+  Bar)
+
+---
+
+foo = Foo
+'id = ('x => { x })
+'x = id(id(foo))
+
+(=
+  foo
+  Foo)
+(=
+  'id
+  (=>
+    'x
+    {
+      x}))
+(=
+  'x
+  (id
+    (id
+      foo)))
+
+---
+
+f'('x, 'y) = {
+  match: Pair(x, y) with: Vec(
+    Pair('x, 'x) => { x }
+    Pair('x, 'y) => { Mismatch }
+    ' => { InvalidPair }
+  )
+}
+
+(=
+  (f'
+    'x
+    'y)
+  {
+    (match:with:
+      (Pair
+        x
+        y)
+      (Vec
+        (=>
+          (Pair
+            'x
+            'x)
+          {
+            x})
+        (=>
+          (Pair
+            'x
+            'y)
+          {
+            Mismatch})
+        (=>
+          '
+          {
+            InvalidPair})))})
+
+---
+
+if: x == y do: { print(Equal) } else: { print(NotEqual) }
+if: x == Foo do: Pair(x, x) else: Error"
+
+(if:do:else:
+  (==
+    x
+    y)
+  {
+    (print
+      Equal)}
+  {
+    (print
+      NotEqual)})
+(if:do:else:
+  (==
+    x
+    Foo)
+  (Pair
+    x
+    x)
+  Error")

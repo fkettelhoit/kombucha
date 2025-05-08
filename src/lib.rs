@@ -667,7 +667,7 @@ impl std::fmt::Display for Vm<'_> {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, io::Write, path::Path};
+    use std::{fs, io::Write, path::PathBuf};
 
     use super::*;
 
@@ -1367,110 +1367,167 @@ if: x == Foo do: Pair(x, x) else: Error";
         buf
     }
 
-    #[test]
-    fn run_txt_tests() {
+    #[derive(Debug, Clone)]
+    struct Failure {
+        file: String,
+        code: String,
+        expected: String,
+        actual: String,
+    }
+
+    const STAGES: [&str; 4] = ["parse", "desugar", "compile", "run"];
+
+    fn test_txt(path: PathBuf) -> Vec<Vec<Failure>> {
         let overwrite = false;
-        let test_separator = "\n\n---\n\n";
-        let phase_separator = "\n\n";
-        let tests_dir = Path::new("tests");
+        let test_sep = "\n\n---\n\n";
+        let phase_sep = "\n\n";
 
-        assert!(tests_dir.exists() && tests_dir.is_dir(), "No 'tests' dir!");
+        let s = fs::read_to_string(&path).expect(&format!("Failed to read file: {:?}", path));
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let mut has_failure = false;
+        let mut actual_phases = vec![];
+        let mut failed = vec![vec![]; STAGES.len()];
+        for (i, test) in s.split(test_sep).enumerate() {
+            let i = i + 1;
+            let mut parts = test.split(&phase_sep).peekable();
 
-        let stages = ["parse", "desugar", "compile", "run"];
-        let mut failed = vec![vec![]; stages.len()];
-
-        let entries = fs::read_dir(tests_dir).expect("Failed to read tests directory");
-        for entry in entries {
-            let entry = entry.expect("Failed to read directory entry");
-            let path = entry.path();
-            if !path.is_file()
-                || path.extension().map_or(true, |ext| ext != "txt")
-                || path.to_str().map_or(true, |p| p.ends_with(".actual.txt"))
-            {
+            let Some(code) = parts.next() else {
+                eprintln!("No code in {file_name} (test {i})");
                 continue;
-            }
-            let s = fs::read_to_string(&path).expect(&format!("Failed to read file: {:?}", path));
-            let file_name = path.file_name().unwrap().to_string_lossy().to_string();
-            let mut has_failure = false;
-            let mut actual_phases = vec![];
-            for (i, test) in s.split(test_separator).enumerate() {
-                let i = i + 1;
-                let mut parts = test.split(&phase_separator).peekable();
-
-                let Some(code) = parts.next() else {
-                    eprintln!("No code in {file_name} (test {i})");
-                    continue;
-                };
-                let expected = parts.take(4).collect::<Vec<&str>>();
-                let mut actual = vec![];
-                match parse(code) {
-                    Err(e) => actual.push(e),
-                    Ok(parsed) => {
-                        actual.push(pretty_prg(&parsed));
-                        match desugar(parsed.clone()) {
-                            Err(e) => actual.push(e),
-                            Ok((expr, strs)) => {
-                                actual.push(pretty_expr(&expr, &strs));
-                                match parsed.compile() {
-                                    Err(e) => actual.push(e),
-                                    Ok(vm) => {
-                                        actual.push(pretty_bytecode(&vm));
-                                        match vm.run() {
-                                            Err(e) => actual.push(format!("Error at op {e}")),
-                                            Ok(v) => actual.push(v),
-                                        }
+            };
+            let expected = parts.take(4).collect::<Vec<&str>>();
+            let mut actual = vec![];
+            match parse(code) {
+                Err(e) => actual.push(e),
+                Ok(parsed) => {
+                    actual.push(pretty_prg(&parsed));
+                    match desugar(parsed.clone()) {
+                        Err(e) => actual.push(e),
+                        Ok((expr, strs)) => {
+                            actual.push(pretty_expr(&expr, &strs));
+                            match parsed.compile() {
+                                Err(e) => actual.push(e),
+                                Ok(vm) => {
+                                    actual.push(pretty_bytecode(&vm));
+                                    match vm.run() {
+                                        Err(e) => actual.push(format!("Error at op {e}")),
+                                        Ok(v) => actual.push(v),
                                     }
                                 }
                             }
                         }
                     }
                 }
-                actual_phases.push(
-                    code.to_string()
-                        + phase_separator
-                        + &actual
-                            .iter()
-                            .map(|x| x.trim())
-                            .collect::<Vec<_>>()
-                            .join(&phase_separator),
-                );
-                for (phase, (exp, act)) in expected.iter().zip(actual).enumerate() {
-                    let exp = exp.trim().to_string();
-                    let act = act.trim().to_string();
-                    if exp != act {
-                        failed[phase].push((file_name.clone(), i, code.to_string(), exp, act));
-                        has_failure = true;
-                    }
+            }
+            let actual = actual.iter().map(|x| x.trim()).collect::<Vec<_>>();
+            actual_phases.push(code.to_string() + phase_sep + &actual.join(&phase_sep));
+            for (phase, (exp, act)) in expected.iter().zip(actual).enumerate() {
+                let exp = exp.trim().to_string();
+                if exp != act {
+                    failed[phase].push(Failure {
+                        file: file_name.clone(),
+                        code: code.to_string(),
+                        expected: exp,
+                        actual: act.to_string(),
+                    });
+                    has_failure = true;
                 }
             }
+        }
 
-            if has_failure {
-                let p = if overwrite {
-                    path
-                } else {
-                    path.with_extension(format!("actual.txt"))
-                };
-                let Ok(mut file) = fs::File::create(&p) else {
-                    eprintln!("Could not create file with actual results for {file_name}");
-                    continue;
-                };
-                if let Err(e) = file.write_all(&actual_phases.join(test_separator).as_bytes()) {
-                    eprintln!("Could not write file: {e}");
-                }
+        if has_failure {
+            let p = if overwrite {
+                path
+            } else {
+                path.with_extension(format!("actual.txt"))
+            };
+            let Ok(mut file) = fs::File::create(&p) else {
+                eprintln!("Could not create file with actual results for {file_name}");
+                return failed;
+            };
+            if let Err(e) = file.write_all(&actual_phases.join(test_sep).as_bytes()) {
+                eprintln!("Could not write file: {e}");
             }
         }
-        for (failed, stage) in failed.into_iter().zip(stages) {
-            if !failed.is_empty() {
-                let n = failed.len();
-                eprintln!("{n} test(s) failed while trying to {stage} the code.",);
-                for (file_name, i, code, expected, actual) in failed {
-                    eprintln!("\n--- {file_name} (test {i}) ---\n");
-                    eprintln!("Code:\n{code}\n");
-                    eprintln!("Expected:\n{expected}\n");
-                    eprintln!("Actual:\n{actual}\n");
-                }
-                panic!("Some tests failed while trying to {stage} the code!");
-            }
-        }
+        failed
     }
+
+    fn report(failed: Vec<Vec<Failure>>) -> Result<(), String> {
+        for (failed, stage) in failed.into_iter().zip(STAGES) {
+            if failed.is_empty() {
+                continue;
+            }
+            let n = failed.len();
+            for failure in failed {
+                eprintln!("\n--- {} ---\n", failure.file);
+                eprintln!("Code:\n{}\n", failure.code);
+                eprintln!("Expected:\n{}\n", failure.expected);
+                eprintln!("Actual:\n{}\n", failure.actual);
+            }
+            if n == 1 {
+                return Err(format!("test failed while trying to {stage} code."));
+            } else {
+                return Err(format!("{n} tests failed while trying to {stage} code."));
+            }
+        }
+        Ok(())
+    }
+
+    fn test(path: PathBuf) -> Result<(), String> {
+        report(test_txt(path))
+    }
+
+    #[test]
+    fn test_parse() -> Result<(), String> {
+        test(PathBuf::from("tests/parse.txt"))
+    }
+
+    #[test]
+    fn test_err_parse() -> Result<(), String> {
+        test(PathBuf::from("tests/err_parse.txt"))
+    }
+
+    #[test]
+    fn test_err_desugar() -> Result<(), String> {
+        test(PathBuf::from("tests/err_desugar.txt"))
+    }
+
+    #[test]
+    fn test_run_record() -> Result<(), String> {
+        test(PathBuf::from("tests/run_record.txt"))
+    }
+
+    #[test]
+    fn test_run_apply_rec2() -> Result<(), String> {
+        test(PathBuf::from("tests/run_apply_rec2.txt"))
+    }
+
+    #[test]
+    fn test_run_fn_app1() -> Result<(), String> {
+        test(PathBuf::from("tests/run_fn_app1.txt"))
+    }
+
+    // #[test]
+    // fn run_txt_tests() -> Result<(), String> {
+    //     let tests_dir = Path::new("tests");
+    //     assert!(tests_dir.exists() && tests_dir.is_dir(), "No 'tests' dir!");
+
+    //     let mut failed = vec![vec![]; STAGES.len()];
+
+    //     let entries = fs::read_dir(tests_dir).expect("Failed to read tests directory");
+    //     for entry in entries {
+    //         let entry = entry.expect("Failed to read directory entry");
+    //         let path = entry.path();
+    //         if !path.is_file()
+    //             || path.extension().map_or(true, |ext| ext != "txt")
+    //             || path.to_str().map_or(true, |p| p.ends_with(".actual.txt"))
+    //         {
+    //             continue;
+    //         }
+    //         for (i, failures) in test_txt(path).into_iter().enumerate() {
+    //             failed[i].extend(failures)
+    //         }
+    //     }
+    //     report(failed)
+    // }
 }
