@@ -1,0 +1,149 @@
+'x = Foo, 'y = Bar, Pair(x, y)
+
+(=
+  'x
+  Foo)
+(=
+  'y
+  Bar)
+(Pair
+  x
+  y)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "x" )
+    "Foo" )
+  =>
+    ( ( ( =>
+            =>
+              =>
+                ( 0
+                  1 )
+          "y" )
+        "Bar" )
+      =>
+        ( ( "Pair"
+            1 )
+          0 ) ) )
+
+-- STRS:
+00000 -> x
+00001 -> Foo
+00002 -> y
+00003 -> Bar
+00004 -> Pair
+-- CODE:
+00000: PushVar(00000)
+00001: PushVar(00001)
+00002: PushString("Pair")
+00003: Apply
+00004: Apply
+00005:   Return
+00006: PushVar(00001)
+00007: PushVar(00000)
+00008: Apply
+00009:   Return
+00010: PushFn(00006, 00001)
+00011:   Return
+00012: PushFn(00010, 00000)
+00013:   Return
+00014: PushFn(00000, 00001)
+00015: PushString("Bar")
+00016: PushString("y")
+00017: PushFn(00012, 00000)
+00018: Apply
+00019: Apply
+00020: Apply
+00021:   Return
+00022: PushVar(00001)
+00023: PushVar(00000)
+00024: Apply
+00025:   Return
+00026: PushFn(00022, 00001)
+00027:   Return
+00028: PushFn(00026, 00000)
+00029:   Return
+00030: PushFn(00014, 00000)
+00031: PushString("Foo")
+00032: PushString("x")
+00033: PushFn(00028, 00000)
+00034: Apply
+00035: Apply
+00036: Apply
+
+Pair(Foo, Bar)
+
+---
+
+'f = ('x => { Foo(x) }), f(Bar)
+
+(=
+  'f
+  (=>
+    'x
+    {
+      (Foo
+        x)}))
+(f
+  Bar)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "f" )
+    ( ( =>
+          =>
+            0
+        "x" )
+      =>
+        ( "Foo"
+          0 ) ) )
+  =>
+    ( 0
+      "Bar" ) )
+
+-- STRS:
+00000 -> f
+00001 -> x
+00002 -> Foo
+00003 -> Bar
+-- CODE:
+00000: PushString("Bar")
+00001: PushVar(00000)
+00002: Apply
+00003:   Return
+00004: PushVar(00000)
+00005: PushString("Foo")
+00006: Apply
+00007:   Return
+00008: PushVar(00000)
+00009:   Return
+00010: PushFn(00008, 00000)
+00011:   Return
+00012: PushVar(00001)
+00013: PushVar(00000)
+00014: Apply
+00015:   Return
+00016: PushFn(00012, 00001)
+00017:   Return
+00018: PushFn(00016, 00000)
+00019:   Return
+00020: PushFn(00000, 00000)
+00021: PushFn(00004, 00000)
+00022: PushString("x")
+00023: PushFn(00010, 00000)
+00024: Apply
+00025: Apply
+00026: PushString("f")
+00027: PushFn(00018, 00000)
+00028: Apply
+00029: Apply
+00030: Apply
+
+Foo(Bar)

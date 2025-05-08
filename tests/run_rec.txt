@@ -1,0 +1,957 @@
+'f = ('f ~> { Foo }), f(Bar)
+
+(=
+  'f
+  (~>
+    'f
+    {
+      Foo}))
+(f
+  Bar)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "f" )
+    ( ( =>
+          =>
+            ~>
+              0
+        "f" )
+      =>
+        "Foo" ) )
+  =>
+    ( 0
+      "Bar" ) )
+
+-- STRS:
+00000 -> f
+00001 -> Foo
+00002 -> Bar
+-- CODE:
+00000: PushString("Bar")
+00001: PushVar(00000)
+00002: Apply
+00003:   Return
+00004: PushString("Foo")
+00005:   Return
+00006: PushVar(00000)
+00007: Rec
+00008:   Return
+00009: PushFn(00006, 00000)
+00010:   Return
+00011: PushVar(00001)
+00012: PushVar(00000)
+00013: Apply
+00014:   Return
+00015: PushFn(00011, 00001)
+00016:   Return
+00017: PushFn(00015, 00000)
+00018:   Return
+00019: PushFn(00000, 00000)
+00020: PushFn(00004, 00000)
+00021: PushString("f")
+00022: PushFn(00009, 00000)
+00023: Apply
+00024: Apply
+00025: PushString("f")
+00026: PushFn(00017, 00000)
+00027: Apply
+00028: Apply
+00029: Apply
+
+Foo(Bar)
+
+---
+
+'f = ('f ~> { 'x => { Foo(x) } }), f(Bar)
+
+(=
+  'f
+  (~>
+    'f
+    {
+      (=>
+        'x
+        {
+          (Foo
+            x)})}))
+(f
+  Bar)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "f" )
+    ( ( =>
+          =>
+            ~>
+              0
+        "f" )
+      =>
+        ( ( =>
+              =>
+                0
+            "x" )
+          =>
+            ( "Foo"
+              0 ) ) ) )
+  =>
+    ( 0
+      "Bar" ) )
+
+-- STRS:
+00000 -> f
+00001 -> x
+00002 -> Foo
+00003 -> Bar
+-- CODE:
+00000: PushString("Bar")
+00001: PushVar(00000)
+00002: Apply
+00003:   Return
+00004: PushVar(00000)
+00005: PushString("Foo")
+00006: Apply
+00007:   Return
+00008: PushVar(00000)
+00009:   Return
+00010: PushFn(00008, 00000)
+00011:   Return
+00012: PushFn(00004, 00000)
+00013: PushString("x")
+00014: PushFn(00010, 00000)
+00015: Apply
+00016: Apply
+00017:   Return
+00018: PushVar(00000)
+00019: Rec
+00020:   Return
+00021: PushFn(00018, 00000)
+00022:   Return
+00023: PushVar(00001)
+00024: PushVar(00000)
+00025: Apply
+00026:   Return
+00027: PushFn(00023, 00001)
+00028:   Return
+00029: PushFn(00027, 00000)
+00030:   Return
+00031: PushFn(00000, 00000)
+00032: PushFn(00012, 00000)
+00033: PushString("f")
+00034: PushFn(00021, 00000)
+00035: Apply
+00036: Apply
+00037: PushString("f")
+00038: PushFn(00029, 00000)
+00039: Apply
+00040: Apply
+00041: Apply
+
+Foo(Bar)
+
+---
+
+pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })
+
+(pop
+  (~>
+    'r
+    {
+      (Foo
+        Bar
+        r)})
+  (=>
+    'f
+    {
+      (=>
+        'x
+        {
+          f})})
+  {
+    Error})
+
+( ( ( =>
+        =>
+          =>
+            ( pop
+              2
+              1
+              0)
+      ( ( =>
+            =>
+              ~>
+                0
+          "r" )
+        =>
+          ( ( "Foo"
+              "Bar" )
+            0 ) ) )
+    ( ( =>
+          =>
+            0
+        "f" )
+      =>
+        ( ( =>
+              =>
+                0
+            "x" )
+          =>
+            1 ) ) )
+  =>
+    "Error" )
+
+-- STRS:
+00000 -> r
+00001 -> Foo
+00002 -> Bar
+00003 -> f
+00004 -> x
+00005 -> Error
+-- CODE:
+00000: PushString("Error")
+00001:   Return
+00002: PushVar(00001)
+00003:   Return
+00004: PushVar(00000)
+00005:   Return
+00006: PushFn(00004, 00000)
+00007:   Return
+00008: PushFn(00002, 00001)
+00009: PushString("x")
+00010: PushFn(00006, 00000)
+00011: Apply
+00012: Apply
+00013:   Return
+00014: PushVar(00000)
+00015:   Return
+00016: PushFn(00014, 00000)
+00017:   Return
+00018: PushVar(00000)
+00019: PushString("Bar")
+00020: PushString("Foo")
+00021: Apply
+00022: Apply
+00023:   Return
+00024: PushVar(00000)
+00025: Rec
+00026:   Return
+00027: PushFn(00024, 00000)
+00028:   Return
+00029: PushVar(00000)
+00030: PushVar(00001)
+00031: PushVar(00002)
+00032: Pop
+00033: Apply
+00034: Apply
+00035:   Return
+00036: PushFn(00029, 00002)
+00037:   Return
+00038: PushFn(00036, 00001)
+00039:   Return
+00040: PushFn(00000, 00000)
+00041: PushFn(00008, 00000)
+00042: PushString("f")
+00043: PushFn(00016, 00000)
+00044: Apply
+00045: Apply
+00046: PushFn(00018, 00000)
+00047: PushString("r")
+00048: PushFn(00027, 00000)
+00049: Apply
+00050: Apply
+00051: PushFn(00038, 00000)
+00052: Apply
+00053: Apply
+00054: Apply
+
+Foo(Bar)
+
+---
+
+pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
+
+(pop
+  (~>
+    'r
+    (Foo
+      Bar
+      Baz))
+  (=>
+    'f
+    {
+      (=>
+        'x
+        {
+          f})})
+  {
+    Error})
+
+( ( ( =>
+        =>
+          =>
+            ( pop
+              2
+              1
+              0)
+      ( ( =>
+            =>
+              ~>
+                0
+          "r" )
+        ( ( "Foo"
+            "Bar" )
+          "Baz" ) ) )
+    ( ( =>
+          =>
+            0
+        "f" )
+      =>
+        ( ( =>
+              =>
+                0
+            "x" )
+          =>
+            1 ) ) )
+  =>
+    "Error" )
+
+-- STRS:
+00000 -> r
+00001 -> Foo
+00002 -> Bar
+00003 -> Baz
+00004 -> f
+00005 -> x
+00006 -> Error
+-- CODE:
+00000: PushString("Error")
+00001:   Return
+00002: PushVar(00001)
+00003:   Return
+00004: PushVar(00000)
+00005:   Return
+00006: PushFn(00004, 00000)
+00007:   Return
+00008: PushFn(00002, 00001)
+00009: PushString("x")
+00010: PushFn(00006, 00000)
+00011: Apply
+00012: Apply
+00013:   Return
+00014: PushVar(00000)
+00015:   Return
+00016: PushFn(00014, 00000)
+00017:   Return
+00018: PushVar(00000)
+00019: Rec
+00020:   Return
+00021: PushFn(00018, 00000)
+00022:   Return
+00023: PushVar(00000)
+00024: PushVar(00001)
+00025: PushVar(00002)
+00026: Pop
+00027: Apply
+00028: Apply
+00029:   Return
+00030: PushFn(00023, 00002)
+00031:   Return
+00032: PushFn(00030, 00001)
+00033:   Return
+00034: PushFn(00000, 00000)
+00035: PushFn(00008, 00000)
+00036: PushString("f")
+00037: PushFn(00016, 00000)
+00038: Apply
+00039: Apply
+00040: PushString("Baz")
+00041: PushString("Bar")
+00042: PushString("Foo")
+00043: Apply
+00044: Apply
+00045: PushString("r")
+00046: PushFn(00021, 00000)
+00047: Apply
+00048: Apply
+00049: PushFn(00032, 00000)
+00050: Apply
+00051: Apply
+00052: Apply
+
+Foo(Bar)
+
+---
+
+pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Error }) } }, { Error })
+
+(pop
+  (~>
+    'r
+    {
+      (Cons
+        Foo
+        r)})
+  (=>
+    'f
+    {
+      (=>
+        'x
+        {
+          (pop
+            x
+            (=>
+              'f
+              {
+                (=>
+                  'x
+                  {
+                    f})})
+            {
+              Error})})})
+  {
+    Error})
+
+( ( ( =>
+        =>
+          =>
+            ( pop
+              2
+              1
+              0)
+      ( ( =>
+            =>
+              ~>
+                0
+          "r" )
+        =>
+          ( ( "Cons"
+              "Foo" )
+            0 ) ) )
+    ( ( =>
+          =>
+            0
+        "f" )
+      =>
+        ( ( =>
+              =>
+                0
+            "x" )
+          =>
+            ( ( ( =>
+                    =>
+                      =>
+                        ( pop
+                          2
+                          1
+                          0)
+                  0 )
+                ( ( =>
+                      =>
+                        0
+                    "f" )
+                  =>
+                    ( ( =>
+                          =>
+                            0
+                        "x" )
+                      =>
+                        1 ) ) )
+              =>
+                "Error" ) ) ) )
+  =>
+    "Error" )
+
+-- STRS:
+00000 -> r
+00001 -> Cons
+00002 -> Foo
+00003 -> f
+00004 -> x
+00005 -> Error
+-- CODE:
+00000: PushString("Error")
+00001:   Return
+00002: PushString("Error")
+00003:   Return
+00004: PushVar(00001)
+00005:   Return
+00006: PushVar(00000)
+00007:   Return
+00008: PushFn(00006, 00000)
+00009:   Return
+00010: PushFn(00004, 00001)
+00011: PushString("x")
+00012: PushFn(00008, 00000)
+00013: Apply
+00014: Apply
+00015:   Return
+00016: PushVar(00000)
+00017:   Return
+00018: PushFn(00016, 00000)
+00019:   Return
+00020: PushVar(00000)
+00021: PushVar(00001)
+00022: PushVar(00002)
+00023: Pop
+00024: Apply
+00025: Apply
+00026:   Return
+00027: PushFn(00020, 00002)
+00028:   Return
+00029: PushFn(00027, 00001)
+00030:   Return
+00031: PushFn(00002, 00000)
+00032: PushFn(00010, 00000)
+00033: PushString("f")
+00034: PushFn(00018, 00000)
+00035: Apply
+00036: Apply
+00037: PushVar(00000)
+00038: PushFn(00029, 00000)
+00039: Apply
+00040: Apply
+00041: Apply
+00042:   Return
+00043: PushVar(00000)
+00044:   Return
+00045: PushFn(00043, 00000)
+00046:   Return
+00047: PushFn(00031, 00000)
+00048: PushString("x")
+00049: PushFn(00045, 00000)
+00050: Apply
+00051: Apply
+00052:   Return
+00053: PushVar(00000)
+00054:   Return
+00055: PushFn(00053, 00000)
+00056:   Return
+00057: PushVar(00000)
+00058: PushString("Foo")
+00059: PushString("Cons")
+00060: Apply
+00061: Apply
+00062:   Return
+00063: PushVar(00000)
+00064: Rec
+00065:   Return
+00066: PushFn(00063, 00000)
+00067:   Return
+00068: PushVar(00000)
+00069: PushVar(00001)
+00070: PushVar(00002)
+00071: Pop
+00072: Apply
+00073: Apply
+00074:   Return
+00075: PushFn(00068, 00002)
+00076:   Return
+00077: PushFn(00075, 00001)
+00078:   Return
+00079: PushFn(00000, 00000)
+00080: PushFn(00047, 00000)
+00081: PushString("f")
+00082: PushFn(00055, 00000)
+00083: Apply
+00084: Apply
+00085: PushFn(00057, 00000)
+00086: PushString("r")
+00087: PushFn(00066, 00000)
+00088: Apply
+00089: Apply
+00090: PushFn(00077, 00000)
+00091: Apply
+00092: Apply
+00093: Apply
+
+Cons(Foo)
+
+---
+
+'foo = Foo, pop('r ~> { Cons(foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Error }) } }, { Error })
+
+(=
+  'foo
+  Foo)
+(pop
+  (~>
+    'r
+    {
+      (Cons
+        foo
+        r)})
+  (=>
+    'f
+    {
+      (=>
+        'x
+        {
+          (pop
+            x
+            (=>
+              'f
+              {
+                (=>
+                  'x
+                  {
+                    f})})
+            {
+              Error})})})
+  {
+    Error})
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "foo" )
+    "Foo" )
+  =>
+    ( ( ( =>
+            =>
+              =>
+                ( pop
+                  2
+                  1
+                  0)
+          ( ( =>
+                =>
+                  ~>
+                    0
+              "r" )
+            =>
+              ( ( "Cons"
+                  1 )
+                0 ) ) )
+        ( ( =>
+              =>
+                0
+            "f" )
+          =>
+            ( ( =>
+                  =>
+                    0
+                "x" )
+              =>
+                ( ( ( =>
+                        =>
+                          =>
+                            ( pop
+                              2
+                              1
+                              0)
+                      0 )
+                    ( ( =>
+                          =>
+                            0
+                        "f" )
+                      =>
+                        ( ( =>
+                              =>
+                                0
+                            "x" )
+                          =>
+                            1 ) ) )
+                  =>
+                    "Error" ) ) ) )
+      =>
+        "Error" ) )
+
+-- STRS:
+00000 -> foo
+00001 -> Foo
+00002 -> r
+00003 -> Cons
+00004 -> f
+00005 -> x
+00006 -> Error
+-- CODE:
+00000: PushString("Error")
+00001:   Return
+00002: PushString("Error")
+00003:   Return
+00004: PushVar(00001)
+00005:   Return
+00006: PushVar(00000)
+00007:   Return
+00008: PushFn(00006, 00000)
+00009:   Return
+00010: PushFn(00004, 00001)
+00011: PushString("x")
+00012: PushFn(00008, 00000)
+00013: Apply
+00014: Apply
+00015:   Return
+00016: PushVar(00000)
+00017:   Return
+00018: PushFn(00016, 00000)
+00019:   Return
+00020: PushVar(00000)
+00021: PushVar(00001)
+00022: PushVar(00002)
+00023: Pop
+00024: Apply
+00025: Apply
+00026:   Return
+00027: PushFn(00020, 00002)
+00028:   Return
+00029: PushFn(00027, 00001)
+00030:   Return
+00031: PushFn(00002, 00000)
+00032: PushFn(00010, 00000)
+00033: PushString("f")
+00034: PushFn(00018, 00000)
+00035: Apply
+00036: Apply
+00037: PushVar(00000)
+00038: PushFn(00029, 00000)
+00039: Apply
+00040: Apply
+00041: Apply
+00042:   Return
+00043: PushVar(00000)
+00044:   Return
+00045: PushFn(00043, 00000)
+00046:   Return
+00047: PushFn(00031, 00000)
+00048: PushString("x")
+00049: PushFn(00045, 00000)
+00050: Apply
+00051: Apply
+00052:   Return
+00053: PushVar(00000)
+00054:   Return
+00055: PushFn(00053, 00000)
+00056:   Return
+00057: PushVar(00000)
+00058: PushVar(00001)
+00059: PushString("Cons")
+00060: Apply
+00061: Apply
+00062:   Return
+00063: PushVar(00000)
+00064: Rec
+00065:   Return
+00066: PushFn(00063, 00000)
+00067:   Return
+00068: PushVar(00000)
+00069: PushVar(00001)
+00070: PushVar(00002)
+00071: Pop
+00072: Apply
+00073: Apply
+00074:   Return
+00075: PushFn(00068, 00002)
+00076:   Return
+00077: PushFn(00075, 00001)
+00078:   Return
+00079: PushFn(00000, 00000)
+00080: PushFn(00047, 00000)
+00081: PushString("f")
+00082: PushFn(00055, 00000)
+00083: Apply
+00084: Apply
+00085: PushFn(00057, 00001)
+00086: PushString("r")
+00087: PushFn(00066, 00000)
+00088: Apply
+00089: Apply
+00090: PushFn(00077, 00000)
+00091: Apply
+00092: Apply
+00093: Apply
+00094:   Return
+00095: PushVar(00001)
+00096: PushVar(00000)
+00097: Apply
+00098:   Return
+00099: PushFn(00095, 00001)
+00100:   Return
+00101: PushFn(00099, 00000)
+00102:   Return
+00103: PushFn(00079, 00000)
+00104: PushString("Foo")
+00105: PushString("foo")
+00106: PushFn(00101, 00000)
+00107: Apply
+00108: Apply
+00109: Apply
+
+Cons(Foo)
+
+---
+
+'f = ('f ~> { 'xs => { pop(xs, 'xs => { '_ => { f(xs) } }, { xs }) } }), f(Foo(Bar, Baz))
+
+(=
+  'f
+  (~>
+    'f
+    {
+      (=>
+        'xs
+        {
+          (pop
+            xs
+            (=>
+              'xs
+              {
+                (=>
+                  '_
+                  {
+                    (f
+                      xs)})})
+            {
+              xs})})}))
+(f
+  (Foo
+    Bar
+    Baz))
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "f" )
+    ( ( =>
+          =>
+            ~>
+              0
+        "f" )
+      =>
+        ( ( =>
+              =>
+                0
+            "xs" )
+          =>
+            ( ( ( =>
+                    =>
+                      =>
+                        ( pop
+                          2
+                          1
+                          0)
+                  0 )
+                ( ( =>
+                      =>
+                        0
+                    "xs" )
+                  =>
+                    ( ( =>
+                          =>
+                            0
+                        "_" )
+                      =>
+                        ( 3
+                          1 ) ) ) )
+              =>
+                1 ) ) ) )
+  =>
+    ( 0
+      ( ( "Foo"
+          "Bar" )
+        "Baz" ) ) )
+
+-- STRS:
+00000 -> f
+00001 -> xs
+00002 -> _
+00003 -> Foo
+00004 -> Bar
+00005 -> Baz
+-- CODE:
+00000: PushString("Baz")
+00001: PushString("Bar")
+00002: PushString("Foo")
+00003: Apply
+00004: Apply
+00005: PushVar(00000)
+00006: Apply
+00007:   Return
+00008: PushVar(00001)
+00009:   Return
+00010: PushVar(00001)
+00011: PushVar(00003)
+00012: Apply
+00013:   Return
+00014: PushVar(00000)
+00015:   Return
+00016: PushFn(00014, 00000)
+00017:   Return
+00018: PushFn(00010, 00003)
+00019: PushString("_")
+00020: PushFn(00016, 00000)
+00021: Apply
+00022: Apply
+00023:   Return
+00024: PushVar(00000)
+00025:   Return
+00026: PushFn(00024, 00000)
+00027:   Return
+00028: PushVar(00000)
+00029: PushVar(00001)
+00030: PushVar(00002)
+00031: Pop
+00032: Apply
+00033: Apply
+00034:   Return
+00035: PushFn(00028, 00002)
+00036:   Return
+00037: PushFn(00035, 00001)
+00038:   Return
+00039: PushFn(00008, 00001)
+00040: PushFn(00018, 00002)
+00041: PushString("xs")
+00042: PushFn(00026, 00000)
+00043: Apply
+00044: Apply
+00045: PushVar(00000)
+00046: PushFn(00037, 00000)
+00047: Apply
+00048: Apply
+00049: Apply
+00050:   Return
+00051: PushVar(00000)
+00052:   Return
+00053: PushFn(00051, 00000)
+00054:   Return
+00055: PushFn(00039, 00001)
+00056: PushString("xs")
+00057: PushFn(00053, 00000)
+00058: Apply
+00059: Apply
+00060:   Return
+00061: PushVar(00000)
+00062: Rec
+00063:   Return
+00064: PushFn(00061, 00000)
+00065:   Return
+00066: PushVar(00001)
+00067: PushVar(00000)
+00068: Apply
+00069:   Return
+00070: PushFn(00066, 00001)
+00071:   Return
+00072: PushFn(00070, 00000)
+00073:   Return
+00074: PushFn(00000, 00000)
+00075: PushFn(00055, 00000)
+00076: PushString("f")
+00077: PushFn(00064, 00000)
+00078: Apply
+00079: Apply
+00080: PushString("f")
+00081: PushFn(00072, 00000)
+00082: Apply
+00083: Apply
+00084: Apply
+
+Foo

@@ -672,225 +672,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_error_unmatched() {
-        let code = "{)}";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("')'"));
-        assert!(e.contains("line 1, col 2"));
-    }
-
-    #[test]
-    fn parse_error_infix_mismatch() {
-        let code = "a + b - c";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("all infix functions starting at line 1, col 3 to be named '+'"));
-        assert!(e.contains("'-' at line 1, col 7"));
-    }
-
-    #[test]
-    fn parse_error_missing_infix_arg() {
-        let code = "a +";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("infix argument after the function '+' at line 1, col 3"));
-    }
-
-    #[test]
-    fn parse_error_missing_infix_arg_in_call() {
-        let code = "f(a +)";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("infix argument after the function '+' at line 1, col 5"));
-    }
-
-    #[test]
-    fn parse_error_invalid_fn_args() {
-        for code in ["f(", "f(a"] {
-            let e = parse(code).unwrap_err();
-            eprintln!("'{code}': {e}");
-            assert!(e.contains("at line 1, col 2"));
-            assert!(e.contains("')'"));
-        }
-    }
-
-    #[test]
-    fn parse_error_fn_args_without_separators() {
-        let code = "f({a} {b}";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("',' or '\\n'"));
-        assert!(e.contains("'{' at line 1, col 7"));
-    }
-
-    #[test]
-    fn parse_error_fn_args_without_r_paren() {
-        let code = "{f(a}";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("'}' at line 1, col 5"));
-    }
-
-    #[test]
-    fn parse_error_invalid_group() {
-        for code in ["(", "(a", "({a} {b})", "({a}, {b})"] {
-            let e = parse(code).unwrap_err();
-            eprintln!("'{code}': {e}");
-            assert!(e.contains("'(' at line 1, col 1"));
-            assert!(e.contains("')'"));
-        }
-    }
-
-    #[test]
-    fn parse_error_keyword_as_value() {
-        let code = "a + keyword:";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("infix argument"));
-        assert!(e.contains("'keyword:' at line 1, col 5"));
-    }
-
-    #[test]
-    fn parse_error_double_keyword() {
-        let code = "foo: bar:";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("argument"));
-        assert!(e.contains("'bar:' at line 1, col 6"));
-    }
-
-    #[test]
-    fn parse_error_separator_as_value() {
-        let code = "a + ,";
-        let e = parse(code).unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("infix argument"));
-        assert!(e.contains("',' at line 1, col 5"));
-    }
-
-    #[test]
-    fn parse_error_list_without_closing_bracket() {
-        for code in ["x + {a, b", "x + {a, )"] {
-            let e = parse(code).unwrap_err();
-            eprintln!("'{code}': {e}");
-            assert!(e.contains("closed with '}'"));
-            assert!(e.contains("at line 1, col 5"));
-        }
-    }
-
-    #[test]
-    fn error_unbound_var() {
-        let code = "Foo(f(Bar))";
-        let e = parse(code).unwrap().compile().unwrap_err();
-        eprintln!("{e}");
-        assert!(e.contains("Unbound variable 'f' at line 1, col 5"));
-    }
-
-    #[test]
-    fn pretty_var() {
-        let code = "foo";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_string() {
-        let code = "Foo";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_binding() {
-        let code = "'foo";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_block() {
-        let code = "{ foo, Foo, 'foo }";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_prefix_call() {
-        let code = "f(g(), h(Bar), Baz)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_curried_prefix_call() {
-        let code = "f(g(x)(y)())";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_infix_call() {
-        let code = "f(x) foo g(y)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_grouped_infix_call() {
-        let code = "(a * b) + (c * d)";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_keyword_call() {
-        let code = "if: x == y do: { foo() } else: Bar";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty_grouped_keyword_call() {
-        let code = "if: x == y do: (foo: Bar baz: Qux) else: Bar";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn pretty() {
-        let code = "'foo = Foo
-
-'id = ('x => { x })
-
-f'('x, 'y) = {
-  match: Pair(x, y) with: Vec(
-    Pair('x, 'x) => { x }
-    Pair('x, 'y) => { Mismatch }
-    ' => { InvalidPair }
-  )
-}
-
-if: x == y do: { print(Equal) } else: { print(NotEqual) }
-
-'x = id(id(foo))
-
-if: x == Foo do: Pair(x, x) else: Error";
-        let parsed = parse(code).unwrap();
-        assert_eq!(code, parsed.to_string());
-    }
-
-    #[test]
-    fn eval_record() {
-        let code = "Foo(Bar, Baz)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo(Bar, Baz)");
-    }
-
-    #[test]
     fn eval_raw_app1() {
         // (\x.x) "Foo"
         let expr = Expr::App(
@@ -989,66 +770,6 @@ if: x == Foo do: Pair(x, x) else: Error";
     }
 
     #[test]
-    fn eval_fn_app1() {
-        let code = "('x => { Bar })(Foo)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Bar");
-    }
-
-    #[test]
-    fn eval_fn_app2() {
-        let code = "('x => { x })(Foo)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo");
-    }
-
-    #[test]
-    fn eval_fn_app3() {
-        let code = "('x => { 'y => { x } })(Foo, Bar)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo");
-    }
-
-    #[test]
-    fn eval_fn_app4() {
-        let code = "('x => { 'y => { 'z => { Vec(z, x, z) } } })(Foo, Bar, Baz)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
-    }
-
-    #[test]
-    fn eval_block1() {
-        let code = "'x = Foo, 'y = Bar, Pair(x, y)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Pair(Foo, Bar)");
-    }
-
-    #[test]
-    fn eval_block2() {
-        let code = "'f = ('x => { Foo(x) }), f(Bar)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo(Bar)");
-    }
-
-    #[test]
     fn eval_raw_if() {
         // if(Foo, Foo, { True }, { False })
         let t = abs(Expr::String(1));
@@ -1069,36 +790,6 @@ if: x == Foo do: Pair(x, x) else: Error";
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "True");
-    }
-
-    #[test]
-    fn eval_if1() {
-        let code = "if(Foo, Bar, { True }, { False })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "False");
-    }
-
-    #[test]
-    fn eval_if2() {
-        let code = "'f = ('x => { if(x, Bar, { True }, { False }) }), f(Bar)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "True");
-    }
-
-    #[test]
-    fn eval_if3() {
-        let code = "'f = ('x => { if(x, Foo, { True }, { False }) }), Pair(f(Foo), f(Bar))";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Pair(True, False)");
     }
 
     #[test]
@@ -1125,46 +816,6 @@ if: x == Foo do: Pair(x, x) else: Error";
     }
 
     #[test]
-    fn eval_pop1() {
-        let code = "pop(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Baz");
-    }
-
-    #[test]
-    fn eval_pop2() {
-        let code = "pop(Foo, 'f => { 'x => { x } }, { Error })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Error");
-    }
-
-    #[test]
-    fn eval_pop3() {
-        let code = "pop(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo(Bar)");
-    }
-
-    #[test]
-    fn eval_pop4() {
-        let code = "pop(Foo(Bar), 'f => { 'x => { f } }, { Error })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo");
-    }
-
-    #[test]
     fn eval_raw_pop_rec() {
         // pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { f } }, { Error })
         let foo_app_rec = Expr::Rec(Box::new(abs(app(
@@ -1188,76 +839,6 @@ if: x == Foo do: Pair(x, x) else: Error";
         println!("{bytecode}");
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Cons(Foo)");
-    }
-
-    #[test]
-    fn eval_pop_rec1() {
-        let code = "pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo(Bar)");
-    }
-
-    #[test]
-    fn eval_pop_rec2() {
-        let code = "pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo(Bar)");
-    }
-
-    #[test]
-    fn eval_pop_rec3() {
-        let code = "pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Error }) } }, { Error })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Cons(Foo)");
-    }
-
-    #[test]
-    fn eval_pop_rec4() {
-        let code = "'foo = Foo, pop('r ~> { Cons(foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Error }) } }, { Error })";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Cons(Foo)");
-    }
-
-    #[test]
-    fn eval_apply_rec1() {
-        let code = "'f = ('f ~> { Foo }), f(Bar)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo(Bar)");
-    }
-
-    #[test]
-    fn eval_apply_rec2() {
-        let code = "'f = ('f ~> { 'x => { Foo(x) } }), f(Bar)";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo(Bar)");
-    }
-
-    #[test]
-    fn eval_apply_rec3() {
-        let code = "'f = ('f ~> { 'xs => { pop(xs, 'xs => { '_ => { f(xs) } }, { xs }) } }), f(Foo(Bar, Baz))";
-        let parsed = parse(code).unwrap();
-        let bytecode = parsed.compile().unwrap();
-        println!("{bytecode}");
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo");
     }
 
     fn pretty_prg<'c>(prg: &Prg<'c>) -> String {
@@ -1377,8 +958,7 @@ if: x == Foo do: Pair(x, x) else: Error";
 
     const STAGES: [&str; 4] = ["parse", "desugar", "compile", "run"];
 
-    fn test_txt(path: PathBuf) -> Vec<Vec<Failure>> {
-        let overwrite = false;
+    fn test_txt(path: PathBuf, overwrite: bool) -> Vec<Vec<Failure>> {
         let test_sep = "\n\n---\n\n";
         let phase_sep = "\n\n";
 
@@ -1474,7 +1054,8 @@ if: x == Foo do: Pair(x, x) else: Error";
     }
 
     fn test(path: PathBuf) -> Result<(), String> {
-        report(test_txt(path))
+        let overwrite = false;
+        report(test_txt(path, overwrite))
     }
 
     #[test]
@@ -1493,18 +1074,33 @@ if: x == Foo do: Pair(x, x) else: Error";
     }
 
     #[test]
-    fn test_run_record() -> Result<(), String> {
-        test(PathBuf::from("tests/run_record.txt"))
+    fn test_run_apply() -> Result<(), String> {
+        test(PathBuf::from("tests/run_apply.txt"))
     }
 
     #[test]
-    fn test_run_apply_rec2() -> Result<(), String> {
-        test(PathBuf::from("tests/run_apply_rec2.txt"))
+    fn test_run_fn() -> Result<(), String> {
+        test(PathBuf::from("tests/run_fn.txt"))
     }
 
     #[test]
-    fn test_run_fn_app1() -> Result<(), String> {
-        test(PathBuf::from("tests/run_fn_app1.txt"))
+    fn test_run_block() -> Result<(), String> {
+        test(PathBuf::from("tests/run_block.txt"))
+    }
+
+    #[test]
+    fn test_run_if() -> Result<(), String> {
+        test(PathBuf::from("tests/run_if.txt"))
+    }
+
+    #[test]
+    fn test_run_pop() -> Result<(), String> {
+        test(PathBuf::from("tests/run_pop.txt"))
+    }
+
+    #[test]
+    fn test_run_rec() -> Result<(), String> {
+        test(PathBuf::from("tests/run_rec.txt"))
     }
 
     // #[test]

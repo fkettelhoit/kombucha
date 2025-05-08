@@ -1,0 +1,52 @@
+Foo(Bar, Baz)
+
+(Foo
+  Bar
+  Baz)
+
+( ( "Foo"
+    "Bar" )
+  "Baz" )
+
+-- STRS:
+00000 -> Foo
+00001 -> Bar
+00002 -> Baz
+-- CODE:
+00000: PushString("Baz")
+00001: PushString("Bar")
+00002: PushString("Foo")
+00003: Apply
+00004: Apply
+
+Foo(Bar, Baz)
+
+---
+
+Foo(Bar, Baz(Qux))
+
+(Foo
+  Bar
+  (Baz
+    Qux))
+
+( ( "Foo"
+    "Bar" )
+  ( "Baz"
+    "Qux" ) )
+
+-- STRS:
+00000 -> Foo
+00001 -> Bar
+00002 -> Baz
+00003 -> Qux
+-- CODE:
+00000: PushString("Qux")
+00001: PushString("Baz")
+00002: Apply
+00003: PushString("Bar")
+00004: PushString("Foo")
+00005: Apply
+00006: Apply
+
+Foo(Bar, Baz(Qux))
