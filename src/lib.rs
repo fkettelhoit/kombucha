@@ -70,7 +70,7 @@ enum Call<'code> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Prg<'code>(Vec<Ast<'code>>, &'code str);
+struct Prg<'code>(Vec<Ast<'code>>, &'code str);
 
 fn pos_at(i: usize, code: &str) -> String {
     let (mut line, mut col) = (1, 1);
@@ -84,7 +84,7 @@ fn pos_at(i: usize, code: &str) -> String {
     format!("line {line}, col {col}")
 }
 
-pub fn parse(code: &str) -> Result<Prg<'_>, String> {
+fn parse(code: &str) -> Result<Prg<'_>, String> {
     struct E<'c>(usize, Option<(usize, &'c str)>, _E<'c>);
     enum _E<'c> {
         RParen,
@@ -398,7 +398,7 @@ enum Op {
     If,
 }
 
-fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
+fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
     match expr {
         Expr::Var(v) => {
             ops.push(Op::PushVar(v));
@@ -410,37 +410,37 @@ fn compile(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
         }
         Expr::Abs(body) => {
             let mut f = vec![];
-            let captured = compile(*body, &mut f, fns);
+            let captured = compile_expr(*body, &mut f, fns);
             f.push(Op::Return);
             ops.push(Op::PushFn(fns.len(), captured));
             fns.extend(f);
             if captured == 0 { 0 } else { captured - 1 }
         }
         Expr::Rec(body) => {
-            let f = compile(*body, ops, fns);
+            let f = compile_expr(*body, ops, fns);
             ops.push(Op::Rec);
             f
         }
         Expr::App(f, arg) => {
-            let a = compile(*arg, ops, fns);
-            let b = compile(*f, ops, fns);
+            let a = compile_expr(*arg, ops, fns);
+            let b = compile_expr(*f, ops, fns);
             ops.push(Op::Apply);
             max(a, b)
         }
         Expr::Pop(v, t, f) => {
-            let f = compile(*f, ops, fns);
-            let t = compile(*t, ops, fns);
-            let v = compile(*v, ops, fns);
+            let f = compile_expr(*f, ops, fns);
+            let t = compile_expr(*t, ops, fns);
+            let v = compile_expr(*v, ops, fns);
             ops.push(Op::Pop);
             ops.push(Op::Apply);
             ops.push(Op::Apply);
             v.max(t).max(f)
         }
         Expr::If(a, b, t, f) => {
-            let f = compile(*f, ops, fns);
-            let t = compile(*t, ops, fns);
-            let b = compile(*b, ops, fns);
-            let a = compile(*a, ops, fns);
+            let f = compile_expr(*f, ops, fns);
+            let t = compile_expr(*t, ops, fns);
+            let b = compile_expr(*b, ops, fns);
+            let a = compile_expr(*a, ops, fns);
             ops.push(Op::If);
             ops.push(Op::Apply);
             a.max(b).max(t).max(f)
@@ -471,16 +471,19 @@ impl<'code> Vm<'code> {
     }
 }
 
-impl<'code> Prg<'code> {
-    pub fn compile(self) -> Result<Vm<'code>, String> {
-        let (expr, strings) = desugar(self)?;
-        let mut main = vec![];
-        let mut bytecode = vec![];
-        compile(expr, &mut main, &mut bytecode);
-        let start = bytecode.len();
-        bytecode.extend(main);
-        Ok(Vm::new(strings, bytecode, start))
-    }
+fn compile_prg<'code>(expr: Expr, strings: Vec<&'code str>) -> Vm<'code> {
+    let mut main = vec![];
+    let mut bytecode = vec![];
+    compile_expr(expr, &mut main, &mut bytecode);
+    let start = bytecode.len();
+    bytecode.extend(main);
+    Vm::new(strings, bytecode, start)
+}
+
+pub fn compile<'code>(code: &'code str) -> Result<Vm<'code>, String> {
+    let parsed = parse(code)?;
+    let (expr, strings) = desugar(parsed)?;
+    Ok(compile_prg(expr, strings))
 }
 
 #[derive(Debug, Clone)]
@@ -663,12 +666,8 @@ mod tests {
             Box::new(Expr::Abs(Box::new(Expr::Var(0)))),
             Box::new(Expr::String(0)),
         );
-        let mut ops = vec![];
-        let mut fns = vec![];
-        compile(expr, &mut ops, &mut fns);
-        let start = fns.len();
-        fns.extend(ops);
-        let bytecode = Vm::new(vec!["Foo"], fns, start);
+        let strings = vec!["Foo"];
+        let bytecode = compile_prg(expr, strings);
         println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Foo");
@@ -684,12 +683,8 @@ mod tests {
             )),
             Box::new(Expr::String(1)),
         );
-        let mut ops = vec![];
-        let mut fns = vec![];
-        compile(expr, &mut ops, &mut fns);
-        let start = fns.len();
-        fns.extend(ops);
-        let bytecode = Vm::new(vec!["Foo", "Bar"], fns, start);
+        let strings = vec!["Foo", "Bar"];
+        let bytecode = compile_prg(expr, strings);
         println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Bar");
@@ -719,12 +714,8 @@ mod tests {
             )),
             Box::new(Expr::String(2)),
         );
-        let mut ops = vec![];
-        let mut fns = vec![];
-        compile(expr, &mut ops, &mut fns);
-        let start = fns.len();
-        fns.extend(ops);
-        let bytecode = Vm::new(vec!["Foo", "Bar", "Baz", "Vec"], fns, start);
+        let strings = vec!["Foo", "Bar", "Baz", "Vec"];
+        let bytecode = compile_prg(expr, strings);
         println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
@@ -743,12 +734,8 @@ mod tests {
             )))),
             Box::new(Expr::String(2)),
         );
-        let mut ops = vec![];
-        let mut fns = vec![];
-        compile(expr, &mut ops, &mut fns);
-        let start = fns.len();
-        fns.extend(ops);
-        let bytecode = Vm::new(vec!["Foo", "Bar", "Baz"], fns, start);
+        let strings = vec!["Foo", "Bar", "Baz"];
+        let bytecode = compile_prg(expr, strings);
         println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Baz(Foo)");
@@ -766,12 +753,8 @@ mod tests {
             Box::new(Expr::Var(0)),
         )))));
         let expr = app(app(app(app(if_fn, Expr::String(0)), Expr::String(0)), t), f);
-        let mut ops = vec![];
-        let mut fns = vec![];
-        compile(expr, &mut ops, &mut fns);
-        let start = fns.len();
-        fns.extend(ops);
-        let bytecode = Vm::new(vec!["Foo", "True", "False"], fns, start);
+        let strings = vec!["Foo", "True", "False"];
+        let bytecode = compile_prg(expr, strings);
         println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "True");
@@ -789,12 +772,8 @@ mod tests {
             Box::new(Expr::Var(0)),
         ))));
         let expr = app(app(app(pop_fn, foo_bar), t), f);
-        let mut ops = vec![];
-        let mut fns = vec![];
-        compile(expr, &mut ops, &mut fns);
-        let start = fns.len();
-        fns.extend(ops);
-        let bytecode = Vm::new(vec!["Foo", "Bar", "Error"], fns, start);
+        let strings = vec!["Foo", "Bar", "Error"];
+        let bytecode = compile_prg(expr, strings);
         println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Bar");
@@ -815,12 +794,8 @@ mod tests {
             Box::new(Expr::Var(0)),
         ))));
         let expr = app(app(app(pop_fn, foo_app_rec), t), f);
-        let mut ops = vec![];
-        let mut fns = vec![];
-        compile(expr, &mut ops, &mut fns);
-        let start = fns.len();
-        fns.extend(ops);
-        let bytecode = Vm::new(vec!["Cons", "Foo", "Error"], fns, start);
+        let strings = vec!["Cons", "Foo", "Error"];
+        let bytecode = compile_prg(expr, strings);
         println!("{}", pretty_bytecode(&bytecode));
         let v = bytecode.run().unwrap();
         assert_eq!(v.to_string(), "Cons(Foo)");
@@ -970,15 +945,11 @@ mod tests {
                         Err(e) => actual.push(e),
                         Ok((expr, strs)) => {
                             actual.push(pretty_expr(&expr, &strs));
-                            match parsed.compile() {
-                                Err(e) => actual.push(e),
-                                Ok(vm) => {
-                                    actual.push(pretty_bytecode(&vm));
-                                    match vm.run() {
-                                        Err(e) => actual.push(format!("Error at op {e}")),
-                                        Ok(v) => actual.push(v),
-                                    }
-                                }
+                            let vm = compile_prg(expr, strs);
+                            actual.push(pretty_bytecode(&vm));
+                            match vm.run() {
+                                Err(e) => actual.push(format!("Error at op {e}")),
+                                Ok(v) => actual.push(v),
                             }
                         }
                     }
@@ -1039,8 +1010,8 @@ mod tests {
     }
 
     fn test(path: PathBuf) -> Result<(), String> {
-        let overwrite = false;
-        report(test_txt(path, overwrite))
+        let overwrite_tests = false;
+        report(test_txt(path, overwrite_tests))
     }
 
     #[test]
