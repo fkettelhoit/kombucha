@@ -521,11 +521,8 @@ impl Vm<'_> {
             },
             Op::Apply => {
                 let (f, mut arg) = (temps.pop()?, temps.pop()?);
-                if let V::Fn(c, v, f) = arg {
-                    // TODO: is there a case where an arg could not have f == frames.len()?
-                    if f == frames.len() {
-                        arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
-                    }
+                if let V::Fn(c, v, _) = arg {
+                    arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
                 }
                 match (f, arg) {
                     (V::Recursive(c, captured), arg) => {
@@ -560,12 +557,10 @@ impl Vm<'_> {
                     (Some(V::Fn(c, _, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
                         let _f = temps.pop();
                         let mut arg = temps.pop()?;
-                        if let V::Fn(c, v, f) = arg {
-                            if f == frames.len() {
-                                let max_var = vars.len() - args;
-                                let captured = Rc::new(vars[max_var - v..max_var].to_vec());
-                                arg = V::Closure(c, captured);
-                            }
+                        if let V::Fn(c, v, _) = arg {
+                            let max_var = vars.len() - args;
+                            let captured = Rc::new(vars[max_var - v..max_var].to_vec());
+                            arg = V::Closure(c, captured);
                         }
                         frames.push((args + 1, ret + 1));
                         vars.push(arg);
