@@ -14,11 +14,6 @@
       "Bar" )
   "Foo" )
 
--- STRS:
-00000 -> x
-00001 -> Bar
-00002 -> Foo
--- CODE:
 00000: PushString("Bar")
 00001:   Return
 00002: PushVar(00000)
@@ -53,10 +48,6 @@ Bar
       0 )
   "Foo" )
 
--- STRS:
-00000 -> x
-00001 -> Foo
--- CODE:
 00000: PushVar(00000)
 00001:   Return
 00002: PushVar(00000)
@@ -101,12 +92,6 @@ Foo
     "Foo" )
   "Bar" )
 
--- STRS:
-00000 -> x
-00001 -> y
-00002 -> Foo
-00003 -> Bar
--- CODE:
 00000: PushVar(00001)
 00001:   Return
 00002: PushVar(00000)
@@ -179,15 +164,6 @@ Foo
     "Bar" )
   "Baz" )
 
--- STRS:
-00000 -> x
-00001 -> y
-00002 -> z
-00003 -> Vec
-00004 -> Foo
-00005 -> Bar
-00006 -> Baz
--- CODE:
 00000: PushVar(00000)
 00001: PushVar(00002)
 00002: PushVar(00000)

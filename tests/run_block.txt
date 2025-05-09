@@ -30,13 +30,6 @@
             1 )
           0 ) ) )
 
--- STRS:
-00000 -> x
-00001 -> Foo
-00002 -> y
-00003 -> Bar
-00004 -> Pair
--- CODE:
 00000: PushVar(00000)
 00001: PushVar(00001)
 00002: PushString("Pair")
@@ -108,12 +101,6 @@ Pair(Foo, Bar)
     ( 0
       "Bar" ) )
 
--- STRS:
-00000 -> f
-00001 -> x
-00002 -> Foo
-00003 -> Bar
--- CODE:
 00000: PushString("Bar")
 00001: PushVar(00000)
 00002: Apply

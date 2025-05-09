@@ -24,12 +24,6 @@ if(Foo, Bar, { True }, { False })
   =>
     "False" )
 
--- STRS:
-00000 -> Foo
-00001 -> Bar
-00002 -> True
-00003 -> False
--- CODE:
 00000: PushString("False")
 00001:   Return
 00002: PushString("True")
@@ -108,13 +102,6 @@ False
     ( 0
       "Bar" ) )
 
--- STRS:
-00000 -> f
-00001 -> x
-00002 -> Bar
-00003 -> True
-00004 -> False
--- CODE:
 00000: PushString("Bar")
 00001: PushVar(00000)
 00002: Apply
@@ -227,15 +214,6 @@ True
       ( 0
         "Bar" ) ) )
 
--- STRS:
-00000 -> f
-00001 -> x
-00002 -> Foo
-00003 -> True
-00004 -> False
-00005 -> Pair
-00006 -> Bar
--- CODE:
 00000: PushString("Bar")
 00001: PushVar(00000)
 00002: Apply

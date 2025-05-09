@@ -38,14 +38,6 @@ pop(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })
   =>
     "Error" )
 
--- STRS:
-00000 -> Foo
-00001 -> Bar
-00002 -> Baz
-00003 -> f
-00004 -> x
-00005 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushVar(00000)
@@ -131,12 +123,6 @@ pop(Foo, 'f => { 'x => { x } }, { Error })
   =>
     "Error" )
 
--- STRS:
-00000 -> Foo
-00001 -> f
-00002 -> x
-00003 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushVar(00000)
@@ -222,14 +208,6 @@ pop(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
   =>
     "Error" )
 
--- STRS:
-00000 -> Foo
-00001 -> Bar
-00002 -> Baz
-00003 -> f
-00004 -> x
-00005 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushVar(00001)
@@ -317,13 +295,6 @@ pop(Foo(Bar), 'f => { 'x => { f } }, { Error })
   =>
     "Error" )
 
--- STRS:
-00000 -> Foo
-00001 -> Bar
-00002 -> f
-00003 -> x
-00004 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushVar(00001)

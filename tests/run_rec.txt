@@ -26,11 +26,6 @@
     ( 0
       "Bar" ) )
 
--- STRS:
-00000 -> f
-00001 -> Foo
-00002 -> Bar
--- CODE:
 00000: PushString("Bar")
 00001: PushVar(00000)
 00002: Apply
@@ -104,12 +99,6 @@ Foo(Bar)
     ( 0
       "Bar" ) )
 
--- STRS:
-00000 -> f
-00001 -> x
-00002 -> Foo
-00003 -> Bar
--- CODE:
 00000: PushString("Bar")
 00001: PushVar(00000)
 00002: Apply
@@ -206,14 +195,6 @@ pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })
   =>
     "Error" )
 
--- STRS:
-00000 -> r
-00001 -> Foo
-00002 -> Bar
-00003 -> f
-00004 -> x
-00005 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushVar(00001)
@@ -321,15 +302,6 @@ pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
   =>
     "Error" )
 
--- STRS:
-00000 -> r
-00001 -> Foo
-00002 -> Bar
-00003 -> Baz
-00004 -> f
-00005 -> x
-00006 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushVar(00001)
@@ -467,14 +439,6 @@ pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Erro
   =>
     "Error" )
 
--- STRS:
-00000 -> r
-00001 -> Cons
-00002 -> Foo
-00003 -> f
-00004 -> x
-00005 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushString("Error")
@@ -664,15 +628,6 @@ Cons(Foo)
       =>
         "Error" ) )
 
--- STRS:
-00000 -> foo
-00001 -> Foo
-00002 -> r
-00003 -> Cons
-00004 -> f
-00005 -> x
-00006 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushString("Error")
@@ -860,14 +815,6 @@ Cons(Foo)
           "Bar" )
         "Baz" ) ) )
 
--- STRS:
-00000 -> f
-00001 -> xs
-00002 -> _
-00003 -> Foo
-00004 -> Bar
-00005 -> Baz
--- CODE:
 00000: PushString("Baz")
 00001: PushString("Bar")
 00002: PushString("Foo")
@@ -1033,16 +980,6 @@ Foo
               =>
                 "Error" ) ) ) ) )
 
--- STRS:
-00000 -> foo
-00001 -> Foo
-00002 -> bar
-00003 -> Bar
-00004 -> r
-00005 -> f
-00006 -> x
-00007 -> Error
--- CODE:
 00000: PushString("Error")
 00001:   Return
 00002: PushVar(00001)

@@ -886,11 +886,6 @@ mod tests {
 
     fn pretty_bytecode(vm: &Vm) -> String {
         let mut buf = String::new();
-        buf.push_str("-- STRS:\n");
-        for (i, str) in vm.strings.iter().enumerate() {
-            buf.push_str(&format!("{i:05} -> {str}\n"));
-        }
-        buf.push_str("-- CODE:\n");
         for (i, op) in vm.bytecode.iter().enumerate() {
             match op {
                 Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),

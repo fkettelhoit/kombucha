@@ -8,11 +8,6 @@ Foo(Bar, Baz)
     "Bar" )
   "Baz" )
 
--- STRS:
-00000 -> Foo
-00001 -> Bar
-00002 -> Baz
--- CODE:
 00000: PushString("Baz")
 00001: PushString("Bar")
 00002: PushString("Foo")
@@ -35,12 +30,6 @@ Foo(Bar, Baz(Qux))
   ( "Baz"
     "Qux" ) )
 
--- STRS:
-00000 -> Foo
-00001 -> Bar
-00002 -> Baz
-00003 -> Qux
--- CODE:
 00000: PushString("Qux")
 00001: PushString("Baz")
 00002: Apply
