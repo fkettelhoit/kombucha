@@ -527,20 +527,20 @@ impl Vm<'_> {
                 match (f, arg) {
                     (V::Recursive(c, captured), arg) => {
                         temps.push(arg);
-                        frames.push((captured.len() + 1, self.ip - 1));
+                        frames.push((vars.len(), self.ip - 1));
                         vars.extend(captured.iter().cloned());
                         vars.push(V::Recursive(c, captured));
                         self.ip = c;
                     }
                     (V::Closure(c, captured), arg) => {
                         // TODO: if the next op is an Op::Return, we might want to do TCO
-                        frames.push((captured.len() + 1, self.ip));
+                        frames.push((vars.len(), self.ip));
                         vars.extend(captured.iter().cloned());
                         vars.push(arg);
                         self.ip = c;
                     }
                     (V::Fn(c, _, _), arg) => {
-                        frames.push((1, self.ip));
+                        frames.push((vars.len(), self.ip));
                         vars.push(arg);
                         self.ip = c;
                     }
@@ -552,35 +552,34 @@ impl Vm<'_> {
                 }
             }
             Op::Return => {
-                let (args, ret) = frames.pop()?;
+                let (frame, ret) = frames.pop()?;
                 match (temps.last().cloned(), self.bytecode.get(ret)) {
                     (Some(V::Fn(c, _, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
                         let _f = temps.pop();
                         let mut arg = temps.pop()?;
                         if let V::Fn(c, v, _) = arg {
-                            let max_var = vars.len() - args;
-                            let captured = Rc::new(vars[max_var - v..max_var].to_vec());
+                            let captured = Rc::new(vars[frame - v..frame].to_vec());
                             arg = V::Closure(c, captured);
                         }
-                        frames.push((args + 1, ret + 1));
+                        frames.push((frame, ret + 1));
                         vars.push(arg);
                         self.ip = c;
                     }
                     (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
                         let _f = temps.pop();
                         temps.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
-                        vars.truncate(vars.len() - args);
+                        vars.truncate(frame);
                         self.ip = ret
                     }
                     _ => {
-                        vars.truncate(vars.len() - args);
+                        vars.truncate(frame);
                         self.ip = ret
                     }
                 }
             }
             Op::Pop => match temps.pop()? {
                 V::Recursive(c, captured) => {
-                    frames.push((captured.len() + 1, self.ip - 1));
+                    frames.push((vars.len(), self.ip - 1));
                     vars.extend(captured.iter().cloned());
                     vars.push(V::Recursive(c, captured));
                     self.ip = c;
@@ -653,6 +652,8 @@ mod tests {
     use std::{fs, io::Write, path::PathBuf};
 
     use super::*;
+
+    const OVERWRITE_TESTS: bool = false;
 
     #[test]
     fn eval_raw_app1() {
@@ -1005,8 +1006,10 @@ mod tests {
     }
 
     fn test(path: PathBuf) -> Result<(), String> {
-        let overwrite_tests = false;
-        report(test_txt(path, overwrite_tests))
+        if OVERWRITE_TESTS {
+            let _ = test_txt(path.clone(), OVERWRITE_TESTS);
+        }
+        report(test_txt(path, OVERWRITE_TESTS))
     }
 
     #[test]
