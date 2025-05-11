@@ -903,7 +903,7 @@ mod tests {
 
     const STAGES: [&str; 4] = ["parse", "desugar", "compile", "run"];
     const TEST_SEP: &str = "\n\n---\n\n";
-    const PHASE_SEP: &str = "\n\n";
+    const STAGE_SEP: &str = "\n\n";
     const OVERWRITE_TESTS: bool = false;
 
     fn parse_tests(path: PathBuf) -> Result<Vec<(String, Vec<String>)>, String> {
@@ -912,9 +912,9 @@ mod tests {
         Ok(tests
             .split(TEST_SEP)
             .map(|t| {
-                let mut phases = t.split(PHASE_SEP).map(|p| p.to_string());
-                let code = phases.next().unwrap_or_default();
-                (code, phases.collect())
+                let mut stages = t.split(STAGE_SEP).map(|p| p.to_string());
+                let code = stages.next().unwrap_or_default();
+                (code, stages.collect())
             })
             .collect())
     }
@@ -944,9 +944,9 @@ mod tests {
     fn report(mut p: PathBuf, res: Vec<(String, Vec<String>, Vec<String>)>) -> Result<(), String> {
         let mut failed = vec![vec![]; STAGES.len()];
         for (code, expected, actual) in res.iter() {
-            for (phase, (expected, actual)) in expected.iter().zip(actual.iter()).enumerate() {
+            for (stage, (expected, actual)) in expected.iter().zip(actual.iter()).enumerate() {
                 if expected != actual {
-                    failed[phase].push(Failure {
+                    failed[stage].push(Failure {
                         code: code.clone(),
                         expected: expected.clone(),
                         actual: actual.clone(),
@@ -969,7 +969,7 @@ mod tests {
                 once(c)
                     .chain(actual.iter().cloned().take(expected.len()))
                     .collect::<Vec<_>>()
-                    .join(PHASE_SEP)
+                    .join(STAGE_SEP)
             })
             .collect::<Vec<_>>()
             .join(TEST_SEP);
