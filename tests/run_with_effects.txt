@@ -7,7 +7,49 @@ print!(Foo)
   "Foo" )
 
 00000: PushString("Foo")
-00001: PushEffect(00000)
+00001: PushEffect("print")
 00002: Apply
 
-Foo
+"Foo"
+Nil
+
+---
+
+print!(Foo), print!(Bar), print!(FooBar)
+
+(print!
+  Foo)
+(print!
+  Bar)
+(print!
+  FooBar)
+
+( =>
+    ( =>
+        ( print!
+          "FooBar" )
+      ( print!
+        "Bar" ) )
+  ( print!
+    "Foo" ) )
+
+00000: PushString("FooBar")
+00001: PushEffect("print")
+00002: Apply
+00003:   Return
+00004: PushString("Bar")
+00005: PushEffect("print")
+00006: Apply
+00007: PushFn(00000, 00000)
+00008: Apply
+00009:   Return
+00010: PushString("Foo")
+00011: PushEffect("print")
+00012: Apply
+00013: PushFn(00004, 00000)
+00014: Apply
+
+"Foo"
+"Bar"
+"FooBar"
+Nil

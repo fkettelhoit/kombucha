@@ -523,14 +523,43 @@ fn pretty(v: &V, strs: &[&str]) -> String {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum VmState {
-    Done(V),
-    Effect(usize, V),
+#[derive(Debug)]
+pub enum VmState<'c> {
+    Done(V, Vec<&'c str>),
+    Resumable(Resumable<'c>, V),
 }
 
-impl Vm<'_> {
-    pub fn run(&mut self) -> Result<VmState, usize> {
+#[derive(Debug)]
+pub struct Resumable<'c>(Vm<'c>, usize);
+
+impl<'c> Resumable<'c> {
+    pub fn strings(&self) -> &[&str] {
+        &self.0.strings
+    }
+
+    pub fn get_effect_name(&self) -> Option<&str> {
+        let Resumable(vm, eff) = self;
+        vm.strings.get(*eff).copied()
+    }
+
+    pub fn intern_string(&mut self, s: &'c str) -> V {
+        let Resumable(vm, _) = self;
+        let s = vm.strings.iter().position(|x| *x == s).unwrap_or_else(|| {
+            vm.strings.push(s);
+            vm.strings.len() - 1
+        });
+        V::String(s)
+    }
+
+    pub fn run(self, arg: V) -> Result<VmState<'c>, usize> {
+        let Resumable(mut vm, _) = self;
+        vm.temps.push(arg);
+        vm.run()
+    }
+}
+
+impl<'c> Vm<'c> {
+    pub fn run(mut self) -> Result<VmState<'c>, usize> {
         let vars = &mut self.vars;
         let temps = &mut self.temps;
         let frames = &mut self.frames;
@@ -565,7 +594,9 @@ impl Vm<'_> {
                         arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
                     }
                     match (f, arg) {
-                        (V::Effect(eff), arg) => return Ok(VmState::Effect(eff, arg)),
+                        (V::Effect(eff), arg) => {
+                            return Ok(VmState::Resumable(Resumable(self, eff), arg));
+                        }
                         (V::Recursive(c, captured), arg) => {
                             temps.push(arg);
                             frames.push((vars.len(), self.ip - 1));
@@ -667,7 +698,10 @@ impl Vm<'_> {
                 }
             }
         }
-        Ok(VmState::Done(self.temps.pop().ok_or(self.ip)?))
+        Ok(VmState::Done(
+            self.temps.pop().ok_or(self.ip)?,
+            self.strings,
+        ))
     }
 }
 
@@ -895,6 +929,10 @@ mod tests {
                     Some(s) => buf.push_str(&format!("{i:05}: PushString(\"{s}\")\n")),
                     None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
                 },
+                Op::PushEffect(s) => match vm.strings.get(*s) {
+                    Some(s) => buf.push_str(&format!("{i:05}: PushEffect(\"{s}\")\n")),
+                    None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+                },
                 _ => buf.push_str(&format!("{i:05}: {op:05?}\n")),
             }
         }
@@ -902,11 +940,13 @@ mod tests {
     }
 
     fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
-        let mut bytecode = compile_prg(expr, strings.clone());
+        let bytecode = compile_prg(expr, strings.clone());
         println!("{}", pretty_bytecode(&bytecode));
         match bytecode.run() {
-            Ok(VmState::Done(v)) => Ok(pretty(&v, &strings)),
-            Ok(VmState::Effect(e, arg)) => Err(format!("Effect {e} with {arg:?}")),
+            Ok(VmState::Done(v, strs)) => Ok(pretty(&v, &strs)),
+            Ok(VmState::Resumable(res, arg)) => {
+                Err(format!("Effect {:?} with {arg:?}", res.get_effect_name()))
+            }
             Err(e) => Err(format!("Error at op {e}")),
         }
     }
@@ -1021,10 +1061,12 @@ mod tests {
         let mut results = vec![];
         for (code, expected) in tests {
             let (mut actual, compiled) = test_without_run(&code);
-            for mut vm in compiled {
+            for vm in compiled {
                 match vm.run() {
-                    Ok(VmState::Done(v)) => actual.push(pretty(&v, &vm.strings)),
-                    Ok(VmState::Effect(e, arg)) => actual.push(format!("Effect {e} with {arg:?}")),
+                    Ok(VmState::Done(v, strs)) => actual.push(pretty(&v, &strs)),
+                    Ok(VmState::Resumable(res, arg)) => {
+                        actual.push(format!("Effect {:?} with {arg:?}", res.get_effect_name()))
+                    }
                     Err(e) => actual.push(format!("Error at op {e}")),
                 }
             }
@@ -1085,22 +1127,28 @@ mod tests {
         let mut results = vec![];
         for (code, expected) in tests {
             let (mut actual, compiled) = test_without_run(&code);
-            for mut vm in compiled {
+            for vm in compiled {
                 let mut printed = vec![];
-                match vm.run() {
-                    Ok(VmState::Done(v)) => actual.push(pretty(&v, &vm.strings)),
-                    Ok(VmState::Effect(eff, arg)) => {
-                        let arg = pretty(&arg, &vm.strings);
-                        match vm.strings.get(eff).copied() {
-                            Some(eff) if eff == "print" => {
-                                printed.push(arg);
-                                actual.push(String::new());
+                let mut result = vm.run();
+                let nil = "Nil";
+                loop {
+                    match result {
+                        Ok(VmState::Resumable(mut res, arg)) => {
+                            let arg = pretty(&arg, res.strings());
+                            match res.get_effect_name() {
+                                Some(eff) if eff == "print" => {
+                                    printed.push(format!("\"{arg}\"\n"));
+                                    let nil = res.intern_string(nil);
+                                    result = res.run(nil);
+                                }
+                                name => break actual.push(format!("Effect {name:?} with {arg}")),
                             }
-                            Some(eff) => actual.push(format!("Effect {eff} with {arg}")),
-                            None => actual.push(format!("Unknown effect {eff} with {arg}")),
                         }
+                        Ok(VmState::Done(v, strs)) => {
+                            break actual.push(printed.join("") + &pretty(&v, &strs));
+                        }
+                        Err(e) => break actual.push(format!("Error at op {e}")),
                     }
-                    Err(e) => actual.push(format!("Error at op {e}")),
                 }
             }
             results.push((code, expected, actual));
