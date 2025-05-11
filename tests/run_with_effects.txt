@@ -1,0 +1,13 @@
+print!(Foo)
+
+(print!
+  Foo)
+
+( print!
+  "Foo" )
+
+00000: PushString("Foo")
+00001: PushEffect(00000)
+00002: Apply
+
+Foo

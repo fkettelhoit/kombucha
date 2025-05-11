@@ -276,6 +276,7 @@ impl std::fmt::Display for Prg<'_> {
 enum Expr {
     Var(usize),
     String(usize),
+    Effect(usize),
     Abs(Box<Expr>),
     Rec(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
@@ -313,6 +314,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
     }
     fn desugar<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
         match ast {
+            A::Var(v) if v.ends_with("!") => Ok(Expr::Effect(resolve_str(&v[..v.len() - 1], ctx))),
             A::Var(v) => match resolve_var(v, ctx) {
                 Some(v) => Ok(Expr::Var(v)),
                 None if v == "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
@@ -390,6 +392,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
 enum Op {
     PushVar(usize),
     PushString(usize),
+    PushEffect(usize),
     PushFn(usize, usize),
     Rec,
     Apply,
@@ -406,6 +409,10 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
         }
         Expr::String(s) => {
             ops.push(Op::PushString(s));
+            0
+        }
+        Expr::Effect(e) => {
+            ops.push(Op::PushEffect(e));
             0
         }
         Expr::Abs(body) => {
@@ -483,167 +490,184 @@ fn compile_prg<'code>(expr: Expr, strings: Vec<&'code str>) -> Vm<'code> {
 pub fn compile<'code>(code: &'code str) -> Result<Vm<'code>, String> {
     let parsed = parse(code)?;
     let (expr, strings) = desugar(parsed)?;
-    Ok(compile_prg(expr, strings))
+    Ok(compile_prg(expr, strings.clone()))
 }
 
 #[derive(Debug, Clone)]
 pub enum V {
     Fn(usize, usize, usize),
     String(usize),
+    Effect(usize),
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
     Recursive(usize, Rc<Vec<V>>),
 }
 
+fn pretty(v: &V, strs: &[&str]) -> String {
+    match v {
+        V::String(s) => strs[*s].to_string(),
+        V::Effect(eff) => format!("{}!", strs[*eff]),
+        V::Fn(c, v, frame) => format!("{c}(captured:{v},frame:{frame})"),
+        V::Closure(c, vs) => {
+            let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+            format!("{c} [{}]", closed.join(", "))
+        }
+        V::Record(s, vs) => {
+            let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+            format!("{}({})", pretty(&V::String(*s), strs), items.join(", "))
+        }
+        V::Recursive(c, vs) => {
+            let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+            format!("~>{c} [{}]", closed.join(", "))
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum VmState {
+    Done(V),
+    Effect(usize, V),
+}
+
 impl Vm<'_> {
-    fn eval_op(&mut self, op: Op) -> Option<()> {
+    pub fn run(&mut self) -> Result<VmState, usize> {
         let vars = &mut self.vars;
         let temps = &mut self.temps;
         let frames = &mut self.frames;
-        self.ip += 1;
-        match op {
-            Op::PushVar(v) => {
-                let v: &V = &vars[vars.len() - 1 - v];
-                temps.push(v.clone());
+        while let Some(op) = self.bytecode.get(self.ip).copied() {
+            let i = self.ip;
+            if cfg!(test) {
+                println!("==> {i}: {op:?}");
             }
-            Op::PushString(s) => temps.push(V::String(s)),
-            Op::PushFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
-            Op::Rec => match temps.pop()? {
-                V::Fn(c, v, _) => {
-                    // TODO: does the frame not matter here? is it always safe to create a closure?
-                    let captured = vars[vars.len() - v..].to_vec();
-                    temps.push(V::Recursive(c, Rc::new(captured)));
+            self.ip += 1;
+            match op {
+                Op::PushVar(v) => {
+                    let v: &V = &vars[vars.len() - 1 - v];
+                    temps.push(v.clone());
                 }
-                V::Closure(c, captured) => {
-                    temps.push(V::Recursive(c, captured));
+                Op::PushString(s) => temps.push(V::String(s)),
+                Op::PushEffect(eff) => temps.push(V::Effect(eff)),
+                Op::PushFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
+                Op::Rec => match temps.pop().ok_or(i)? {
+                    V::Fn(c, v, _) => {
+                        // TODO: does the frame not matter here? is it always safe to create a closure?
+                        let captured = vars[vars.len() - v..].to_vec();
+                        temps.push(V::Recursive(c, Rc::new(captured)));
+                    }
+                    V::Closure(c, captured) => {
+                        temps.push(V::Recursive(c, captured));
+                    }
+                    v => temps.push(v),
+                },
+                Op::Apply => {
+                    let (f, mut arg) = (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?);
+                    if let V::Fn(c, v, _) = arg {
+                        arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
+                    }
+                    match (f, arg) {
+                        (V::Effect(eff), arg) => return Ok(VmState::Effect(eff, arg)),
+                        (V::Recursive(c, captured), arg) => {
+                            temps.push(arg);
+                            frames.push((vars.len(), self.ip - 1));
+                            vars.extend(captured.iter().cloned());
+                            vars.push(V::Recursive(c, captured));
+                            self.ip = c;
+                        }
+                        (V::Closure(c, captured), arg) => {
+                            // TODO: if the next op is an Op::Return, we might want to do TCO
+                            frames.push((vars.len(), self.ip));
+                            vars.extend(captured.iter().cloned());
+                            vars.push(arg);
+                            self.ip = c;
+                        }
+                        (V::Fn(c, _, _), arg) => {
+                            frames.push((vars.len(), self.ip));
+                            vars.push(arg);
+                            self.ip = c;
+                        }
+                        (V::String(s), arg) => temps.push(V::Record(s, vec![Rc::new(arg)])),
+                        (V::Record(s, mut items), arg) => {
+                            items.push(Rc::new(arg));
+                            temps.push(V::Record(s, items))
+                        }
+                    }
                 }
-                v => temps.push(v),
-            },
-            Op::Apply => {
-                let (f, mut arg) = (temps.pop()?, temps.pop()?);
-                if let V::Fn(c, v, _) = arg {
-                    arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
+                Op::Return => {
+                    let (frame, ret) = frames.pop().ok_or(i)?;
+                    match (temps.last().cloned(), self.bytecode.get(ret)) {
+                        (Some(V::Fn(c, _, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
+                            let _f = temps.pop();
+                            let mut arg = temps.pop().ok_or(i)?;
+                            if let V::Fn(c, v, _) = arg {
+                                let captured = Rc::new(vars[frame - v..frame].to_vec());
+                                arg = V::Closure(c, captured);
+                            }
+                            frames.push((frame, ret + 1));
+                            vars.push(arg);
+                            self.ip = c;
+                        }
+                        (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
+                            let _f = temps.pop();
+                            temps.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
+                            vars.truncate(frame);
+                            self.ip = ret
+                        }
+                        _ => {
+                            vars.truncate(frame);
+                            self.ip = ret
+                        }
+                    }
                 }
-                match (f, arg) {
-                    (V::Recursive(c, captured), arg) => {
-                        temps.push(arg);
+                Op::Pop => match temps.pop().ok_or(i)? {
+                    V::Recursive(c, captured) => {
                         frames.push((vars.len(), self.ip - 1));
                         vars.extend(captured.iter().cloned());
                         vars.push(V::Recursive(c, captured));
                         self.ip = c;
                     }
-                    (V::Closure(c, captured), arg) => {
-                        // TODO: if the next op is an Op::Return, we might want to do TCO
-                        frames.push((vars.len(), self.ip));
-                        vars.extend(captured.iter().cloned());
-                        vars.push(arg);
-                        self.ip = c;
-                    }
-                    (V::Fn(c, _, _), arg) => {
-                        frames.push((vars.len(), self.ip));
-                        vars.push(arg);
-                        self.ip = c;
-                    }
-                    (V::String(s), arg) => temps.push(V::Record(s, vec![Rc::new(arg)])),
-                    (V::Record(s, mut items), arg) => {
-                        items.push(Rc::new(arg));
-                        temps.push(V::Record(s, items))
-                    }
-                }
-            }
-            Op::Return => {
-                let (frame, ret) = frames.pop()?;
-                match (temps.last().cloned(), self.bytecode.get(ret)) {
-                    (Some(V::Fn(c, _, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
-                        let _f = temps.pop();
-                        let mut arg = temps.pop()?;
-                        if let V::Fn(c, v, _) = arg {
-                            let captured = Rc::new(vars[frame - v..frame].to_vec());
-                            arg = V::Closure(c, captured);
+                    v => match (v, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
+                        (V::Record(f, mut xs), t, _) => {
+                            let x = xs.pop().ok_or(i)?;
+                            temps.push(x.as_ref().clone());
+                            temps.push(if xs.is_empty() {
+                                V::String(f)
+                            } else {
+                                V::Record(f, xs)
+                            });
+                            temps.push(t);
                         }
-                        frames.push((frame, ret + 1));
-                        vars.push(arg);
-                        self.ip = c;
-                    }
-                    (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
-                        let _f = temps.pop();
-                        temps.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
-                        vars.truncate(frame);
-                        self.ip = ret
-                    }
-                    _ => {
-                        vars.truncate(frame);
-                        self.ip = ret
-                    }
-                }
-            }
-            Op::Pop => match temps.pop()? {
-                V::Recursive(c, captured) => {
-                    frames.push((vars.len(), self.ip - 1));
-                    vars.extend(captured.iter().cloned());
-                    vars.push(V::Recursive(c, captured));
-                    self.ip = c;
-                }
-                v => match (v, temps.pop()?, temps.pop()?) {
-                    (V::Record(f, mut xs), t, _) => {
-                        let x = xs.pop()?;
-                        temps.push(x.as_ref().clone());
-                        temps.push(if xs.is_empty() {
-                            V::String(f)
-                        } else {
-                            V::Record(f, xs)
-                        });
-                        temps.push(t);
-                    }
-                    (_, _, f) => {
-                        temps.push(V::String(0));
-                        temps.push(f);
-                        self.ip += 1;
-                    }
+                        (_, _, f) => {
+                            temps.push(V::String(0));
+                            temps.push(f);
+                            self.ip += 1;
+                        }
+                    },
                 },
-            },
-            Op::If => {
-                let branch = match (temps.pop()?, temps.pop()?, temps.pop()?, temps.pop()?) {
-                    (V::String(a), V::String(b), t, _) if a == b => t,
-                    (_, _, _, f) => f,
-                };
-                temps.push(V::String(0));
-                temps.push(branch);
+                Op::If => {
+                    let (a, b, t, f) = (
+                        temps.pop().ok_or(i)?,
+                        temps.pop().ok_or(i)?,
+                        temps.pop().ok_or(i)?,
+                        temps.pop().ok_or(i)?,
+                    );
+                    let branch = match (a, b, t, f) {
+                        (V::String(a), V::String(b), t, _) if a == b => t,
+                        (_, _, _, f) => f,
+                    };
+                    temps.push(V::String(0));
+                    temps.push(branch);
+                }
             }
-        }
-        Some(())
-    }
-
-    pub fn run(mut self) -> Result<String, usize> {
-        fn pretty(v: &V, strs: &[&str]) -> String {
-            match v {
-                V::String(s) => strs[*s].to_string(),
-                V::Fn(c, v, frame) => format!("{c}(captured:{v},frame:{frame})"),
-                V::Closure(c, vs) => {
-                    let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-                    format!("{c} [{}]", closed.join(", "))
+            if cfg!(test) {
+                for (i, v) in vars.iter().rev().enumerate() {
+                    println!("        {i}: {}", pretty(v, &self.strings));
                 }
-                V::Record(s, vs) => {
-                    let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-                    format!("{}({})", pretty(&V::String(*s), strs), items.join(", "))
-                }
-                V::Recursive(c, vs) => {
-                    let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-                    format!("~>{c} [{}]", closed.join(", "))
+                for v in temps.iter() {
+                    println!("  {}", pretty(v, &self.strings));
                 }
             }
         }
-        while let Some(op) = self.bytecode.get(self.ip).copied() {
-            println!("==> {}: {:?}", self.ip, op);
-            self.eval_op(op).ok_or(self.ip)?;
-            for (i, v) in self.vars.iter().rev().enumerate() {
-                println!("        {i}: {}", pretty(v, &self.strings));
-            }
-            for v in &self.temps {
-                println!("  {}", pretty(v, &self.strings));
-            }
-        }
-        Ok(pretty(&self.temps.pop().ok_or(self.ip)?, &self.strings))
+        Ok(VmState::Done(self.temps.pop().ok_or(self.ip)?))
     }
 }
 
@@ -653,8 +677,6 @@ mod tests {
 
     use super::*;
 
-    const OVERWRITE_TESTS: bool = false;
-
     #[test]
     fn eval_raw_app1() {
         // (\x.x) "Foo"
@@ -663,10 +685,7 @@ mod tests {
             Box::new(Expr::String(0)),
         );
         let strings = vec!["Foo"];
-        let bytecode = compile_prg(expr, strings);
-        println!("{}", pretty_bytecode(&bytecode));
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Foo");
+        assert_eq!(eval_expr(expr, strings).unwrap(), "Foo");
     }
 
     #[test]
@@ -680,10 +699,7 @@ mod tests {
             Box::new(Expr::String(1)),
         );
         let strings = vec!["Foo", "Bar"];
-        let bytecode = compile_prg(expr, strings);
-        println!("{}", pretty_bytecode(&bytecode));
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Bar");
+        assert_eq!(eval_expr(expr, strings).unwrap(), "Bar");
     }
 
     #[test]
@@ -711,10 +727,7 @@ mod tests {
             Box::new(Expr::String(2)),
         );
         let strings = vec!["Foo", "Bar", "Baz", "Vec"];
-        let bytecode = compile_prg(expr, strings);
-        println!("{}", pretty_bytecode(&bytecode));
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Vec(Baz, Foo, Baz)");
+        assert_eq!(eval_expr(expr, strings).unwrap(), "Vec(Baz, Foo, Baz)");
     }
 
     #[test]
@@ -731,10 +744,7 @@ mod tests {
             Box::new(Expr::String(2)),
         );
         let strings = vec!["Foo", "Bar", "Baz"];
-        let bytecode = compile_prg(expr, strings);
-        println!("{}", pretty_bytecode(&bytecode));
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Baz(Foo)");
+        assert_eq!(eval_expr(expr, strings).unwrap(), "Baz(Foo)");
     }
 
     #[test]
@@ -750,10 +760,7 @@ mod tests {
         )))));
         let expr = app(app(app(app(if_fn, Expr::String(0)), Expr::String(0)), t), f);
         let strings = vec!["Foo", "True", "False"];
-        let bytecode = compile_prg(expr, strings);
-        println!("{}", pretty_bytecode(&bytecode));
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "True");
+        assert_eq!(eval_expr(expr, strings).unwrap(), "True");
     }
 
     #[test]
@@ -769,10 +776,7 @@ mod tests {
         ))));
         let expr = app(app(app(pop_fn, foo_bar), t), f);
         let strings = vec!["Foo", "Bar", "Error"];
-        let bytecode = compile_prg(expr, strings);
-        println!("{}", pretty_bytecode(&bytecode));
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Bar");
+        assert_eq!(eval_expr(expr, strings).unwrap(), "Bar");
     }
 
     #[test]
@@ -791,10 +795,7 @@ mod tests {
         ))));
         let expr = app(app(app(pop_fn, foo_app_rec), t), f);
         let strings = vec!["Cons", "Foo", "Error"];
-        let bytecode = compile_prg(expr, strings);
-        println!("{}", pretty_bytecode(&bytecode));
-        let v = bytecode.run().unwrap();
-        assert_eq!(v.to_string(), "Cons(Foo)");
+        assert_eq!(eval_expr(expr, strings).unwrap(), "Cons(Foo)");
     }
 
     fn pretty_prg<'c>(prg: &Prg<'c>) -> String {
@@ -841,6 +842,7 @@ mod tests {
             match expr {
                 Expr::Var(v) => buf.push_str(&v.to_string()),
                 Expr::String(s) => buf.push_str(&format!("\"{}\"", strs[*s])),
+                Expr::Effect(eff) => buf.push_str(&format!("{}!", strs[*eff])),
                 Expr::Abs(expr) => {
                     buf.push_str("=>\n");
                     buf.push_str(&indent.repeat(lvl + 1));
@@ -899,94 +901,108 @@ mod tests {
         buf
     }
 
+    fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
+        let mut bytecode = compile_prg(expr, strings.clone());
+        println!("{}", pretty_bytecode(&bytecode));
+        match bytecode.run() {
+            Ok(VmState::Done(v)) => Ok(pretty(&v, &strings)),
+            Ok(VmState::Effect(e, arg)) => Err(format!("Effect {e} with {arg:?}")),
+            Err(e) => Err(format!("Error at op {e}")),
+        }
+    }
+
     #[derive(Debug, Clone)]
     struct Failure {
-        file: String,
         code: String,
         expected: String,
         actual: String,
     }
 
     const STAGES: [&str; 4] = ["parse", "desugar", "compile", "run"];
+    const TEST_SEP: &str = "\n\n---\n\n";
+    const PHASE_SEP: &str = "\n\n";
+    const OVERWRITE_TESTS: bool = false;
 
-    fn test_txt(path: PathBuf, overwrite: bool) -> Vec<Vec<Failure>> {
-        let test_sep = "\n\n---\n\n";
-        let phase_sep = "\n\n";
+    fn parse_tests(path: PathBuf) -> Result<Vec<(String, Vec<String>)>, String> {
+        let tests = fs::read_to_string(&path)
+            .map_err(|e| format!("Failed to read file {}: {e}", path.display()))?;
+        Ok(tests
+            .split(TEST_SEP)
+            .map(|t| {
+                let mut phases = t.split(PHASE_SEP).map(|p| p.to_string());
+                let code = phases.next().unwrap_or_default();
+                (code, phases.collect())
+            })
+            .collect())
+    }
 
-        let s = fs::read_to_string(&path).expect(&format!("Failed to read file: {:?}", path));
-        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
-        let mut has_failure = false;
-        let mut actual_phases = vec![];
-        let mut failed = vec![vec![]; STAGES.len()];
-        for (i, test) in s.split(test_sep).enumerate() {
-            let i = i + 1;
-            let mut parts = test.split(&phase_sep).peekable();
-
-            let Some(code) = parts.next() else {
-                eprintln!("No code in {file_name} (test {i})");
-                continue;
-            };
-            let expected = parts.take(4).collect::<Vec<&str>>();
-            let mut actual = vec![];
-            match parse(code) {
-                Err(e) => actual.push(e),
-                Ok(parsed) => {
-                    actual.push(pretty_prg(&parsed));
-                    match desugar(parsed.clone()) {
-                        Err(e) => actual.push(e),
-                        Ok((expr, strs)) => {
-                            actual.push(pretty_expr(&expr, &strs));
-                            let vm = compile_prg(expr, strs);
-                            actual.push(pretty_bytecode(&vm));
-                            match vm.run() {
-                                Err(e) => actual.push(format!("Error at op {e}")),
-                                Ok(v) => actual.push(v),
-                            }
-                        }
+    fn test_without_run<'c>(code: &'c str) -> (Vec<String>, Vec<Vm<'c>>) {
+        let mut results = vec![];
+        let mut compiled = vec![];
+        match parse(code) {
+            Err(e) => results.push(e),
+            Ok(parsed) => {
+                results.push(pretty_prg(&parsed));
+                match desugar(parsed.clone()) {
+                    Err(e) => results.push(e),
+                    Ok((expr, strs)) => {
+                        results.push(pretty_expr(&expr, &strs));
+                        let vm = compile_prg(expr, strs.clone());
+                        results.push(pretty_bytecode(&vm));
+                        compiled.push(vm);
                     }
                 }
             }
-            let actual = actual.iter().map(|x| x.trim()).collect::<Vec<_>>();
-            actual_phases.push(code.to_string() + phase_sep + &actual.join(&phase_sep));
-            for (phase, (exp, act)) in expected.iter().zip(actual).enumerate() {
-                let exp = exp.trim().to_string();
-                if exp != act {
+        }
+        let results = results.iter().map(|x| x.trim().to_string()).collect();
+        (results, compiled)
+    }
+
+    fn report(mut p: PathBuf, res: Vec<(String, Vec<String>, Vec<String>)>) -> Result<(), String> {
+        let mut failed = vec![vec![]; STAGES.len()];
+        for (code, expected, actual) in res.iter() {
+            for (phase, (expected, actual)) in expected.iter().zip(actual.iter()).enumerate() {
+                if expected != actual {
                     failed[phase].push(Failure {
-                        file: file_name.clone(),
-                        code: code.to_string(),
-                        expected: exp,
-                        actual: act.to_string(),
-                    });
-                    has_failure = true;
+                        code: code.clone(),
+                        expected: expected.clone(),
+                        actual: actual.clone(),
+                    })
                 }
             }
         }
-
-        if has_failure {
-            let p = if overwrite {
-                path
-            } else {
-                path.with_extension(format!("actual.txt"))
-            };
-            let Ok(mut file) = fs::File::create(&p) else {
-                eprintln!("Could not create file with actual results for {file_name}");
-                return failed;
-            };
-            if let Err(e) = file.write_all(&actual_phases.join(test_sep).as_bytes()) {
-                eprintln!("Could not write file: {e}");
-            }
+        if failed.iter().all(|stage| stage.is_empty()) {
+            return Ok(());
         }
-        failed
-    }
-
-    fn report(failed: Vec<Vec<Failure>>) -> Result<(), String> {
+        if !OVERWRITE_TESTS {
+            p = p.with_extension(format!("actual.txt"))
+        }
+        let Ok(mut file) = fs::File::create(&p) else {
+            return Err(format!("Could not create file {}", p.display()));
+        };
+        let tests = res
+            .into_iter()
+            .map(|(c, expected, actual)| {
+                once(c)
+                    .chain(actual.iter().cloned().take(expected.len()))
+                    .collect::<Vec<_>>()
+                    .join(PHASE_SEP)
+            })
+            .collect::<Vec<_>>()
+            .join(TEST_SEP);
+        if let Err(e) = file.write_all(&tests.as_bytes()) {
+            return Err(format!("Could not write file {}: {e}", p.display()));
+        }
+        if OVERWRITE_TESTS {
+            return Ok(());
+        }
         for (failed, stage) in failed.into_iter().zip(STAGES) {
             if failed.is_empty() {
                 continue;
             }
             let n = failed.len();
             for failure in failed {
-                eprintln!("\n--- {} ---\n", failure.file);
+                eprintln!("\n--- {} ---\n", p.display());
                 eprintln!("Code:\n{}\n", failure.code);
                 eprintln!("Expected:\n{}\n", failure.expected);
                 eprintln!("Actual:\n{}\n", failure.actual);
@@ -1001,10 +1017,20 @@ mod tests {
     }
 
     fn test(path: PathBuf) -> Result<(), String> {
-        if OVERWRITE_TESTS {
-            let _ = test_txt(path.clone(), OVERWRITE_TESTS);
+        let tests = parse_tests(path.clone())?;
+        let mut results = vec![];
+        for (code, expected) in tests {
+            let (mut actual, compiled) = test_without_run(&code);
+            for mut vm in compiled {
+                match vm.run() {
+                    Ok(VmState::Done(v)) => actual.push(pretty(&v, &vm.strings)),
+                    Ok(VmState::Effect(e, arg)) => actual.push(format!("Effect {e} with {arg:?}")),
+                    Err(e) => actual.push(format!("Error at op {e}")),
+                }
+            }
+            results.push((code, expected, actual));
         }
-        report(test_txt(path, OVERWRITE_TESTS))
+        report(path, results)
     }
 
     #[test]
@@ -1050,5 +1076,35 @@ mod tests {
     #[test]
     fn test_run_rec() -> Result<(), String> {
         test(PathBuf::from("tests/run_rec.txt"))
+    }
+
+    #[test]
+    fn test_run_with_effects() -> Result<(), String> {
+        let path = PathBuf::from("tests/run_with_effects.txt");
+        let tests = parse_tests(path.clone())?;
+        let mut results = vec![];
+        for (code, expected) in tests {
+            let (mut actual, compiled) = test_without_run(&code);
+            for mut vm in compiled {
+                let mut printed = vec![];
+                match vm.run() {
+                    Ok(VmState::Done(v)) => actual.push(pretty(&v, &vm.strings)),
+                    Ok(VmState::Effect(eff, arg)) => {
+                        let arg = pretty(&arg, &vm.strings);
+                        match vm.strings.get(eff).copied() {
+                            Some(eff) if eff == "print" => {
+                                printed.push(arg);
+                                actual.push(String::new());
+                            }
+                            Some(eff) => actual.push(format!("Effect {eff} with {arg}")),
+                            None => actual.push(format!("Unknown effect {eff} with {arg}")),
+                        }
+                    }
+                    Err(e) => actual.push(format!("Error at op {e}")),
+                }
+            }
+            results.push((code, expected, actual));
+        }
+        report(path, results)
     }
 }
