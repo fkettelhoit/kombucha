@@ -215,63 +215,6 @@ fn parse(code: &str) -> Result<Prg<'_>, String> {
     }
 }
 
-impl Ast<'_> {
-    fn size(&self) -> usize {
-        match &self.1 {
-            A::Var(_) | A::String(_) | A::Binding(_) => 1,
-            A::Block(xs) => xs.iter().map(|x| x.size()).sum::<usize>() + 1,
-            A::Call(Call::Prefix(f), xs) => f.size() + xs.iter().map(|x| x.size()).sum::<usize>(),
-            A::Call(_, xs) => 1 + xs.iter().map(|x| x.size()).sum::<usize>(),
-        }
-    }
-
-    fn pretty(&self, lvl: usize) -> String {
-        fn one_line(xs: &[Ast<'_>], lvl: usize) -> String {
-            let xs = xs.iter().map(|x| x.pretty(lvl));
-            xs.collect::<Vec<_>>().join(", ")
-        }
-        fn multi_line(xs: &[Ast<'_>], lvl: usize) -> String {
-            let xs = xs.iter().map(|x| "  ".repeat(lvl) + &x.pretty(lvl) + "\n");
-            "\n".to_string() + &xs.collect::<String>() + &"  ".repeat(lvl - 1)
-        }
-        match (&self.1, self.size() >= 10) {
-            (A::Var(s) | A::String(s) | A::Binding(s), _) => s.to_string(),
-            (A::Block(xs), false) => "{ ".to_string() + &one_line(xs, lvl + 1) + " }",
-            (A::Block(xs), true) => "{".to_string() + &multi_line(xs, lvl + 1) + "}",
-            (A::Call(Call::Prefix(f), xs), false) => {
-                f.pretty(lvl) + "(" + &one_line(xs, lvl + 1) + ")"
-            }
-            (A::Call(Call::Prefix(f), xs), true) => {
-                f.pretty(lvl) + "(" + &multi_line(xs, lvl + 1) + ")"
-            }
-            (A::Call(Call::Infix(f), args), _) => {
-                let args = args.iter().map(|a| match a.1 {
-                    A::Call(Call::Keyword(_) | Call::Infix(_), _) => format!("({})", a.pretty(lvl)),
-                    _ => a.pretty(lvl),
-                });
-                args.collect::<Vec<_>>().join(&format!(" {f} "))
-            }
-            (A::Call(Call::Keyword(keywords), items), _) => {
-                let args = keywords
-                    .iter()
-                    .zip(items.iter())
-                    .map(|(k, arg)| match arg.1 {
-                        A::Call(Call::Keyword(_), _) => format!("{k} ({})", arg.pretty(lvl)),
-                        _ => format!("{k} {}", arg.pretty(lvl)),
-                    });
-                args.collect::<Vec<_>>().join(" ")
-            }
-        }
-    }
-}
-
-impl std::fmt::Display for Prg<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let items = self.0.iter().map(|x| x.pretty(0));
-        f.write_str(&items.collect::<Vec<_>>().join("\n\n"))
-    }
-}
-
 #[derive(Debug, Clone)]
 enum Expr {
     Var(usize),
