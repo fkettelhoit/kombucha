@@ -224,6 +224,7 @@ enum Expr {
     Rec(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
     Pop(Box<Expr>, Box<Expr>, Box<Expr>),
+    Try(Box<Expr>, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
 }
 
@@ -264,6 +265,11 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 None if v == "=>" => Ok(abs(abs(Expr::Var(0)))),
                 None if v == "~>" => Ok(abs(abs(Expr::Rec(Box::new(Expr::Var(0)))))),
                 None if v == "pop" => Ok(abs(abs(abs(Expr::Pop(
+                    Box::new(Expr::Var(2)),
+                    Box::new(Expr::Var(1)),
+                    Box::new(Expr::Var(0)),
+                ))))),
+                None if v == "try" => Ok(abs(abs(abs(Expr::Try(
                     Box::new(Expr::Var(2)),
                     Box::new(Expr::Var(1)),
                     Box::new(Expr::Var(0)),
@@ -314,9 +320,13 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                         None => return Err((pos, E::UnboundVar(keywords.join("")))),
                     },
                 };
+                if args.is_empty() {
+                    f = Expr::App(Box::new(f), Box::new(Expr::String(0)))
+                }
                 for arg in args {
                     f = Expr::App(Box::new(f), Box::new(desugar(arg, ctx)?));
                 }
+
                 ctx.bindings.splice(0..0, bindings);
                 Ok(f)
             }
@@ -340,7 +350,9 @@ enum Op {
     Rec,
     Apply,
     Return,
+    Unwind,
     Pop,
+    Try,
     If,
 }
 
@@ -386,6 +398,15 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             ops.push(Op::Apply);
             v.max(t).max(f)
         }
+        Expr::Try(v, e, h) => {
+            let f = compile_expr(*h, ops, fns);
+            let e = compile_expr(*e, ops, fns);
+            let h = compile_expr(*v, ops, fns);
+            ops.push(Op::Try);
+            ops.push(Op::Apply);
+            ops.push(Op::Unwind);
+            h.max(e).max(f)
+        }
         Expr::If(a, b, t, f) => {
             let f = compile_expr(*f, ops, fns);
             let t = compile_expr(*t, ops, fns);
@@ -398,7 +419,7 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Vm<'code> {
     strings: Vec<&'code str>,
     bytecode: Vec<Op>,
@@ -406,6 +427,24 @@ pub struct Vm<'code> {
     vars: Vec<V>,
     temps: Vec<V>,
     frames: Vec<(usize, usize)>,
+    handlers: Vec<Handler>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Coroutine {
+    vars: Vec<V>,
+    temps: Vec<V>,
+    frames: Vec<(usize, usize)>,
+    handlers: Vec<Handler>,
+}
+
+#[derive(Debug, Clone)]
+struct Handler {
+    effect: usize,
+    code: usize,
+    state: (usize, usize, usize, usize),
+    captured: Rc<Vec<V>>,
+    ret: usize,
 }
 
 impl<'code> Vm<'code> {
@@ -414,9 +453,7 @@ impl<'code> Vm<'code> {
             strings,
             bytecode,
             ip: start,
-            vars: vec![],
-            temps: vec![],
-            frames: vec![],
+            ..Default::default()
         }
     }
 }
@@ -444,6 +481,7 @@ pub enum V {
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
     Recursive(usize, Rc<Vec<V>>),
+    Resumable(usize, usize, Coroutine),
 }
 
 fn pretty(v: &V, strs: &[&str]) -> String {
@@ -462,6 +500,9 @@ fn pretty(v: &V, strs: &[&str]) -> String {
         V::Recursive(c, vs) => {
             let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("~>{c} [{}]", closed.join(", "))
+        }
+        V::Resumable(c, v, coroutine) => {
+            format!("resumable {c}, ({v}), {coroutine:?}")
         }
     }
 }
@@ -506,6 +547,7 @@ impl<'c> Vm<'c> {
         let vars = &mut self.vars;
         let temps = &mut self.temps;
         let frames = &mut self.frames;
+        let handlers = &mut self.handlers;
         while let Some(op) = self.bytecode.get(self.ip).copied() {
             let i = self.ip;
             if cfg!(test) {
@@ -538,7 +580,43 @@ impl<'c> Vm<'c> {
                     }
                     match (f, arg) {
                         (V::Effect(eff), arg) => {
-                            return Ok(VmState::Resumable(Resumable(self, eff), arg));
+                            let handler = handlers.iter().rev().find(|h| h.effect == eff);
+                            match handler.cloned() {
+                                Some(handler) => {
+                                    let (v, t, f, h) = handler.state;
+                                    let res_vars = vars.drain(v..).collect::<Vec<_>>();
+                                    let res_temps = temps.drain(t..).collect::<Vec<_>>();
+                                    let res_frames = frames.drain(f..).collect::<Vec<_>>();
+                                    let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
+                                    frames.push((vars.len(), handler.ret));
+                                    vars.extend(handler.captured.iter().cloned());
+                                    let coroutine = Coroutine {
+                                        vars: res_vars,
+                                        temps: res_temps,
+                                        frames: res_frames,
+                                        handlers: res_handlers,
+                                    };
+                                    vars.push(V::Resumable(self.ip, v, coroutine));
+                                    temps.push(arg);
+                                    self.ip = handler.code;
+                                }
+                                None => return Ok(VmState::Resumable(Resumable(self, eff), arg)),
+                            }
+                        }
+                        (V::Resumable(c, v, coroutine), arg) => {
+                            let offset = vars.len() as i64 - v as i64;
+                            frames.push((vars.len(), self.ip));
+                            vars.extend(coroutine.vars);
+                            temps.extend(coroutine.temps);
+                            frames.extend(
+                                coroutine
+                                    .frames
+                                    .into_iter()
+                                    .map(|(v, ret)| ((v as i64 + offset) as usize, ret)),
+                            );
+                            handlers.extend(coroutine.handlers);
+                            temps.push(arg);
+                            self.ip = c;
                         }
                         (V::Recursive(c, captured), arg) => {
                             temps.push(arg);
@@ -617,6 +695,33 @@ impl<'c> Vm<'c> {
                         }
                     },
                 },
+                Op::Try => {
+                    let v = temps.pop().ok_or(i)?;
+                    let eff = temps.pop().ok_or(i)?;
+                    let mut handler = temps.pop().ok_or(i)?;
+                    if let V::Fn(c, v, _) = handler {
+                        handler = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
+                    }
+                    match (eff, handler) {
+                        (V::String(effect), V::Closure(code, captured)) => {
+                            let state = (vars.len(), temps.len(), frames.len(), handlers.len());
+                            let ret = self.ip;
+                            handlers.push(Handler {
+                                effect,
+                                code,
+                                state,
+                                captured,
+                                ret,
+                            });
+                            temps.push(V::String(0));
+                            temps.push(v);
+                        }
+                        _ => temps.push(v),
+                    }
+                }
+                Op::Unwind => {
+                    handlers.pop();
+                }
                 Op::If => {
                     let (a, b, t, f) = (
                         temps.pop().ok_or(i)?,
@@ -841,6 +946,15 @@ mod tests {
                 Expr::Pop(v, t, f) => {
                     buf.push_str("( pop");
                     for expr in [v, t, f] {
+                        buf.push('\n');
+                        buf.push_str(&indent.repeat(lvl + 1));
+                        pretty(expr, strs, lvl + 1, buf);
+                    }
+                    buf.push(')');
+                }
+                Expr::Try(v, e, h) => {
+                    buf.push_str("( try");
+                    for expr in [v, e, h] {
                         buf.push('\n');
                         buf.push_str(&indent.repeat(lvl + 1));
                         pretty(expr, strs, lvl + 1, buf);
