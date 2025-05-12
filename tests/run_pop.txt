@@ -20,7 +20,7 @@ pop(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })
             ( pop
               2
               1
-              0)
+              0 )
       ( ( "Foo"
           "Bar" )
         "Baz" ) )
@@ -107,7 +107,7 @@ pop(Foo, 'f => { 'x => { x } }, { Error })
             ( pop
               2
               1
-              0)
+              0 )
       "Foo" )
     ( ( =>
           =>
@@ -190,7 +190,7 @@ pop(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
             ( pop
               2
               1
-              0)
+              0 )
       ( ( "Foo"
           "Bar" )
         "Baz" ) )
@@ -278,7 +278,7 @@ pop(Foo(Bar), 'f => { 'x => { f } }, { Error })
             ( pop
               2
               1
-              0)
+              0 )
       ( "Foo"
         "Bar" ) )
     ( ( =>

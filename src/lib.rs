@@ -950,7 +950,7 @@ mod tests {
                         buf.push_str(&indent.repeat(lvl + 1));
                         pretty(expr, strs, lvl + 1, buf);
                     }
-                    buf.push(')');
+                    buf.push_str(" )");
                 }
                 Expr::Try(v, e, h) => {
                     buf.push_str("( try");
@@ -959,7 +959,7 @@ mod tests {
                         buf.push_str(&indent.repeat(lvl + 1));
                         pretty(expr, strs, lvl + 1, buf);
                     }
-                    buf.push(')');
+                    buf.push_str(" )");
                 }
                 Expr::If(a, b, t, f) => {
                     buf.push_str("( if");
@@ -968,7 +968,7 @@ mod tests {
                         buf.push_str(&indent.repeat(lvl + 1));
                         pretty(expr, strs, lvl + 1, buf);
                     }
-                    buf.push(')');
+                    buf.push_str(" )");
                 }
             }
         }

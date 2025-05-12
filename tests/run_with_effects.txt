@@ -113,7 +113,7 @@ try({ foo(Bar, Baz) }, 'pair, 'r => { 'arg => { Pair(arg) } })
                 ( try
                   2
                   1
-                  0)
+                  0 )
           =>
             ( ( 1
                 "Bar" )
@@ -245,7 +245,7 @@ try({ Foo }, 'unused, 'r => { ' => { Error }})
             ( try
               2
               1
-              0)
+              0 )
       =>
         "Foo" )
     "unused" )
@@ -329,7 +329,7 @@ try({ effect!(Foo) }, 'effect, 'r => { 'arg => { arg(r(Bar)) }})
             ( try
               2
               1
-              0)
+              0 )
       =>
         ( effect!
           "Foo" ) )
@@ -428,7 +428,7 @@ try({
             ( try
               2
               1
-              0)
+              0 )
       =>
         ( "Foo"
           ( eff!
@@ -545,7 +545,7 @@ Pair(Foo(Bar), Foo(Baz))
                 ( try
                   2
                   1
-                  0)
+                  0 )
           =>
             ( "List"
               ( elems!
