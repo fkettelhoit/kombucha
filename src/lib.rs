@@ -333,6 +333,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
         }
     }
     let mut ctx = Ctx::default();
+    ctx.strs.push("Nil");
     match desugar(Ast(0, A::Block(block)), &mut ctx) {
         Err((i, E::UnboundVar(v))) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
         Err((i, E::EmptyBlock)) => Err(format!("Empty block at {}", pos_at(i, code))),

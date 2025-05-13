@@ -432,7 +432,7 @@ try({
       =>
         ( "Foo"
           ( eff!
-            "Foo" ) ) )
+            "Nil" ) ) )
     "eff" )
   ( ( =>
         =>
@@ -474,7 +474,7 @@ try({
 00021:   Return
 00022: PushFn(00020, 00000)
 00023:   Return
-00024: PushString("Foo")
+00024: PushString("Nil")
 00025: PushEffect("eff")
 00026: Apply
 00027: PushString("Foo")
