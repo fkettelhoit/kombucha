@@ -303,10 +303,10 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                     let (f, arg) = if bindings == 0 { (expr, x) } else { (x, expr) };
                     let app = Expr::App(Box::new(f), Box::new(arg));
                     expr = (0..max(1, prev_bindings)).fold(app, |x, _| Expr::Abs(Box::new(x)));
-                    ctx.vars.truncate(ctx.vars.len() - bindings);
+                    ctx.vars.truncate(ctx.vars.len() - max(1, bindings));
                     bindings = prev_bindings;
                 }
-                ctx.vars.truncate(ctx.vars.len() - bindings);
+                ctx.vars.truncate(ctx.vars.len() - max(1, bindings));
                 ctx.bindings.clear();
                 Ok(expr)
             }
@@ -400,13 +400,13 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             v.max(t).max(f)
         }
         Expr::Try(v, e, h) => {
-            let f = compile_expr(*h, ops, fns);
+            let h = compile_expr(*h, ops, fns);
             let e = compile_expr(*e, ops, fns);
-            let h = compile_expr(*v, ops, fns);
+            let v = compile_expr(*v, ops, fns);
             ops.push(Op::Try);
             ops.push(Op::Apply);
             ops.push(Op::Unwind);
-            h.max(e).max(f)
+            v.max(e).max(h)
         }
         Expr::If(a, b, t, f) => {
             let f = compile_expr(*f, ops, fns);
@@ -704,7 +704,7 @@ impl<'c> Vm<'c> {
                         handler = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
                     }
                     match (eff, handler) {
-                        (V::String(effect), V::Closure(code, captured)) => {
+                        (V::Effect(effect), V::Closure(code, captured)) => {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len());
                             let ret = self.ip;
                             handlers.push(Handler {
@@ -1178,9 +1178,7 @@ mod tests {
         test(PathBuf::from("tests/run_rec.txt"))
     }
 
-    #[test]
-    fn test_run_with_effects() -> Result<(), String> {
-        let path = PathBuf::from("tests/run_with_effects.txt");
+    fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
         let tests = parse_tests(path.clone())?;
         let mut results = vec![];
         for (code, expected) in tests {
@@ -1212,5 +1210,15 @@ mod tests {
             results.push((code, expected, actual));
         }
         report(path, results)
+    }
+
+    #[test]
+    fn test_run_with_effects() -> Result<(), String> {
+        test_with_print_effect(PathBuf::from("tests/run_with_effects.txt"))
+    }
+
+    #[test]
+    fn test_run_with_rec_effects() -> Result<(), String> {
+        test_with_print_effect(PathBuf::from("tests/run_with_rec_effects.txt"))
     }
 }

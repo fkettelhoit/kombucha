@@ -57,7 +57,7 @@ Nil
 ---
 
 'foo = ('x => { 'y => { pair!(Args(x, y)) } })
-try({ foo(Bar, Baz) }, 'pair, 'r => { 'arg => { Pair(arg) } })
+try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
 
 (=
   'foo
@@ -76,7 +76,7 @@ try({ foo(Bar, Baz) }, 'pair, 'r => { 'arg => { Pair(arg) } })
     (foo
       Bar
       Baz)}
-  'pair
+  pair!
   (=>
     'r
     {
@@ -118,7 +118,7 @@ try({ foo(Bar, Baz) }, 'pair, 'r => { 'arg => { Pair(arg) } })
             ( ( 1
                 "Bar" )
               "Baz" ) )
-        "pair" )
+        pair! )
       ( ( =>
             =>
               0
@@ -172,7 +172,7 @@ try({ foo(Bar, Baz) }, 'pair, 'r => { 'arg => { Pair(arg) } })
 00037: PushFn(00016, 00000)
 00038: Apply
 00039: Apply
-00040: PushString("pair")
+00040: PushEffect("pair")
 00041: PushFn(00018, 00001)
 00042: PushFn(00033, 00000)
 00043: Apply
@@ -225,12 +225,12 @@ Pair(Args(Bar, Baz))
 
 ---
 
-try({ Foo }, 'unused, 'r => { ' => { Error }})
+try({ Foo }, unused!, 'r => { ' => { Error }})
 
 (try
   {
     Foo}
-  'unused
+  unused!
   (=>
     'r
     {
@@ -248,7 +248,7 @@ try({ Foo }, 'unused, 'r => { ' => { Error }})
               0 )
       =>
         "Foo" )
-    "unused" )
+    unused! )
   ( ( =>
         =>
           0
@@ -295,7 +295,7 @@ try({ Foo }, 'unused, 'r => { ' => { Error }})
 00031: PushFn(00014, 00000)
 00032: Apply
 00033: Apply
-00034: PushString("unused")
+00034: PushEffect("unused")
 00035: PushFn(00016, 00000)
 00036: PushFn(00027, 00000)
 00037: Apply
@@ -306,13 +306,13 @@ Foo
 
 ---
 
-try({ effect!(Foo) }, 'effect, 'r => { 'arg => { arg(r(Bar)) }})
+try({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
 
 (try
   {
     (effect!
       Foo)}
-  'effect
+  effect!
   (=>
     'r
     {
@@ -333,7 +333,7 @@ try({ effect!(Foo) }, 'effect, 'r => { 'arg => { arg(r(Bar)) }})
       =>
         ( effect!
           "Foo" ) )
-    "effect" )
+    effect! )
   ( ( =>
         =>
           0
@@ -388,7 +388,7 @@ try({ effect!(Foo) }, 'effect, 'r => { 'arg => { arg(r(Bar)) }})
 00037: PushFn(00018, 00000)
 00038: Apply
 00039: Apply
-00040: PushString("effect")
+00040: PushEffect("effect")
 00041: PushFn(00020, 00000)
 00042: PushFn(00033, 00000)
 00043: Apply
@@ -401,7 +401,7 @@ Foo(Bar)
 
 try({
     Foo(eff!())
-}, 'eff, 'r => { ' => {
+}, eff!, 'r => { ' => {
     Pair(r(Bar), r(Baz))
 } })
 
@@ -409,7 +409,7 @@ try({
   {
     (Foo
       (eff!))}
-  'eff
+  eff!
   (=>
     'r
     {
@@ -433,7 +433,7 @@ try({
         ( "Foo"
           ( eff!
             "Nil" ) ) )
-    "eff" )
+    eff! )
   ( ( =>
         =>
           0
@@ -496,7 +496,7 @@ try({
 00043: PushFn(00022, 00000)
 00044: Apply
 00045: Apply
-00046: PushString("eff")
+00046: PushEffect("eff")
 00047: PushFn(00024, 00000)
 00048: PushFn(00039, 00000)
 00049: Apply
@@ -507,7 +507,7 @@ Pair(Foo(Bar), Foo(Baz))
 
 ---
 
-'foo = Foo, try({ List(elems!(foo)) }, 'elems, 'r => { 'x => { Twice(r(x, x), r(Baz)) } })
+'foo = Foo, try({ List(elems!(foo)) }, elems!, 'r => { 'x => { Twice(r(x, x), r(Baz)) } })
 
 (=
   'foo
@@ -517,7 +517,7 @@ Pair(Foo(Bar), Foo(Baz))
     (List
       (elems!
         foo))}
-  'elems
+  elems!
   (=>
     'r
     {
@@ -550,7 +550,7 @@ Pair(Foo(Bar), Foo(Baz))
             ( "List"
               ( elems!
                 1 ) ) )
-        "elems" )
+        elems! )
       ( ( =>
             =>
               0
@@ -616,7 +616,7 @@ Pair(Foo(Bar), Foo(Baz))
 00045: PushFn(00024, 00000)
 00046: Apply
 00047: Apply
-00048: PushString("elems")
+00048: PushEffect("elems")
 00049: PushFn(00026, 00001)
 00050: PushFn(00041, 00000)
 00051: Apply
