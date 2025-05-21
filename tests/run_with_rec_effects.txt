@@ -130,3 +130,314 @@
 00071: Apply
 
 List(Foo)
+
+---
+
+'with-toggle = ('loop ~> {
+    'val => { 'r => {
+        try({
+            r(val)
+        }, toggle!, 'r => { ' => {
+            if(val, True, {
+              loop(False, r)
+            }, {
+              loop(True, r)
+            })
+        }})
+    }}
+})
+with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
+
+(=
+  'with-toggle
+  (~>
+    'loop
+    {
+      (=>
+        'val
+        {
+          (=>
+            'r
+            {
+              (try
+                {
+                  (r
+                    val)}
+                toggle!
+                (=>
+                  'r
+                  {
+                    (=>
+                      '
+                      {
+                        (if
+                          val
+                          True
+                          {
+                            (loop
+                              False
+                              r)}
+                          {
+                            (loop
+                              True
+                              r)})})}))})})}))
+(with-toggle
+  False
+  {
+    (List
+      (toggle!)
+      (toggle!)
+      (toggle!))})
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "with-toggle" )
+    ( ( =>
+          =>
+            ~>
+              0
+        "loop" )
+      =>
+        ( ( =>
+              =>
+                0
+            "val" )
+          =>
+            ( ( =>
+                  =>
+                    0
+                "r" )
+              =>
+                ( ( ( =>
+                        =>
+                          =>
+                            ( try
+                              2
+                              1
+                              0 )
+                      =>
+                        ( 1
+                          2 ) )
+                    toggle! )
+                  ( ( =>
+                        =>
+                          0
+                      "r" )
+                    =>
+                      ( ( =>
+                            =>
+                              0
+                          "" )
+                        =>
+                          ( ( ( ( =>
+                                    =>
+                                      =>
+                                        =>
+                                          ( if
+                                            3
+                                            2
+                                            1
+                                            0 )
+                                  3 )
+                                "True" )
+                              =>
+                                ( ( 5
+                                    "False" )
+                                  2 ) )
+                            =>
+                              ( ( 5
+                                  "True" )
+                                2 ) ) ) ) ) ) ) ) )
+  =>
+    ( ( 0
+        "False" )
+      =>
+        ( ( ( "List"
+              ( toggle!
+                "Nil" ) )
+            ( toggle!
+              "Nil" ) )
+          ( toggle!
+            "Nil" ) ) ) )
+
+00000: PushVar(00000)
+00001: PushVar(00001)
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00000)
+00010: Rec
+00011:   Return
+00012: PushFn(00009, 00000)
+00013:   Return
+00014: PushVar(00000)
+00015:   Return
+00016: PushFn(00014, 00000)
+00017:   Return
+00018: PushVar(00000)
+00019:   Return
+00020: PushFn(00018, 00000)
+00021:   Return
+00022: PushVar(00002)
+00023: PushVar(00001)
+00024: PushVar(00000)
+00025: Swap(00003)
+00026: Try
+00027: Apply
+00028: Unwind
+00029:   Return
+00030: PushFn(00022, 00002)
+00031:   Return
+00032: PushFn(00030, 00001)
+00033:   Return
+00034: PushVar(00001)
+00035: PushVar(00002)
+00036: Swap(00002)
+00037: Apply
+00038:   Return
+00039: PushVar(00000)
+00040:   Return
+00041: PushFn(00039, 00000)
+00042:   Return
+00043: PushVar(00000)
+00044:   Return
+00045: PushFn(00043, 00000)
+00046:   Return
+00047: PushVar(00003)
+00048: PushVar(00002)
+00049: PushVar(00001)
+00050: PushVar(00000)
+00051: Swap(00004)
+00052: If
+00053: Apply
+00054:   Return
+00055: PushFn(00047, 00003)
+00056:   Return
+00057: PushFn(00055, 00002)
+00058:   Return
+00059: PushFn(00057, 00001)
+00060:   Return
+00061: PushVar(00005)
+00062: PushString("False")
+00063: Swap(00002)
+00064: Apply
+00065: PushVar(00002)
+00066: Swap(00002)
+00067: Apply
+00068:   Return
+00069: PushVar(00005)
+00070: PushString("True")
+00071: Swap(00002)
+00072: Apply
+00073: PushVar(00002)
+00074: Swap(00002)
+00075: Apply
+00076:   Return
+00077: PushFn(00059, 00000)
+00078: PushVar(00003)
+00079: Swap(00002)
+00080: Apply
+00081: PushString("True")
+00082: Swap(00002)
+00083: Apply
+00084: PushFn(00061, 00005)
+00085: Swap(00002)
+00086: Apply
+00087: PushFn(00069, 00005)
+00088: Swap(00002)
+00089: Apply
+00090:   Return
+00091: PushFn(00045, 00000)
+00092: PushString("")
+00093: Swap(00002)
+00094: Apply
+00095: PushFn(00077, 00004)
+00096: Swap(00002)
+00097: Apply
+00098:   Return
+00099: PushFn(00032, 00000)
+00100: PushFn(00034, 00002)
+00101: Swap(00002)
+00102: Apply
+00103: PushEffect("toggle")
+00104: Swap(00002)
+00105: Apply
+00106: PushFn(00041, 00000)
+00107: PushString("r")
+00108: Swap(00002)
+00109: Apply
+00110: PushFn(00091, 00003)
+00111: Swap(00002)
+00112: Apply
+00113: Swap(00002)
+00114: Apply
+00115:   Return
+00116: PushFn(00020, 00000)
+00117: PushString("r")
+00118: Swap(00002)
+00119: Apply
+00120: PushFn(00099, 00002)
+00121: Swap(00002)
+00122: Apply
+00123:   Return
+00124: PushFn(00016, 00000)
+00125: PushString("val")
+00126: Swap(00002)
+00127: Apply
+00128: PushFn(00116, 00001)
+00129: Swap(00002)
+00130: Apply
+00131:   Return
+00132: PushString("List")
+00133: PushEffect("toggle")
+00134: PushString("Nil")
+00135: Swap(00002)
+00136: Apply
+00137: Swap(00002)
+00138: Apply
+00139: PushEffect("toggle")
+00140: PushString("Nil")
+00141: Swap(00002)
+00142: Apply
+00143: Swap(00002)
+00144: Apply
+00145: PushEffect("toggle")
+00146: PushString("Nil")
+00147: Swap(00002)
+00148: Apply
+00149: Swap(00002)
+00150: Apply
+00151:   Return
+00152: PushVar(00000)
+00153: PushString("False")
+00154: Swap(00002)
+00155: Apply
+00156: PushFn(00132, 00000)
+00157: Swap(00002)
+00158: Apply
+00159:   Return
+00160: PushFn(00007, 00000)
+00161: PushString("with-toggle")
+00162: Swap(00002)
+00163: Apply
+00164: PushFn(00012, 00000)
+00165: PushString("loop")
+00166: Swap(00002)
+00167: Apply
+00168: PushFn(00124, 00000)
+00169: Swap(00002)
+00170: Apply
+00171: Swap(00002)
+00172: Apply
+00173: PushFn(00152, 00000)
+00174: Swap(00002)
+00175: Apply
+
+List(True, False, True)
