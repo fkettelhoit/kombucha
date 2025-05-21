@@ -348,6 +348,7 @@ enum Op {
     PushString(usize),
     PushEffect(usize),
     PushFn(usize, usize),
+    Swap(usize),
     Rec,
     Apply,
     Return,
@@ -385,34 +386,38 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
             f
         }
         Expr::App(f, arg) => {
-            let a = compile_expr(*arg, ops, fns);
-            let b = compile_expr(*f, ops, fns);
+            let f = compile_expr(*f, ops, fns);
+            let arg = compile_expr(*arg, ops, fns);
+            ops.push(Op::Swap(2));
             ops.push(Op::Apply);
-            max(a, b)
+            max(f, arg)
         }
         Expr::Pop(v, t, f) => {
-            let f = compile_expr(*f, ops, fns);
-            let t = compile_expr(*t, ops, fns);
             let v = compile_expr(*v, ops, fns);
+            let t = compile_expr(*t, ops, fns);
+            let f = compile_expr(*f, ops, fns);
+            ops.push(Op::Swap(3));
             ops.push(Op::Pop);
             ops.push(Op::Apply);
             ops.push(Op::Apply);
             v.max(t).max(f)
         }
         Expr::Try(v, e, h) => {
-            let h = compile_expr(*h, ops, fns);
-            let e = compile_expr(*e, ops, fns);
             let v = compile_expr(*v, ops, fns);
+            let e = compile_expr(*e, ops, fns);
+            let h = compile_expr(*h, ops, fns);
+            ops.push(Op::Swap(3));
             ops.push(Op::Try);
             ops.push(Op::Apply);
             ops.push(Op::Unwind);
             v.max(e).max(h)
         }
         Expr::If(a, b, t, f) => {
-            let f = compile_expr(*f, ops, fns);
-            let t = compile_expr(*t, ops, fns);
-            let b = compile_expr(*b, ops, fns);
             let a = compile_expr(*a, ops, fns);
+            let b = compile_expr(*b, ops, fns);
+            let t = compile_expr(*t, ops, fns);
+            let f = compile_expr(*f, ops, fns);
+            ops.push(Op::Swap(4));
             ops.push(Op::If);
             ops.push(Op::Apply);
             a.max(b).max(t).max(f)
@@ -502,8 +507,8 @@ fn pretty(v: &V, strs: &[&str]) -> String {
             let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("~>{c} [{}]", closed.join(", "))
         }
-        V::Resumable(c, v, coroutine) => {
-            format!("resumable {c}, ({v}), {coroutine:?}")
+        V::Resumable(c, v, _) => {
+            format!("resumable {c}, ({v})")
         }
     }
 }
@@ -563,6 +568,10 @@ impl<'c> Vm<'c> {
                 Op::PushString(s) => temps.push(V::String(s)),
                 Op::PushEffect(eff) => temps.push(V::Effect(eff)),
                 Op::PushFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
+                Op::Swap(n) => {
+                    let items = temps.drain(temps.len() - n..).rev().collect::<Vec<_>>();
+                    temps.extend(items);
+                }
                 Op::Rec => match temps.pop().ok_or(i)? {
                     V::Fn(c, v, _) => {
                         // TODO: does the frame not matter here? is it always safe to create a closure?
@@ -589,6 +598,8 @@ impl<'c> Vm<'c> {
                                     let res_temps = temps.drain(t..).collect::<Vec<_>>();
                                     let res_frames = frames.drain(f..).collect::<Vec<_>>();
                                     let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
+                                    handlers.pop();
+                                    println!("***\n***\n***\n***\nh: {h}");
                                     frames.push((vars.len(), handler.ret));
                                     vars.extend(handler.captured.iter().cloned());
                                     let coroutine = Coroutine {
@@ -705,7 +716,7 @@ impl<'c> Vm<'c> {
                     }
                     match (eff, handler) {
                         (V::Effect(effect), V::Closure(code, captured)) => {
-                            let state = (vars.len(), temps.len(), frames.len(), handlers.len());
+                            let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
                             let ret = self.ip;
                             handlers.push(Handler {
                                 effect,
@@ -756,7 +767,7 @@ impl<'c> Vm<'c> {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, io::Write, path::PathBuf};
+    use std::{env, fs, io::Write, path::PathBuf};
 
     use super::*;
 
@@ -1019,7 +1030,6 @@ mod tests {
     const STAGES: [&str; 4] = ["parse", "desugar", "compile", "run"];
     const TEST_SEP: &str = "\n\n---\n\n";
     const STAGE_SEP: &str = "\n\n";
-    const OVERWRITE_TESTS: bool = false;
 
     fn parse_tests(path: PathBuf) -> Result<Vec<(String, Vec<String>)>, String> {
         let tests = fs::read_to_string(&path)
@@ -1072,7 +1082,27 @@ mod tests {
         if failed.iter().all(|stage| stage.is_empty()) {
             return Ok(());
         }
-        if !OVERWRITE_TESTS {
+        let overwrite_tests = env::var("TESTS").unwrap_or_default() == "OVERWRITE";
+        if overwrite_tests {
+            for (c, expected, actual) in res.iter() {
+                let expected_stages = expected.len();
+                let actual_stages = actual.len();
+                if expected_stages != actual_stages {
+                    eprintln!("Code:\n{c}\n");
+                    eprintln!("Expected {expected_stages} stages, but found {actual_stages}");
+                    return Err(format!("Different number of stages in {}", p.display()));
+                }
+                match (expected.last(), actual.last()) {
+                    (Some(exp), Some(act)) if exp != "?" && exp != act => {
+                        eprintln!("Code:\n{c}\n");
+                        eprintln!("Expected:\n{exp}\n");
+                        eprintln!("Actual:\n{act}\n");
+                        return Err(format!("Different end results in {}", p.display()));
+                    }
+                    _ => {}
+                }
+            }
+        } else {
             p = p.with_extension(format!("actual.txt"))
         }
         let Ok(mut file) = fs::File::create(&p) else {
@@ -1091,7 +1121,7 @@ mod tests {
         if let Err(e) = file.write_all(&tests.as_bytes()) {
             return Err(format!("Could not write file {}: {e}", p.display()));
         }
-        if OVERWRITE_TESTS {
+        if overwrite_tests {
             return Ok(());
         }
         for (failed, stage) in failed.into_iter().zip(STAGES) {

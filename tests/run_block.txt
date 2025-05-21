@@ -32,41 +32,51 @@
 
 00000: PushVar(00000)
 00001: PushVar(00001)
-00002: PushString("Pair")
+00002: Swap(00002)
 00003: Apply
-00004: Apply
-00005:   Return
-00006: PushVar(00001)
-00007: PushVar(00000)
-00008: Apply
-00009:   Return
-00010: PushFn(00006, 00001)
-00011:   Return
-00012: PushFn(00010, 00000)
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00000)
+00010: PushVar(00001)
+00011: Swap(00002)
+00012: Apply
 00013:   Return
-00014: PushFn(00000, 00001)
-00015: PushString("Bar")
-00016: PushString("y")
-00017: PushFn(00012, 00000)
-00018: Apply
-00019: Apply
-00020: Apply
-00021:   Return
-00022: PushVar(00001)
-00023: PushVar(00000)
+00014: PushFn(00009, 00001)
+00015:   Return
+00016: PushFn(00014, 00000)
+00017:   Return
+00018: PushString("Pair")
+00019: PushVar(00001)
+00020: Swap(00002)
+00021: Apply
+00022: PushVar(00000)
+00023: Swap(00002)
 00024: Apply
 00025:   Return
-00026: PushFn(00022, 00001)
-00027:   Return
-00028: PushFn(00026, 00000)
-00029:   Return
-00030: PushFn(00014, 00000)
-00031: PushString("Foo")
-00032: PushString("x")
-00033: PushFn(00028, 00000)
-00034: Apply
+00026: PushFn(00016, 00000)
+00027: PushString("y")
+00028: Swap(00002)
+00029: Apply
+00030: PushString("Bar")
+00031: Swap(00002)
+00032: Apply
+00033: PushFn(00018, 00001)
+00034: Swap(00002)
 00035: Apply
-00036: Apply
+00036:   Return
+00037: PushFn(00007, 00000)
+00038: PushString("x")
+00039: Swap(00002)
+00040: Apply
+00041: PushString("Foo")
+00042: Swap(00002)
+00043: Apply
+00044: PushFn(00026, 00000)
+00045: Swap(00002)
+00046: Apply
 
 Pair(Foo, Bar)
 
@@ -101,36 +111,44 @@ Pair(Foo, Bar)
     ( 0
       "Bar" ) )
 
-00000: PushString("Bar")
-00001: PushVar(00000)
-00002: Apply
-00003:   Return
-00004: PushVar(00000)
-00005: PushString("Foo")
-00006: Apply
-00007:   Return
-00008: PushVar(00000)
-00009:   Return
-00010: PushFn(00008, 00000)
-00011:   Return
-00012: PushVar(00001)
-00013: PushVar(00000)
-00014: Apply
-00015:   Return
-00016: PushFn(00012, 00001)
+00000: PushVar(00000)
+00001: PushVar(00001)
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00000)
+00010:   Return
+00011: PushFn(00009, 00000)
+00012:   Return
+00013: PushString("Foo")
+00014: PushVar(00000)
+00015: Swap(00002)
+00016: Apply
 00017:   Return
-00018: PushFn(00016, 00000)
-00019:   Return
-00020: PushFn(00000, 00000)
-00021: PushFn(00004, 00000)
-00022: PushString("x")
-00023: PushFn(00010, 00000)
-00024: Apply
-00025: Apply
-00026: PushString("f")
-00027: PushFn(00018, 00000)
-00028: Apply
-00029: Apply
+00018: PushVar(00000)
+00019: PushString("Bar")
+00020: Swap(00002)
+00021: Apply
+00022:   Return
+00023: PushFn(00007, 00000)
+00024: PushString("f")
+00025: Swap(00002)
+00026: Apply
+00027: PushFn(00011, 00000)
+00028: PushString("x")
+00029: Swap(00002)
 00030: Apply
+00031: PushFn(00013, 00000)
+00032: Swap(00002)
+00033: Apply
+00034: Swap(00002)
+00035: Apply
+00036: PushFn(00018, 00000)
+00037: Swap(00002)
+00038: Apply
 
 Foo(Bar)

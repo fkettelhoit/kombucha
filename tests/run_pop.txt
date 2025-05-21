@@ -38,50 +38,60 @@ pop(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })
   =>
     "Error" )
 
-00000: PushString("Error")
-00001:   Return
+00000: PushVar(00002)
+00001: PushVar(00001)
 00002: PushVar(00000)
-00003:   Return
-00004: PushVar(00000)
-00005:   Return
-00006: PushFn(00004, 00000)
+00003: Swap(00003)
+00004: Pop
+00005: Apply
+00006: Apply
 00007:   Return
-00008: PushFn(00002, 00000)
-00009: PushString("x")
-00010: PushFn(00006, 00000)
-00011: Apply
-00012: Apply
+00008: PushFn(00000, 00002)
+00009:   Return
+00010: PushFn(00008, 00001)
+00011:   Return
+00012: PushVar(00000)
 00013:   Return
-00014: PushVar(00000)
+00014: PushFn(00012, 00000)
 00015:   Return
-00016: PushFn(00014, 00000)
+00016: PushVar(00000)
 00017:   Return
-00018: PushVar(00000)
-00019: PushVar(00001)
-00020: PushVar(00002)
-00021: Pop
-00022: Apply
-00023: Apply
-00024:   Return
-00025: PushFn(00018, 00002)
-00026:   Return
-00027: PushFn(00025, 00001)
-00028:   Return
-00029: PushFn(00000, 00000)
-00030: PushFn(00008, 00000)
-00031: PushString("f")
-00032: PushFn(00016, 00000)
-00033: Apply
-00034: Apply
-00035: PushString("Baz")
-00036: PushString("Bar")
-00037: PushString("Foo")
-00038: Apply
+00018: PushFn(00016, 00000)
+00019:   Return
+00020: PushVar(00000)
+00021:   Return
+00022: PushFn(00018, 00000)
+00023: PushString("x")
+00024: Swap(00002)
+00025: Apply
+00026: PushFn(00020, 00000)
+00027: Swap(00002)
+00028: Apply
+00029:   Return
+00030: PushString("Error")
+00031:   Return
+00032: PushFn(00010, 00000)
+00033: PushString("Foo")
+00034: PushString("Bar")
+00035: Swap(00002)
+00036: Apply
+00037: PushString("Baz")
+00038: Swap(00002)
 00039: Apply
-00040: PushFn(00027, 00000)
+00040: Swap(00002)
 00041: Apply
-00042: Apply
-00043: Apply
+00042: PushFn(00014, 00000)
+00043: PushString("f")
+00044: Swap(00002)
+00045: Apply
+00046: PushFn(00022, 00000)
+00047: Swap(00002)
+00048: Apply
+00049: Swap(00002)
+00050: Apply
+00051: PushFn(00030, 00000)
+00052: Swap(00002)
+00053: Apply
 
 Baz
 
@@ -123,46 +133,54 @@ pop(Foo, 'f => { 'x => { x } }, { Error })
   =>
     "Error" )
 
-00000: PushString("Error")
-00001:   Return
+00000: PushVar(00002)
+00001: PushVar(00001)
 00002: PushVar(00000)
-00003:   Return
-00004: PushVar(00000)
-00005:   Return
-00006: PushFn(00004, 00000)
+00003: Swap(00003)
+00004: Pop
+00005: Apply
+00006: Apply
 00007:   Return
-00008: PushFn(00002, 00000)
-00009: PushString("x")
-00010: PushFn(00006, 00000)
-00011: Apply
-00012: Apply
+00008: PushFn(00000, 00002)
+00009:   Return
+00010: PushFn(00008, 00001)
+00011:   Return
+00012: PushVar(00000)
 00013:   Return
-00014: PushVar(00000)
+00014: PushFn(00012, 00000)
 00015:   Return
-00016: PushFn(00014, 00000)
+00016: PushVar(00000)
 00017:   Return
-00018: PushVar(00000)
-00019: PushVar(00001)
-00020: PushVar(00002)
-00021: Pop
-00022: Apply
-00023: Apply
-00024:   Return
-00025: PushFn(00018, 00002)
-00026:   Return
-00027: PushFn(00025, 00001)
-00028:   Return
-00029: PushFn(00000, 00000)
-00030: PushFn(00008, 00000)
-00031: PushString("f")
-00032: PushFn(00016, 00000)
-00033: Apply
-00034: Apply
-00035: PushString("Foo")
-00036: PushFn(00027, 00000)
-00037: Apply
-00038: Apply
+00018: PushFn(00016, 00000)
+00019:   Return
+00020: PushVar(00000)
+00021:   Return
+00022: PushFn(00018, 00000)
+00023: PushString("x")
+00024: Swap(00002)
+00025: Apply
+00026: PushFn(00020, 00000)
+00027: Swap(00002)
+00028: Apply
+00029:   Return
+00030: PushString("Error")
+00031:   Return
+00032: PushFn(00010, 00000)
+00033: PushString("Foo")
+00034: Swap(00002)
+00035: Apply
+00036: PushFn(00014, 00000)
+00037: PushString("f")
+00038: Swap(00002)
 00039: Apply
+00040: PushFn(00022, 00000)
+00041: Swap(00002)
+00042: Apply
+00043: Swap(00002)
+00044: Apply
+00045: PushFn(00030, 00000)
+00046: Swap(00002)
+00047: Apply
 
 Error
 
@@ -208,50 +226,60 @@ pop(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
   =>
     "Error" )
 
-00000: PushString("Error")
-00001:   Return
-00002: PushVar(00001)
-00003:   Return
-00004: PushVar(00000)
-00005:   Return
-00006: PushFn(00004, 00000)
+00000: PushVar(00002)
+00001: PushVar(00001)
+00002: PushVar(00000)
+00003: Swap(00003)
+00004: Pop
+00005: Apply
+00006: Apply
 00007:   Return
-00008: PushFn(00002, 00001)
-00009: PushString("x")
-00010: PushFn(00006, 00000)
-00011: Apply
-00012: Apply
+00008: PushFn(00000, 00002)
+00009:   Return
+00010: PushFn(00008, 00001)
+00011:   Return
+00012: PushVar(00000)
 00013:   Return
-00014: PushVar(00000)
+00014: PushFn(00012, 00000)
 00015:   Return
-00016: PushFn(00014, 00000)
+00016: PushVar(00000)
 00017:   Return
-00018: PushVar(00000)
-00019: PushVar(00001)
-00020: PushVar(00002)
-00021: Pop
-00022: Apply
-00023: Apply
-00024:   Return
-00025: PushFn(00018, 00002)
-00026:   Return
-00027: PushFn(00025, 00001)
-00028:   Return
-00029: PushFn(00000, 00000)
-00030: PushFn(00008, 00000)
-00031: PushString("f")
-00032: PushFn(00016, 00000)
-00033: Apply
-00034: Apply
-00035: PushString("Baz")
-00036: PushString("Bar")
-00037: PushString("Foo")
-00038: Apply
+00018: PushFn(00016, 00000)
+00019:   Return
+00020: PushVar(00001)
+00021:   Return
+00022: PushFn(00018, 00000)
+00023: PushString("x")
+00024: Swap(00002)
+00025: Apply
+00026: PushFn(00020, 00001)
+00027: Swap(00002)
+00028: Apply
+00029:   Return
+00030: PushString("Error")
+00031:   Return
+00032: PushFn(00010, 00000)
+00033: PushString("Foo")
+00034: PushString("Bar")
+00035: Swap(00002)
+00036: Apply
+00037: PushString("Baz")
+00038: Swap(00002)
 00039: Apply
-00040: PushFn(00027, 00000)
+00040: Swap(00002)
 00041: Apply
-00042: Apply
-00043: Apply
+00042: PushFn(00014, 00000)
+00043: PushString("f")
+00044: Swap(00002)
+00045: Apply
+00046: PushFn(00022, 00000)
+00047: Swap(00002)
+00048: Apply
+00049: Swap(00002)
+00050: Apply
+00051: PushFn(00030, 00000)
+00052: Swap(00002)
+00053: Apply
 
 Foo(Bar)
 
@@ -295,47 +323,56 @@ pop(Foo(Bar), 'f => { 'x => { f } }, { Error })
   =>
     "Error" )
 
-00000: PushString("Error")
-00001:   Return
-00002: PushVar(00001)
-00003:   Return
-00004: PushVar(00000)
-00005:   Return
-00006: PushFn(00004, 00000)
+00000: PushVar(00002)
+00001: PushVar(00001)
+00002: PushVar(00000)
+00003: Swap(00003)
+00004: Pop
+00005: Apply
+00006: Apply
 00007:   Return
-00008: PushFn(00002, 00001)
-00009: PushString("x")
-00010: PushFn(00006, 00000)
-00011: Apply
-00012: Apply
+00008: PushFn(00000, 00002)
+00009:   Return
+00010: PushFn(00008, 00001)
+00011:   Return
+00012: PushVar(00000)
 00013:   Return
-00014: PushVar(00000)
+00014: PushFn(00012, 00000)
 00015:   Return
-00016: PushFn(00014, 00000)
+00016: PushVar(00000)
 00017:   Return
-00018: PushVar(00000)
-00019: PushVar(00001)
-00020: PushVar(00002)
-00021: Pop
-00022: Apply
-00023: Apply
-00024:   Return
-00025: PushFn(00018, 00002)
-00026:   Return
-00027: PushFn(00025, 00001)
-00028:   Return
-00029: PushFn(00000, 00000)
-00030: PushFn(00008, 00000)
-00031: PushString("f")
-00032: PushFn(00016, 00000)
-00033: Apply
-00034: Apply
-00035: PushString("Bar")
-00036: PushString("Foo")
-00037: Apply
-00038: PushFn(00027, 00000)
-00039: Apply
-00040: Apply
-00041: Apply
+00018: PushFn(00016, 00000)
+00019:   Return
+00020: PushVar(00001)
+00021:   Return
+00022: PushFn(00018, 00000)
+00023: PushString("x")
+00024: Swap(00002)
+00025: Apply
+00026: PushFn(00020, 00001)
+00027: Swap(00002)
+00028: Apply
+00029:   Return
+00030: PushString("Error")
+00031:   Return
+00032: PushFn(00010, 00000)
+00033: PushString("Foo")
+00034: PushString("Bar")
+00035: Swap(00002)
+00036: Apply
+00037: Swap(00002)
+00038: Apply
+00039: PushFn(00014, 00000)
+00040: PushString("f")
+00041: Swap(00002)
+00042: Apply
+00043: PushFn(00022, 00000)
+00044: Swap(00002)
+00045: Apply
+00046: Swap(00002)
+00047: Apply
+00048: PushFn(00030, 00000)
+00049: Swap(00002)
+00050: Apply
 
 Foo

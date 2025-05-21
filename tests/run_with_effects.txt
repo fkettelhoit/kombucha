@@ -6,9 +6,10 @@ print!(Foo)
 ( print!
   "Foo" )
 
-00000: PushString("Foo")
-00001: PushEffect("print")
-00002: Apply
+00000: PushEffect("print")
+00001: PushString("Foo")
+00002: Swap(00002)
+00003: Apply
 
 "Foo"
 Nil
@@ -33,21 +34,26 @@ print!(Foo), print!(Bar), print!(FooBar)
   ( print!
     "Foo" ) )
 
-00000: PushString("FooBar")
-00001: PushEffect("print")
-00002: Apply
-00003:   Return
-00004: PushString("Bar")
-00005: PushEffect("print")
-00006: Apply
-00007: PushFn(00000, 00000)
-00008: Apply
-00009:   Return
-00010: PushString("Foo")
-00011: PushEffect("print")
-00012: Apply
-00013: PushFn(00004, 00000)
-00014: Apply
+00000: PushEffect("print")
+00001: PushString("FooBar")
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00000)
+00006: PushEffect("print")
+00007: PushString("Bar")
+00008: Swap(00002)
+00009: Apply
+00010: Swap(00002)
+00011: Apply
+00012:   Return
+00013: PushFn(00005, 00000)
+00014: PushEffect("print")
+00015: PushString("Foo")
+00016: Swap(00002)
+00017: Apply
+00018: Swap(00002)
+00019: Apply
 
 "Foo"
 "Bar"
@@ -133,93 +139,115 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
                 0 ) ) ) ) )
 
 00000: PushVar(00000)
-00001: PushString("Pair")
-00002: Apply
-00003:   Return
-00004: PushVar(00000)
-00005:   Return
-00006: PushFn(00004, 00000)
-00007:   Return
-00008: PushFn(00000, 00000)
-00009: PushString("arg")
-00010: PushFn(00006, 00000)
-00011: Apply
-00012: Apply
-00013:   Return
-00014: PushVar(00000)
-00015:   Return
-00016: PushFn(00014, 00000)
-00017:   Return
-00018: PushString("Baz")
-00019: PushString("Bar")
-00020: PushVar(00001)
+00001: PushVar(00001)
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00000)
+00010:   Return
+00011: PushFn(00009, 00000)
+00012:   Return
+00013: PushVar(00000)
+00014:   Return
+00015: PushFn(00013, 00000)
+00016:   Return
+00017: PushEffect("pair")
+00018: PushString("Args")
+00019: PushVar(00001)
+00020: Swap(00002)
 00021: Apply
-00022: Apply
-00023:   Return
-00024: PushVar(00000)
-00025: PushVar(00001)
-00026: PushVar(00002)
-00027: Try
-00028: Apply
-00029: Unwind
-00030:   Return
-00031: PushFn(00024, 00002)
-00032:   Return
-00033: PushFn(00031, 00001)
-00034:   Return
-00035: PushFn(00008, 00000)
-00036: PushString("r")
-00037: PushFn(00016, 00000)
-00038: Apply
-00039: Apply
-00040: PushEffect("pair")
-00041: PushFn(00018, 00001)
-00042: PushFn(00033, 00000)
-00043: Apply
-00044: Apply
-00045: Apply
-00046:   Return
-00047: PushVar(00000)
+00022: PushVar(00000)
+00023: Swap(00002)
+00024: Apply
+00025: Swap(00002)
+00026: Apply
+00027:   Return
+00028: PushFn(00015, 00000)
+00029: PushString("y")
+00030: Swap(00002)
+00031: Apply
+00032: PushFn(00017, 00001)
+00033: Swap(00002)
+00034: Apply
+00035:   Return
+00036: PushVar(00002)
+00037: PushVar(00001)
+00038: PushVar(00000)
+00039: Swap(00003)
+00040: Try
+00041: Apply
+00042: Unwind
+00043:   Return
+00044: PushFn(00036, 00002)
+00045:   Return
+00046: PushFn(00044, 00001)
+00047:   Return
 00048: PushVar(00001)
-00049: PushString("Args")
-00050: Apply
+00049: PushString("Bar")
+00050: Swap(00002)
 00051: Apply
-00052: PushEffect("pair")
-00053: Apply
-00054:   Return
-00055: PushVar(00000)
-00056:   Return
-00057: PushFn(00055, 00000)
-00058:   Return
-00059: PushFn(00047, 00001)
-00060: PushString("y")
-00061: PushFn(00057, 00000)
-00062: Apply
-00063: Apply
-00064:   Return
+00052: PushString("Baz")
+00053: Swap(00002)
+00054: Apply
+00055:   Return
+00056: PushVar(00000)
+00057:   Return
+00058: PushFn(00056, 00000)
+00059:   Return
+00060: PushVar(00000)
+00061:   Return
+00062: PushFn(00060, 00000)
+00063:   Return
+00064: PushString("Pair")
 00065: PushVar(00000)
-00066:   Return
-00067: PushFn(00065, 00000)
+00066: Swap(00002)
+00067: Apply
 00068:   Return
-00069: PushVar(00001)
-00070: PushVar(00000)
-00071: Apply
-00072:   Return
-00073: PushFn(00069, 00001)
-00074:   Return
-00075: PushFn(00073, 00000)
+00069: PushFn(00062, 00000)
+00070: PushString("arg")
+00071: Swap(00002)
+00072: Apply
+00073: PushFn(00064, 00000)
+00074: Swap(00002)
+00075: Apply
 00076:   Return
-00077: PushFn(00035, 00000)
-00078: PushFn(00059, 00000)
-00079: PushString("x")
-00080: PushFn(00067, 00000)
-00081: Apply
-00082: Apply
-00083: PushString("foo")
-00084: PushFn(00075, 00000)
-00085: Apply
-00086: Apply
+00077: PushFn(00046, 00000)
+00078: PushFn(00048, 00001)
+00079: Swap(00002)
+00080: Apply
+00081: PushEffect("pair")
+00082: Swap(00002)
+00083: Apply
+00084: PushFn(00058, 00000)
+00085: PushString("r")
+00086: Swap(00002)
 00087: Apply
+00088: PushFn(00069, 00000)
+00089: Swap(00002)
+00090: Apply
+00091: Swap(00002)
+00092: Apply
+00093:   Return
+00094: PushFn(00007, 00000)
+00095: PushString("foo")
+00096: Swap(00002)
+00097: Apply
+00098: PushFn(00011, 00000)
+00099: PushString("x")
+00100: Swap(00002)
+00101: Apply
+00102: PushFn(00028, 00000)
+00103: Swap(00002)
+00104: Apply
+00105: Swap(00002)
+00106: Apply
+00107: PushFn(00077, 00000)
+00108: Swap(00002)
+00109: Apply
 
 Pair(Args(Bar, Baz))
 
@@ -261,46 +289,54 @@ try({ Foo }, unused!, 'r => { ' => { Error }})
         =>
           "Error" ) ) )
 
-00000: PushString("Error")
-00001:   Return
+00000: PushVar(00002)
+00001: PushVar(00001)
 00002: PushVar(00000)
-00003:   Return
-00004: PushFn(00002, 00000)
-00005:   Return
-00006: PushFn(00000, 00000)
-00007: PushString("")
-00008: PushFn(00004, 00000)
-00009: Apply
-00010: Apply
+00003: Swap(00003)
+00004: Try
+00005: Apply
+00006: Unwind
+00007:   Return
+00008: PushFn(00000, 00002)
+00009:   Return
+00010: PushFn(00008, 00001)
 00011:   Return
-00012: PushVar(00000)
+00012: PushString("Foo")
 00013:   Return
-00014: PushFn(00012, 00000)
+00014: PushVar(00000)
 00015:   Return
-00016: PushString("Foo")
+00016: PushFn(00014, 00000)
 00017:   Return
 00018: PushVar(00000)
-00019: PushVar(00001)
-00020: PushVar(00002)
-00021: Try
-00022: Apply
-00023: Unwind
-00024:   Return
-00025: PushFn(00018, 00002)
-00026:   Return
-00027: PushFn(00025, 00001)
-00028:   Return
-00029: PushFn(00006, 00000)
-00030: PushString("r")
-00031: PushFn(00014, 00000)
-00032: Apply
-00033: Apply
-00034: PushEffect("unused")
-00035: PushFn(00016, 00000)
-00036: PushFn(00027, 00000)
-00037: Apply
+00019:   Return
+00020: PushFn(00018, 00000)
+00021:   Return
+00022: PushString("Error")
+00023:   Return
+00024: PushFn(00020, 00000)
+00025: PushString("")
+00026: Swap(00002)
+00027: Apply
+00028: PushFn(00022, 00000)
+00029: Swap(00002)
+00030: Apply
+00031:   Return
+00032: PushFn(00010, 00000)
+00033: PushFn(00012, 00000)
+00034: Swap(00002)
+00035: Apply
+00036: PushEffect("unused")
+00037: Swap(00002)
 00038: Apply
-00039: Apply
+00039: PushFn(00016, 00000)
+00040: PushString("r")
+00041: Swap(00002)
+00042: Apply
+00043: PushFn(00024, 00000)
+00044: Swap(00002)
+00045: Apply
+00046: Swap(00002)
+00047: Apply
 
 Foo
 
@@ -348,52 +384,63 @@ try({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
             ( 1
               "Bar" ) ) ) ) )
 
-00000: PushString("Bar")
+00000: PushVar(00002)
 00001: PushVar(00001)
-00002: Apply
-00003: PushVar(00000)
-00004: Apply
-00005:   Return
-00006: PushVar(00000)
+00002: PushVar(00000)
+00003: Swap(00003)
+00004: Try
+00005: Apply
+00006: Unwind
 00007:   Return
-00008: PushFn(00006, 00000)
+00008: PushFn(00000, 00002)
 00009:   Return
-00010: PushFn(00000, 00001)
-00011: PushString("arg")
-00012: PushFn(00008, 00000)
-00013: Apply
-00014: Apply
-00015:   Return
-00016: PushVar(00000)
-00017:   Return
-00018: PushFn(00016, 00000)
-00019:   Return
-00020: PushString("Foo")
-00021: PushEffect("effect")
-00022: Apply
-00023:   Return
-00024: PushVar(00000)
-00025: PushVar(00001)
-00026: PushVar(00002)
-00027: Try
-00028: Apply
-00029: Unwind
-00030:   Return
-00031: PushFn(00024, 00002)
+00010: PushFn(00008, 00001)
+00011:   Return
+00012: PushEffect("effect")
+00013: PushString("Foo")
+00014: Swap(00002)
+00015: Apply
+00016:   Return
+00017: PushVar(00000)
+00018:   Return
+00019: PushFn(00017, 00000)
+00020:   Return
+00021: PushVar(00000)
+00022:   Return
+00023: PushFn(00021, 00000)
+00024:   Return
+00025: PushVar(00000)
+00026: PushVar(00001)
+00027: PushString("Bar")
+00028: Swap(00002)
+00029: Apply
+00030: Swap(00002)
+00031: Apply
 00032:   Return
-00033: PushFn(00031, 00001)
-00034:   Return
-00035: PushFn(00010, 00000)
-00036: PushString("r")
-00037: PushFn(00018, 00000)
-00038: Apply
+00033: PushFn(00023, 00000)
+00034: PushString("arg")
+00035: Swap(00002)
+00036: Apply
+00037: PushFn(00025, 00001)
+00038: Swap(00002)
 00039: Apply
-00040: PushEffect("effect")
-00041: PushFn(00020, 00000)
-00042: PushFn(00033, 00000)
-00043: Apply
+00040:   Return
+00041: PushFn(00010, 00000)
+00042: PushFn(00012, 00000)
+00043: Swap(00002)
 00044: Apply
-00045: Apply
+00045: PushEffect("effect")
+00046: Swap(00002)
+00047: Apply
+00048: PushFn(00019, 00000)
+00049: PushString("r")
+00050: Swap(00002)
+00051: Apply
+00052: PushFn(00033, 00000)
+00053: Swap(00002)
+00054: Apply
+00055: Swap(00002)
+00056: Apply
 
 Foo(Bar)
 
@@ -450,58 +497,72 @@ try({
             ( 1
               "Baz" ) ) ) ) )
 
-00000: PushString("Baz")
+00000: PushVar(00002)
 00001: PushVar(00001)
-00002: Apply
-00003: PushString("Bar")
-00004: PushVar(00001)
+00002: PushVar(00000)
+00003: Swap(00003)
+00004: Try
 00005: Apply
-00006: PushString("Pair")
-00007: Apply
-00008: Apply
+00006: Unwind
+00007:   Return
+00008: PushFn(00000, 00002)
 00009:   Return
-00010: PushVar(00000)
+00010: PushFn(00008, 00001)
 00011:   Return
-00012: PushFn(00010, 00000)
-00013:   Return
-00014: PushFn(00000, 00001)
-00015: PushString("")
-00016: PushFn(00012, 00000)
-00017: Apply
+00012: PushString("Foo")
+00013: PushEffect("eff")
+00014: PushString("Nil")
+00015: Swap(00002)
+00016: Apply
+00017: Swap(00002)
 00018: Apply
 00019:   Return
 00020: PushVar(00000)
 00021:   Return
 00022: PushFn(00020, 00000)
 00023:   Return
-00024: PushString("Nil")
-00025: PushEffect("eff")
-00026: Apply
-00027: PushString("Foo")
-00028: Apply
-00029:   Return
-00030: PushVar(00000)
-00031: PushVar(00001)
-00032: PushVar(00002)
-00033: Try
+00024: PushVar(00000)
+00025:   Return
+00026: PushFn(00024, 00000)
+00027:   Return
+00028: PushString("Pair")
+00029: PushVar(00001)
+00030: PushString("Bar")
+00031: Swap(00002)
+00032: Apply
+00033: Swap(00002)
 00034: Apply
-00035: Unwind
-00036:   Return
-00037: PushFn(00030, 00002)
-00038:   Return
-00039: PushFn(00037, 00001)
-00040:   Return
-00041: PushFn(00014, 00000)
-00042: PushString("r")
-00043: PushFn(00022, 00000)
-00044: Apply
+00035: PushVar(00001)
+00036: PushString("Baz")
+00037: Swap(00002)
+00038: Apply
+00039: Swap(00002)
+00040: Apply
+00041:   Return
+00042: PushFn(00026, 00000)
+00043: PushString("")
+00044: Swap(00002)
 00045: Apply
-00046: PushEffect("eff")
-00047: PushFn(00024, 00000)
-00048: PushFn(00039, 00000)
-00049: Apply
-00050: Apply
-00051: Apply
+00046: PushFn(00028, 00001)
+00047: Swap(00002)
+00048: Apply
+00049:   Return
+00050: PushFn(00010, 00000)
+00051: PushFn(00012, 00000)
+00052: Swap(00002)
+00053: Apply
+00054: PushEffect("eff")
+00055: Swap(00002)
+00056: Apply
+00057: PushFn(00022, 00000)
+00058: PushString("r")
+00059: Swap(00002)
+00060: Apply
+00061: PushFn(00042, 00000)
+00062: Swap(00002)
+00063: Apply
+00064: Swap(00002)
+00065: Apply
 
 Pair(Foo(Bar), Foo(Baz))
 
@@ -568,75 +629,428 @@ Pair(Foo(Bar), Foo(Baz))
                 ( 1
                   "Baz" ) ) ) ) ) )
 
-00000: PushString("Baz")
+00000: PushVar(00000)
 00001: PushVar(00001)
-00002: Apply
-00003: PushVar(00000)
-00004: PushVar(00000)
-00005: PushVar(00001)
-00006: Apply
-00007: Apply
-00008: PushString("Twice")
-00009: Apply
-00010: Apply
-00011:   Return
-00012: PushVar(00000)
-00013:   Return
-00014: PushFn(00012, 00000)
-00015:   Return
-00016: PushFn(00000, 00001)
-00017: PushString("x")
-00018: PushFn(00014, 00000)
-00019: Apply
-00020: Apply
-00021:   Return
-00022: PushVar(00000)
-00023:   Return
-00024: PushFn(00022, 00000)
-00025:   Return
-00026: PushVar(00001)
-00027: PushEffect("elems")
-00028: Apply
-00029: PushString("List")
-00030: Apply
-00031:   Return
-00032: PushVar(00000)
-00033: PushVar(00001)
-00034: PushVar(00002)
-00035: Try
-00036: Apply
-00037: Unwind
-00038:   Return
-00039: PushFn(00032, 00002)
-00040:   Return
-00041: PushFn(00039, 00001)
-00042:   Return
-00043: PushFn(00016, 00000)
-00044: PushString("r")
-00045: PushFn(00024, 00000)
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00002)
+00010: PushVar(00001)
+00011: PushVar(00000)
+00012: Swap(00003)
+00013: Try
+00014: Apply
+00015: Unwind
+00016:   Return
+00017: PushFn(00009, 00002)
+00018:   Return
+00019: PushFn(00017, 00001)
+00020:   Return
+00021: PushString("List")
+00022: PushEffect("elems")
+00023: PushVar(00001)
+00024: Swap(00002)
+00025: Apply
+00026: Swap(00002)
+00027: Apply
+00028:   Return
+00029: PushVar(00000)
+00030:   Return
+00031: PushFn(00029, 00000)
+00032:   Return
+00033: PushVar(00000)
+00034:   Return
+00035: PushFn(00033, 00000)
+00036:   Return
+00037: PushString("Twice")
+00038: PushVar(00001)
+00039: PushVar(00000)
+00040: Swap(00002)
+00041: Apply
+00042: PushVar(00000)
+00043: Swap(00002)
+00044: Apply
+00045: Swap(00002)
 00046: Apply
-00047: Apply
-00048: PushEffect("elems")
-00049: PushFn(00026, 00001)
-00050: PushFn(00041, 00000)
-00051: Apply
+00047: PushVar(00001)
+00048: PushString("Baz")
+00049: Swap(00002)
+00050: Apply
+00051: Swap(00002)
 00052: Apply
-00053: Apply
-00054:   Return
-00055: PushVar(00001)
-00056: PushVar(00000)
+00053:   Return
+00054: PushFn(00035, 00000)
+00055: PushString("x")
+00056: Swap(00002)
 00057: Apply
-00058:   Return
-00059: PushFn(00055, 00001)
-00060:   Return
-00061: PushFn(00059, 00000)
-00062:   Return
-00063: PushFn(00043, 00000)
-00064: PushString("Foo")
-00065: PushString("foo")
-00066: PushFn(00061, 00000)
-00067: Apply
+00058: PushFn(00037, 00001)
+00059: Swap(00002)
+00060: Apply
+00061:   Return
+00062: PushFn(00019, 00000)
+00063: PushFn(00021, 00001)
+00064: Swap(00002)
+00065: Apply
+00066: PushEffect("elems")
+00067: Swap(00002)
 00068: Apply
-00069: Apply
+00069: PushFn(00031, 00000)
+00070: PushString("r")
+00071: Swap(00002)
+00072: Apply
+00073: PushFn(00054, 00000)
+00074: Swap(00002)
+00075: Apply
+00076: Swap(00002)
+00077: Apply
+00078:   Return
+00079: PushFn(00007, 00000)
+00080: PushString("foo")
+00081: Swap(00002)
+00082: Apply
+00083: PushString("Foo")
+00084: Swap(00002)
+00085: Apply
+00086: PushFn(00062, 00000)
+00087: Swap(00002)
+00088: Apply
 
 Twice(List(Foo, Foo), List(Baz))
+
+---
+
+Foo(try({
+  Baz(effect!(), effect!())
+}, effect!, 'r => {
+  ' => {
+    Bar(r(Qux))
+  }
+}))
+
+(Foo
+  (try
+    {
+      (Baz
+        (effect!)
+        (effect!))}
+    effect!
+    (=>
+      'r
+      {
+        (=>
+          '
+          {
+            (Bar
+              (r
+                Qux))})})))
+
+( "Foo"
+  ( ( ( =>
+          =>
+            =>
+              ( try
+                2
+                1
+                0 )
+        =>
+          ( ( "Baz"
+              ( effect!
+                "Nil" ) )
+            ( effect!
+              "Nil" ) ) )
+      effect! )
+    ( ( =>
+          =>
+            0
+        "r" )
+      =>
+        ( ( =>
+              =>
+                0
+            "" )
+          =>
+            ( "Bar"
+              ( 1
+                "Qux" ) ) ) ) ) )
+
+00000: PushVar(00002)
+00001: PushVar(00001)
+00002: PushVar(00000)
+00003: Swap(00003)
+00004: Try
+00005: Apply
+00006: Unwind
+00007:   Return
+00008: PushFn(00000, 00002)
+00009:   Return
+00010: PushFn(00008, 00001)
+00011:   Return
+00012: PushString("Baz")
+00013: PushEffect("effect")
+00014: PushString("Nil")
+00015: Swap(00002)
+00016: Apply
+00017: Swap(00002)
+00018: Apply
+00019: PushEffect("effect")
+00020: PushString("Nil")
+00021: Swap(00002)
+00022: Apply
+00023: Swap(00002)
+00024: Apply
+00025:   Return
+00026: PushVar(00000)
+00027:   Return
+00028: PushFn(00026, 00000)
+00029:   Return
+00030: PushVar(00000)
+00031:   Return
+00032: PushFn(00030, 00000)
+00033:   Return
+00034: PushString("Bar")
+00035: PushVar(00001)
+00036: PushString("Qux")
+00037: Swap(00002)
+00038: Apply
+00039: Swap(00002)
+00040: Apply
+00041:   Return
+00042: PushFn(00032, 00000)
+00043: PushString("")
+00044: Swap(00002)
+00045: Apply
+00046: PushFn(00034, 00001)
+00047: Swap(00002)
+00048: Apply
+00049:   Return
+00050: PushString("Foo")
+00051: PushFn(00010, 00000)
+00052: PushFn(00012, 00000)
+00053: Swap(00002)
+00054: Apply
+00055: PushEffect("effect")
+00056: Swap(00002)
+00057: Apply
+00058: PushFn(00028, 00000)
+00059: PushString("r")
+00060: Swap(00002)
+00061: Apply
+00062: PushFn(00042, 00000)
+00063: Swap(00002)
+00064: Apply
+00065: Swap(00002)
+00066: Apply
+00067: Swap(00002)
+00068: Apply
+
+Effect Some("effect") with Nil
+
+---
+
+try({
+  List(get!(), get!())
+}, get!, 'r => {
+  ' => {
+    try({
+      r(Foo)
+    }, get!, 'r => {
+      ' => {
+        r(Bar)
+      }
+    })
+  }
+})
+
+(try
+  {
+    (List
+      (get!)
+      (get!))}
+  get!
+  (=>
+    'r
+    {
+      (=>
+        '
+        {
+          (try
+            {
+              (r
+                Foo)}
+            get!
+            (=>
+              'r
+              {
+                (=>
+                  '
+                  {
+                    (r
+                      Bar)})}))})}))
+
+( ( ( =>
+        =>
+          =>
+            ( try
+              2
+              1
+              0 )
+      =>
+        ( ( "List"
+            ( get!
+              "Nil" ) )
+          ( get!
+            "Nil" ) ) )
+    get! )
+  ( ( =>
+        =>
+          0
+      "r" )
+    =>
+      ( ( =>
+            =>
+              0
+          "" )
+        =>
+          ( ( ( =>
+                  =>
+                    =>
+                      ( try
+                        2
+                        1
+                        0 )
+                =>
+                  ( 2
+                    "Foo" ) )
+              get! )
+            ( ( =>
+                  =>
+                    0
+                "r" )
+              =>
+                ( ( =>
+                      =>
+                        0
+                    "" )
+                  =>
+                    ( 1
+                      "Bar" ) ) ) ) ) ) )
+
+00000: PushVar(00002)
+00001: PushVar(00001)
+00002: PushVar(00000)
+00003: Swap(00003)
+00004: Try
+00005: Apply
+00006: Unwind
+00007:   Return
+00008: PushFn(00000, 00002)
+00009:   Return
+00010: PushFn(00008, 00001)
+00011:   Return
+00012: PushString("List")
+00013: PushEffect("get")
+00014: PushString("Nil")
+00015: Swap(00002)
+00016: Apply
+00017: Swap(00002)
+00018: Apply
+00019: PushEffect("get")
+00020: PushString("Nil")
+00021: Swap(00002)
+00022: Apply
+00023: Swap(00002)
+00024: Apply
+00025:   Return
+00026: PushVar(00000)
+00027:   Return
+00028: PushFn(00026, 00000)
+00029:   Return
+00030: PushVar(00000)
+00031:   Return
+00032: PushFn(00030, 00000)
+00033:   Return
+00034: PushVar(00002)
+00035: PushVar(00001)
+00036: PushVar(00000)
+00037: Swap(00003)
+00038: Try
+00039: Apply
+00040: Unwind
+00041:   Return
+00042: PushFn(00034, 00002)
+00043:   Return
+00044: PushFn(00042, 00001)
+00045:   Return
+00046: PushVar(00002)
+00047: PushString("Foo")
+00048: Swap(00002)
+00049: Apply
+00050:   Return
+00051: PushVar(00000)
+00052:   Return
+00053: PushFn(00051, 00000)
+00054:   Return
+00055: PushVar(00000)
+00056:   Return
+00057: PushFn(00055, 00000)
+00058:   Return
+00059: PushVar(00001)
+00060: PushString("Bar")
+00061: Swap(00002)
+00062: Apply
+00063:   Return
+00064: PushFn(00057, 00000)
+00065: PushString("")
+00066: Swap(00002)
+00067: Apply
+00068: PushFn(00059, 00001)
+00069: Swap(00002)
+00070: Apply
+00071:   Return
+00072: PushFn(00044, 00000)
+00073: PushFn(00046, 00002)
+00074: Swap(00002)
+00075: Apply
+00076: PushEffect("get")
+00077: Swap(00002)
+00078: Apply
+00079: PushFn(00053, 00000)
+00080: PushString("r")
+00081: Swap(00002)
+00082: Apply
+00083: PushFn(00064, 00000)
+00084: Swap(00002)
+00085: Apply
+00086: Swap(00002)
+00087: Apply
+00088:   Return
+00089: PushFn(00032, 00000)
+00090: PushString("")
+00091: Swap(00002)
+00092: Apply
+00093: PushFn(00072, 00001)
+00094: Swap(00002)
+00095: Apply
+00096:   Return
+00097: PushFn(00010, 00000)
+00098: PushFn(00012, 00000)
+00099: Swap(00002)
+00100: Apply
+00101: PushEffect("get")
+00102: Swap(00002)
+00103: Apply
+00104: PushFn(00028, 00000)
+00105: PushString("r")
+00106: Swap(00002)
+00107: Apply
+00108: PushFn(00089, 00000)
+00109: Swap(00002)
+00110: Apply
+00111: Swap(00002)
+00112: Apply
+
+List(Foo, Bar)

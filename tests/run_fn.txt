@@ -14,19 +14,22 @@
       "Bar" )
   "Foo" )
 
-00000: PushString("Bar")
+00000: PushVar(00000)
 00001:   Return
-00002: PushVar(00000)
+00002: PushFn(00000, 00000)
 00003:   Return
-00004: PushFn(00002, 00000)
+00004: PushString("Bar")
 00005:   Return
-00006: PushString("Foo")
-00007: PushFn(00000, 00000)
-00008: PushString("x")
-00009: PushFn(00004, 00000)
-00010: Apply
-00011: Apply
+00006: PushFn(00002, 00000)
+00007: PushString("x")
+00008: Swap(00002)
+00009: Apply
+00010: PushFn(00004, 00000)
+00011: Swap(00002)
 00012: Apply
+00013: PushString("Foo")
+00014: Swap(00002)
+00015: Apply
 
 Bar
 
@@ -50,17 +53,20 @@ Bar
 
 00000: PushVar(00000)
 00001:   Return
-00002: PushVar(00000)
+00002: PushFn(00000, 00000)
 00003:   Return
-00004: PushFn(00002, 00000)
+00004: PushVar(00000)
 00005:   Return
-00006: PushString("Foo")
-00007: PushFn(00000, 00000)
-00008: PushString("x")
-00009: PushFn(00004, 00000)
-00010: Apply
-00011: Apply
+00006: PushFn(00002, 00000)
+00007: PushString("x")
+00008: Swap(00002)
+00009: Apply
+00010: PushFn(00004, 00000)
+00011: Swap(00002)
 00012: Apply
+00013: PushString("Foo")
+00014: Swap(00002)
+00015: Apply
 
 Foo
 
@@ -92,31 +98,37 @@ Foo
     "Foo" )
   "Bar" )
 
-00000: PushVar(00001)
+00000: PushVar(00000)
 00001:   Return
-00002: PushVar(00000)
+00002: PushFn(00000, 00000)
 00003:   Return
-00004: PushFn(00002, 00000)
+00004: PushVar(00000)
 00005:   Return
-00006: PushFn(00000, 00001)
-00007: PushString("y")
-00008: PushFn(00004, 00000)
-00009: Apply
-00010: Apply
-00011:   Return
-00012: PushVar(00000)
-00013:   Return
-00014: PushFn(00012, 00000)
-00015:   Return
-00016: PushString("Bar")
-00017: PushString("Foo")
-00018: PushFn(00006, 00000)
+00006: PushFn(00004, 00000)
+00007:   Return
+00008: PushVar(00001)
+00009:   Return
+00010: PushFn(00006, 00000)
+00011: PushString("y")
+00012: Swap(00002)
+00013: Apply
+00014: PushFn(00008, 00001)
+00015: Swap(00002)
+00016: Apply
+00017:   Return
+00018: PushFn(00002, 00000)
 00019: PushString("x")
-00020: PushFn(00014, 00000)
+00020: Swap(00002)
 00021: Apply
-00022: Apply
-00023: Apply
+00022: PushFn(00010, 00000)
+00023: Swap(00002)
 00024: Apply
+00025: PushString("Foo")
+00026: Swap(00002)
+00027: Apply
+00028: PushString("Bar")
+00029: Swap(00002)
+00030: Apply
 
 Foo
 
@@ -165,47 +177,59 @@ Foo
   "Baz" )
 
 00000: PushVar(00000)
-00001: PushVar(00002)
-00002: PushVar(00000)
-00003: PushString("Vec")
-00004: Apply
-00005: Apply
-00006: Apply
+00001:   Return
+00002: PushFn(00000, 00000)
+00003:   Return
+00004: PushVar(00000)
+00005:   Return
+00006: PushFn(00004, 00000)
 00007:   Return
 00008: PushVar(00000)
 00009:   Return
 00010: PushFn(00008, 00000)
 00011:   Return
-00012: PushFn(00000, 00002)
-00013: PushString("z")
-00014: PushFn(00010, 00000)
+00012: PushString("Vec")
+00013: PushVar(00000)
+00014: Swap(00002)
 00015: Apply
-00016: Apply
-00017:   Return
-00018: PushVar(00000)
-00019:   Return
-00020: PushFn(00018, 00000)
-00021:   Return
-00022: PushFn(00012, 00001)
-00023: PushString("y")
-00024: PushFn(00020, 00000)
-00025: Apply
+00016: PushVar(00002)
+00017: Swap(00002)
+00018: Apply
+00019: PushVar(00000)
+00020: Swap(00002)
+00021: Apply
+00022:   Return
+00023: PushFn(00010, 00000)
+00024: PushString("z")
+00025: Swap(00002)
 00026: Apply
-00027:   Return
-00028: PushVar(00000)
-00029:   Return
-00030: PushFn(00028, 00000)
-00031:   Return
-00032: PushString("Baz")
-00033: PushString("Bar")
-00034: PushString("Foo")
-00035: PushFn(00022, 00000)
-00036: PushString("x")
-00037: PushFn(00030, 00000)
-00038: Apply
-00039: Apply
-00040: Apply
-00041: Apply
+00027: PushFn(00012, 00002)
+00028: Swap(00002)
+00029: Apply
+00030:   Return
+00031: PushFn(00006, 00000)
+00032: PushString("y")
+00033: Swap(00002)
+00034: Apply
+00035: PushFn(00023, 00001)
+00036: Swap(00002)
+00037: Apply
+00038:   Return
+00039: PushFn(00002, 00000)
+00040: PushString("x")
+00041: Swap(00002)
 00042: Apply
+00043: PushFn(00031, 00000)
+00044: Swap(00002)
+00045: Apply
+00046: PushString("Foo")
+00047: Swap(00002)
+00048: Apply
+00049: PushString("Bar")
+00050: Swap(00002)
+00051: Apply
+00052: PushString("Baz")
+00053: Swap(00002)
+00054: Apply
 
 Vec(Baz, Foo, Baz)
