@@ -104,7 +104,7 @@ fn parse(code: &str) -> Result<Prg<'_>, String> {
         let mut args = vec![];
         while let Some((Tok::Keyword, i, s)) = toks.peek().copied() {
             toks.next();
-            keywords.push(s);
+            keywords.push(&s[..s.len() - 1]);
             match _infix(toks) {
                 Ok(arg) => args.push(arg),
                 Err(E(_, tok, _E::Value)) => return Err(E(i, tok, _E::KeywordArg(s))),
@@ -315,9 +315,9 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 let mut f = match call {
                     Call::Infix(f) => desugar(Ast(pos, A::Var(f)), ctx)?,
                     Call::Prefix(f) => desugar(*f, ctx)?,
-                    Call::Keyword(keywords) => match resolve_var(&keywords.join(""), ctx) {
+                    Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
                         Some(v) => Expr::Var(v),
-                        None => return Err((pos, E::UnboundVar(keywords.join("")))),
+                        None => return Err((pos, E::UnboundVar(keywords.join("-")))),
                     },
                 };
                 if args.is_empty() {
@@ -911,7 +911,7 @@ mod tests {
                     match call {
                         Call::Prefix(f) => pretty(&f, lvl, buf),
                         Call::Infix(f) => buf.push_str(f),
-                        Call::Keyword(f) => buf.push_str(&f.join("")),
+                        Call::Keyword(f) => buf.push_str(&f.join("-")),
                     }
                     for arg in args {
                         buf.push('\n');

@@ -70,7 +70,7 @@ if: x == y do: {
     foo()
 } else: Bar
 
-(if:do:else:
+(if-do-else
   (==
     x
     y)
@@ -82,11 +82,11 @@ if: x == y do: {
 
 if: x == y do: (foo: Bar baz: Qux) else: Bar
 
-(if:do:else:
+(if-do-else
   (==
     x
     y)
-  (foo:baz:
+  (foo-baz
     Bar
     Qux)
   Bar)
@@ -127,7 +127,7 @@ f'('x, 'y) = {
     'x
     'y)
   {
-    (match:with:
+    (match-with
       (Pair
         x
         y)
@@ -154,7 +154,7 @@ f'('x, 'y) = {
 if: x == y do: { print(Equal) } else: { print(NotEqual) }
 if: x == Foo do: Pair(x, x) else: Error"
 
-(if:do:else:
+(if-do-else
   (==
     x
     y)
@@ -164,7 +164,7 @@ if: x == Foo do: Pair(x, x) else: Error"
   {
     (print
       NotEqual)})
-(if:do:else:
+(if-do-else
   (==
     x
     Foo)
