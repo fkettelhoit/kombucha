@@ -1,0 +1,30 @@
+'ski = ('loop ~> {
+    'x => {
+        pop(x, 'f => { 'z => {
+            pop(f, 'f => { 'y => {
+                pop(f, 'f => { 'x => {
+                    if(f, S, {
+                        loop(trace!(x(z, y(z))))
+                    }, {
+                        Invalid(f(x, y, z))
+                    })
+                }}, {
+                    if(f, K, {
+                        loop(trace!(y))
+                    }, {
+                        Invalid(f(y, z))
+                    })
+                })
+            }}, {
+                if(f, I, {
+                    loop(trace!(z))
+                }, {
+                    Invalid(f(z))
+                })
+            })
+        }}, {
+            x
+        })
+    }
+})
+ski(trace!(S(K, I, S(K, I, S(K, I, K(I, S))))))

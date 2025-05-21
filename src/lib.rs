@@ -490,7 +490,7 @@ pub enum V {
     Resumable(usize, usize, Coroutine),
 }
 
-fn pretty(v: &V, strs: &[&str]) -> String {
+pub fn pretty(v: &V, strs: &[&str]) -> String {
     match v {
         V::String(s) => strs[*s].to_string(),
         V::Effect(eff) => format!("{}!", strs[*eff]),
