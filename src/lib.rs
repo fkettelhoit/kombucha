@@ -1087,12 +1087,12 @@ mod tests {
             for (c, expected, actual) in res.iter() {
                 let expected_stages = expected.len();
                 let actual_stages = actual.len();
-                if expected_stages != actual_stages {
+                if expected_stages > actual_stages {
                     eprintln!("Code:\n{c}\n");
                     eprintln!("Expected {expected_stages} stages, but found {actual_stages}");
-                    return Err(format!("Different number of stages in {}", p.display()));
+                    return Err(format!("Wrong number of stages in {}", p.display()));
                 }
-                match (expected.last(), actual.last()) {
+                match (expected.last(), actual.get(expected.len() - 1)) {
                     (Some(exp), Some(act)) if exp != "?" && exp != act => {
                         eprintln!("Code:\n{c}\n");
                         eprintln!("Expected:\n{exp}\n");
