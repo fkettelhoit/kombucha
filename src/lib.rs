@@ -149,13 +149,12 @@ fn parse(code: &str) -> Result<Prg<'_>, String> {
                 Tok::Symbol => Ok(Ast(i, A::Var(s))),
                 Tok::String => Ok(Ast(i, A::String(s))),
                 Tok::Binding => Ok(Ast(i, A::Binding(s))),
-                Tok::LParen => match _expr(toks) {
-                    Err(E(i, tok, _E::Value)) => Err(E(i, tok, _E::RParen)),
-                    Err(e) => Err(e),
-                    Ok(expr) => match toks.next() {
-                        Some((Tok::RParen, _, _)) => Ok(expr),
-                        tok => Err(E(i, tok.map(|(_, i, s)| (i, s)), _E::RParen)),
-                    },
+                Tok::LParen => match _exprs(toks, i, Some(Tok::RParen))? {
+                    elems if elems.len() == 1 => Ok(elems.into_iter().next().unwrap()),
+                    elems => {
+                        let empty_prefix_call = Call::Prefix(Box::new(Ast(i, A::String(""))));
+                        Ok(Ast(i, A::Call(empty_prefix_call, elems)))
+                    }
                 },
                 Tok::LBrace => Ok(Ast(i, A::Block(_exprs(toks, i, Some(Tok::RBrace))?))),
                 Tok::RParen | Tok::RBrace | Tok::Separator | Tok::Keyword => {
