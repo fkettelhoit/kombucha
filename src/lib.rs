@@ -1150,7 +1150,7 @@ mod tests {
                     return Err(format!("Wrong number of stages in {}", p.display()));
                 }
                 match (expected.last(), actual.get(expected.len() - 1)) {
-                    (Some(exp), Some(act)) if exp != "?" && exp != act => {
+                    (Some(exp), Some(act)) if exp.trim() != "?" && exp.trim() != act.trim() => {
                         eprintln!("Code:\n{c}\n");
                         eprintln!("Expected:\n{exp}\n");
                         eprintln!("Actual:\n{act}\n");

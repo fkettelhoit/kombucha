@@ -657,3 +657,562 @@ f(Foo)
 00204: Apply
 
 throw!(ExpectedBindingButFound(Value(Foo)))
+
+---
+
+'== = ('== ~> { 'a => { 'b => {
+    pop(a, 'xs => { 'x => {
+        pop(b, 'ys => { 'y => {
+            if(x == y, True, { xs == ys }, { False })
+        }}, {
+            False
+        })
+    }}, {
+        if(a, b, { True }, { False })
+    })
+}}})
+List(
+    Foo == Foo
+    Foo == Bar
+    Foo(Bar) == Foo(Bar)
+    Foo(Bar) == Foo(Baz)
+    'a == 'a
+    'a == 'b
+    'f('a) == 'f('a)
+    'f('a) == 'g('a)
+)
+
+(=
+  '==
+  (~>
+    '==
+    {
+      (=>
+        'a
+        {
+          (=>
+            'b
+            {
+              (pop
+                a
+                (=>
+                  'xs
+                  {
+                    (=>
+                      'x
+                      {
+                        (pop
+                          b
+                          (=>
+                            'ys
+                            {
+                              (=>
+                                'y
+                                {
+                                  (if
+                                    (==
+                                      x
+                                      y)
+                                    True
+                                    {
+                                      (==
+                                        xs
+                                        ys)}
+                                    {
+                                      False})})})
+                          {
+                            False})})})
+                {
+                  (if
+                    a
+                    b
+                    {
+                      True}
+                    {
+                      False})})})})}))
+(List
+  (==
+    Foo
+    Foo)
+  (==
+    Foo
+    Bar)
+  (==
+    (Foo
+      Bar)
+    (Foo
+      Bar))
+  (==
+    (Foo
+      Bar)
+    (Foo
+      Baz))
+  (==
+    'a
+    'a)
+  (==
+    'a
+    'b)
+  (==
+    ('f
+      'a)
+    ('f
+      'a))
+  (==
+    ('f
+      'a)
+    ('g
+      'a)))
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "==" )
+    ( ( =>
+          =>
+            ~>
+              0
+        "==" )
+      =>
+        ( ( =>
+              =>
+                0
+            "a" )
+          =>
+            ( ( =>
+                  =>
+                    0
+                "b" )
+              =>
+                ( ( ( =>
+                        =>
+                          =>
+                            ( pop
+                              2
+                              1
+                              0 )
+                      1 )
+                    ( ( =>
+                          =>
+                            0
+                        "xs" )
+                      =>
+                        ( ( =>
+                              =>
+                                0
+                            "x" )
+                          =>
+                            ( ( ( =>
+                                    =>
+                                      =>
+                                        ( pop
+                                          2
+                                          1
+                                          0 )
+                                  2 )
+                                ( ( =>
+                                      =>
+                                        0
+                                    "ys" )
+                                  =>
+                                    ( ( =>
+                                          =>
+                                            0
+                                        "y" )
+                                      =>
+                                        ( ( ( ( =>
+                                                  =>
+                                                    =>
+                                                      =>
+                                                        ( if
+                                                          3
+                                                          2
+                                                          1
+                                                          0 )
+                                                ( ( 6
+                                                    2 )
+                                                  0 ) )
+                                              "True" )
+                                            =>
+                                              ( ( 7
+                                                  4 )
+                                                2 ) )
+                                          =>
+                                            "False" ) ) ) )
+                              =>
+                                "False" ) ) ) )
+                  =>
+                    ( ( ( ( =>
+                              =>
+                                =>
+                                  =>
+                                    ( if
+                                      3
+                                      2
+                                      1
+                                      0 )
+                            2 )
+                          1 )
+                        =>
+                          "True" )
+                      =>
+                        "False" ) ) ) ) ) )
+  =>
+    ( ( ( ( ( ( ( ( "List"
+                    ( ( 0
+                        "Foo" )
+                      "Foo" ) )
+                  ( ( 0
+                      "Foo" )
+                    "Bar" ) )
+                ( ( 0
+                    ( "Foo"
+                      "Bar" ) )
+                  ( "Foo"
+                    "Bar" ) ) )
+              ( ( 0
+                  ( "Foo"
+                    "Bar" ) )
+                ( "Foo"
+                  "Baz" ) ) )
+            ( ( 0
+                "a" )
+              "a" ) )
+          ( ( 0
+              "a" )
+            "b" ) )
+        ( ( 0
+            ( "f"
+              "a" ) )
+          ( "f"
+            "a" ) ) )
+      ( ( 0
+          ( "f"
+            "a" ) )
+        ( "g"
+          "a" ) ) ) )
+
+00000: PushVar(00000)
+00001: PushVar(00001)
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00000)
+00010: Rec
+00011:   Return
+00012: PushFn(00009, 00000)
+00013:   Return
+00014: PushVar(00000)
+00015:   Return
+00016: PushFn(00014, 00000)
+00017:   Return
+00018: PushVar(00000)
+00019:   Return
+00020: PushFn(00018, 00000)
+00021:   Return
+00022: PushVar(00002)
+00023: PushVar(00001)
+00024: PushVar(00000)
+00025: Swap(00003)
+00026: Pop
+00027: Apply
+00028: Apply
+00029:   Return
+00030: PushFn(00022, 00002)
+00031:   Return
+00032: PushFn(00030, 00001)
+00033:   Return
+00034: PushVar(00000)
+00035:   Return
+00036: PushFn(00034, 00000)
+00037:   Return
+00038: PushVar(00000)
+00039:   Return
+00040: PushFn(00038, 00000)
+00041:   Return
+00042: PushVar(00002)
+00043: PushVar(00001)
+00044: PushVar(00000)
+00045: Swap(00003)
+00046: Pop
+00047: Apply
+00048: Apply
+00049:   Return
+00050: PushFn(00042, 00002)
+00051:   Return
+00052: PushFn(00050, 00001)
+00053:   Return
+00054: PushVar(00000)
+00055:   Return
+00056: PushFn(00054, 00000)
+00057:   Return
+00058: PushVar(00000)
+00059:   Return
+00060: PushFn(00058, 00000)
+00061:   Return
+00062: PushVar(00003)
+00063: PushVar(00002)
+00064: PushVar(00001)
+00065: PushVar(00000)
+00066: Swap(00004)
+00067: If
+00068: Apply
+00069:   Return
+00070: PushFn(00062, 00003)
+00071:   Return
+00072: PushFn(00070, 00002)
+00073:   Return
+00074: PushFn(00072, 00001)
+00075:   Return
+00076: PushVar(00007)
+00077: PushVar(00004)
+00078: Swap(00002)
+00079: Apply
+00080: PushVar(00002)
+00081: Swap(00002)
+00082: Apply
+00083:   Return
+00084: PushString("False")
+00085:   Return
+00086: PushFn(00074, 00000)
+00087: PushVar(00006)
+00088: PushVar(00002)
+00089: Swap(00002)
+00090: Apply
+00091: PushVar(00000)
+00092: Swap(00002)
+00093: Apply
+00094: Swap(00002)
+00095: Apply
+00096: PushString("True")
+00097: Swap(00002)
+00098: Apply
+00099: PushFn(00076, 00007)
+00100: Swap(00002)
+00101: Apply
+00102: PushFn(00084, 00000)
+00103: Swap(00002)
+00104: Apply
+00105:   Return
+00106: PushFn(00060, 00000)
+00107: PushString("y")
+00108: Swap(00002)
+00109: Apply
+00110: PushFn(00086, 00006)
+00111: Swap(00002)
+00112: Apply
+00113:   Return
+00114: PushString("False")
+00115:   Return
+00116: PushFn(00052, 00000)
+00117: PushVar(00002)
+00118: Swap(00002)
+00119: Apply
+00120: PushFn(00056, 00000)
+00121: PushString("ys")
+00122: Swap(00002)
+00123: Apply
+00124: PushFn(00106, 00005)
+00125: Swap(00002)
+00126: Apply
+00127: Swap(00002)
+00128: Apply
+00129: PushFn(00114, 00000)
+00130: Swap(00002)
+00131: Apply
+00132:   Return
+00133: PushFn(00040, 00000)
+00134: PushString("x")
+00135: Swap(00002)
+00136: Apply
+00137: PushFn(00116, 00004)
+00138: Swap(00002)
+00139: Apply
+00140:   Return
+00141: PushVar(00003)
+00142: PushVar(00002)
+00143: PushVar(00001)
+00144: PushVar(00000)
+00145: Swap(00004)
+00146: If
+00147: Apply
+00148:   Return
+00149: PushFn(00141, 00003)
+00150:   Return
+00151: PushFn(00149, 00002)
+00152:   Return
+00153: PushFn(00151, 00001)
+00154:   Return
+00155: PushString("True")
+00156:   Return
+00157: PushString("False")
+00158:   Return
+00159: PushFn(00153, 00000)
+00160: PushVar(00002)
+00161: Swap(00002)
+00162: Apply
+00163: PushVar(00001)
+00164: Swap(00002)
+00165: Apply
+00166: PushFn(00155, 00000)
+00167: Swap(00002)
+00168: Apply
+00169: PushFn(00157, 00000)
+00170: Swap(00002)
+00171: Apply
+00172:   Return
+00173: PushFn(00032, 00000)
+00174: PushVar(00001)
+00175: Swap(00002)
+00176: Apply
+00177: PushFn(00036, 00000)
+00178: PushString("xs")
+00179: Swap(00002)
+00180: Apply
+00181: PushFn(00133, 00003)
+00182: Swap(00002)
+00183: Apply
+00184: Swap(00002)
+00185: Apply
+00186: PushFn(00159, 00002)
+00187: Swap(00002)
+00188: Apply
+00189:   Return
+00190: PushFn(00020, 00000)
+00191: PushString("b")
+00192: Swap(00002)
+00193: Apply
+00194: PushFn(00173, 00002)
+00195: Swap(00002)
+00196: Apply
+00197:   Return
+00198: PushFn(00016, 00000)
+00199: PushString("a")
+00200: Swap(00002)
+00201: Apply
+00202: PushFn(00190, 00001)
+00203: Swap(00002)
+00204: Apply
+00205:   Return
+00206: PushString("List")
+00207: PushVar(00000)
+00208: PushString("Foo")
+00209: Swap(00002)
+00210: Apply
+00211: PushString("Foo")
+00212: Swap(00002)
+00213: Apply
+00214: Swap(00002)
+00215: Apply
+00216: PushVar(00000)
+00217: PushString("Foo")
+00218: Swap(00002)
+00219: Apply
+00220: PushString("Bar")
+00221: Swap(00002)
+00222: Apply
+00223: Swap(00002)
+00224: Apply
+00225: PushVar(00000)
+00226: PushString("Foo")
+00227: PushString("Bar")
+00228: Swap(00002)
+00229: Apply
+00230: Swap(00002)
+00231: Apply
+00232: PushString("Foo")
+00233: PushString("Bar")
+00234: Swap(00002)
+00235: Apply
+00236: Swap(00002)
+00237: Apply
+00238: Swap(00002)
+00239: Apply
+00240: PushVar(00000)
+00241: PushString("Foo")
+00242: PushString("Bar")
+00243: Swap(00002)
+00244: Apply
+00245: Swap(00002)
+00246: Apply
+00247: PushString("Foo")
+00248: PushString("Baz")
+00249: Swap(00002)
+00250: Apply
+00251: Swap(00002)
+00252: Apply
+00253: Swap(00002)
+00254: Apply
+00255: PushVar(00000)
+00256: PushString("a")
+00257: Swap(00002)
+00258: Apply
+00259: PushString("a")
+00260: Swap(00002)
+00261: Apply
+00262: Swap(00002)
+00263: Apply
+00264: PushVar(00000)
+00265: PushString("a")
+00266: Swap(00002)
+00267: Apply
+00268: PushString("b")
+00269: Swap(00002)
+00270: Apply
+00271: Swap(00002)
+00272: Apply
+00273: PushVar(00000)
+00274: PushString("f")
+00275: PushString("a")
+00276: Swap(00002)
+00277: Apply
+00278: Swap(00002)
+00279: Apply
+00280: PushString("f")
+00281: PushString("a")
+00282: Swap(00002)
+00283: Apply
+00284: Swap(00002)
+00285: Apply
+00286: Swap(00002)
+00287: Apply
+00288: PushVar(00000)
+00289: PushString("f")
+00290: PushString("a")
+00291: Swap(00002)
+00292: Apply
+00293: Swap(00002)
+00294: Apply
+00295: PushString("g")
+00296: PushString("a")
+00297: Swap(00002)
+00298: Apply
+00299: Swap(00002)
+00300: Apply
+00301: Swap(00002)
+00302: Apply
+00303:   Return
+00304: PushFn(00007, 00000)
+00305: PushString("==")
+00306: Swap(00002)
+00307: Apply
+00308: PushFn(00012, 00000)
+00309: PushString("==")
+00310: Swap(00002)
+00311: Apply
+00312: PushFn(00198, 00000)
+00313: Swap(00002)
+00314: Apply
+00315: Swap(00002)
+00316: Apply
+00317: PushFn(00206, 00000)
+00318: Swap(00002)
+00319: Apply
+
+List(True, False, True, False, True, False, True, False)
