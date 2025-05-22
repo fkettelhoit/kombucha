@@ -256,7 +256,57 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
             ctx.strs.len() - 1
         })
     }
-    fn desugar<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
+    fn contains_bindings<'c>(Ast(_, ast): &Ast<'c>) -> bool {
+        match ast {
+            A::Binding(_) => true,
+            A::Var(_) | A::String(_) | A::Block(_) => false,
+            A::Call(call, args) => match call {
+                Call::Prefix(f) if contains_bindings(f) => true,
+                _ => {
+                    let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
+                    !is_macro && args.iter().any(|arg| contains_bindings(arg))
+                }
+            },
+        }
+    }
+    fn desugar_syntax<'c>(ast: Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
+        let has_bindings = contains_bindings(&ast);
+        match ast.1 {
+            A::Call(call, args) if has_bindings => {
+                let mut desugared_args = vec![];
+                for arg in args {
+                    desugared_args.push(desugar_syntax(arg, ctx)?);
+                }
+                let f = match call {
+                    Call::Infix(f) => desugar_syntax(Ast(ast.0, A::Var(f)), ctx)?,
+                    Call::Prefix(f) => desugar_syntax(*f, ctx)?,
+                    Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
+                        Some(v) => app(Expr::String(resolve_str("Value", ctx)), Expr::Var(v)),
+                        None => return Err((ast.0, E::UnboundVar(keywords.join("-")))),
+                    },
+                };
+                let mut f = app(Expr::String(resolve_str("Compound", ctx)), f);
+                if desugared_args.is_empty() {
+                    let nil = app(Expr::String(resolve_str("Value", ctx)), Expr::String(0));
+                    f = app(f, nil)
+                }
+                for arg in desugared_args {
+                    f = app(f, arg)
+                }
+                Ok(f)
+            }
+            A::Var(_) | A::String(_) | A::Call(_, _) => Ok(app(
+                Expr::String(resolve_str("Value", ctx)),
+                desugar_value(ast, ctx)?,
+            )),
+            A::Binding(_) => Ok(app(
+                Expr::String(resolve_str("Binding", ctx)),
+                desugar_value(ast, ctx)?,
+            )),
+            A::Block(_) => desugar_value(ast, ctx),
+        }
+    }
+    fn desugar_value<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
         match ast {
             A::Var(v) if v.ends_with("!") => Ok(Expr::Effect(resolve_str(&v[..v.len() - 1], ctx))),
             A::Var(v) => match resolve_var(v, ctx) {
@@ -295,7 +345,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                     if bindings == 0 {
                         ctx.vars.push("")
                     }
-                    desugared.push((bindings, desugar(ast, ctx)?));
+                    desugared.push((bindings, desugar_value(ast, ctx)?));
                 }
                 let (mut bindings, mut expr) = desugared.pop().ok_or((pos, E::EmptyBlock))?;
                 expr = (0..max(1, bindings)).fold(expr, |x, _| Expr::Abs(Box::new(x)));
@@ -313,8 +363,8 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
             A::Call(call, args) => {
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
                 let mut f = match call {
-                    Call::Infix(f) => desugar(Ast(pos, A::Var(f)), ctx)?,
-                    Call::Prefix(f) => desugar(*f, ctx)?,
+                    Call::Infix(f) => desugar_value(Ast(pos, A::Var(f)), ctx)?,
+                    Call::Prefix(f) => desugar_value(*f, ctx)?,
                     Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
                         Some(v) => Expr::Var(v),
                         None => return Err((pos, E::UnboundVar(keywords.join("-")))),
@@ -323,10 +373,15 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 if args.is_empty() {
                     f = Expr::App(Box::new(f), Box::new(Expr::String(0)))
                 }
+                let is_builtin = matches!(f, Expr::Abs(_));
+                let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
                 for arg in args {
-                    f = Expr::App(Box::new(f), Box::new(desugar(arg, ctx)?));
+                    if is_macro && !is_builtin {
+                        f = Expr::App(Box::new(f), Box::new(desugar_syntax(arg, ctx)?));
+                    } else {
+                        f = Expr::App(Box::new(f), Box::new(desugar_value(arg, ctx)?));
+                    }
                 }
-
                 ctx.bindings.splice(0..0, bindings);
                 Ok(f)
             }
@@ -334,7 +389,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
     }
     let mut ctx = Ctx::default();
     ctx.strs.push("Nil");
-    match desugar(Ast(0, A::Block(block)), &mut ctx) {
+    match desugar_value(Ast(0, A::Block(block)), &mut ctx) {
         Err((i, E::UnboundVar(v))) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
         Err((i, E::EmptyBlock)) => Err(format!("Empty block at {}", pos_at(i, code))),
         Ok(Expr::Abs(body)) => Ok((*body, ctx.strs)),
@@ -1013,9 +1068,11 @@ mod tests {
         println!("{}", pretty_bytecode(&bytecode));
         match bytecode.run() {
             Ok(VmState::Done(v, strs)) => Ok(pretty(&v, &strs)),
-            Ok(VmState::Resumable(res, arg)) => {
-                Err(format!("Effect {:?} with {arg:?}", res.get_effect_name()))
-            }
+            Ok(VmState::Resumable(res, arg)) => Err(format!(
+                "{}!({})",
+                res.get_effect_name().unwrap(),
+                pretty(&arg, res.strings())
+            )),
             Err(e) => Err(format!("Error at op {e}")),
         }
     }
@@ -1082,7 +1139,7 @@ mod tests {
         if failed.iter().all(|stage| stage.is_empty()) {
             return Ok(());
         }
-        let overwrite_tests = env::var("TESTS").unwrap_or_default() == "OVERWRITE";
+        let overwrite_tests = env::var("OVERWRITE").unwrap_or_default() == "INTERMEDIATE";
         if overwrite_tests {
             for (c, expected, actual) in res.iter() {
                 let expected_stages = expected.len();
@@ -1152,9 +1209,11 @@ mod tests {
             for vm in compiled {
                 match vm.run() {
                     Ok(VmState::Done(v, strs)) => actual.push(pretty(&v, &strs)),
-                    Ok(VmState::Resumable(res, arg)) => {
-                        actual.push(format!("Effect {:?} with {arg:?}", res.get_effect_name()))
-                    }
+                    Ok(VmState::Resumable(res, arg)) => actual.push(format!(
+                        "{}!({})",
+                        res.get_effect_name().unwrap(),
+                        pretty(&arg, res.strings())
+                    )),
                     Err(e) => actual.push(format!("Error at op {e}")),
                 }
             }
@@ -1199,6 +1258,11 @@ mod tests {
     }
 
     #[test]
+    fn test_run_macro() -> Result<(), String> {
+        test(PathBuf::from("tests/run_macro.txt"))
+    }
+
+    #[test]
     fn test_run_pop() -> Result<(), String> {
         test(PathBuf::from("tests/run_pop.txt"))
     }
@@ -1221,13 +1285,13 @@ mod tests {
                     match result {
                         Ok(VmState::Resumable(mut res, arg)) => {
                             let arg = pretty(&arg, res.strings());
-                            match res.get_effect_name() {
-                                Some(eff) if eff == "print" => {
+                            match res.get_effect_name().unwrap() {
+                                eff if eff == "print" => {
                                     printed.push(format!("\"{arg}\"\n"));
                                     let nil = res.intern_string(nil);
                                     result = res.run(nil);
                                 }
-                                name => break actual.push(format!("Effect {name:?} with {arg}")),
+                                name => break actual.push(format!("{name}!({arg})")),
                             }
                         }
                         Ok(VmState::Done(v, strs)) => {

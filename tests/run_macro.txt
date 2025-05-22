@@ -1,0 +1,659 @@
+'=> = ('binding => { 'block => {
+    pop(binding, 'xs => { 'x => {
+        if(xs, Binding, {
+            block
+        }, {
+            throw!(ExpectedBindingButFound(xs(x)))
+        })
+    }}, {
+        throw!(MustBeCalledAsMacroButFound(binding, block))
+    })
+}})
+'f = ('x => { x })
+f(Foo)
+
+(=
+  '=>
+  (=>
+    'binding
+    {
+      (=>
+        'block
+        {
+          (pop
+            binding
+            (=>
+              'xs
+              {
+                (=>
+                  'x
+                  {
+                    (if
+                      xs
+                      Binding
+                      {
+                        block}
+                      {
+                        (throw!
+                          (ExpectedBindingButFound
+                            (xs
+                              x)))})})})
+            {
+              (throw!
+                (MustBeCalledAsMacroButFound
+                  binding
+                  block))})})}))
+(=
+  'f
+  (=>
+    'x
+    {
+      x}))
+(f
+  Foo)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "=>" )
+    ( ( =>
+          =>
+            0
+        "binding" )
+      =>
+        ( ( =>
+              =>
+                0
+            "block" )
+          =>
+            ( ( ( =>
+                    =>
+                      =>
+                        ( pop
+                          2
+                          1
+                          0 )
+                  1 )
+                ( ( =>
+                      =>
+                        0
+                    "xs" )
+                  =>
+                    ( ( =>
+                          =>
+                            0
+                        "x" )
+                      =>
+                        ( ( ( ( =>
+                                  =>
+                                    =>
+                                      =>
+                                        ( if
+                                          3
+                                          2
+                                          1
+                                          0 )
+                                1 )
+                              "Binding" )
+                            =>
+                              3 )
+                          =>
+                            ( throw!
+                              ( "ExpectedBindingButFound"
+                                ( 2
+                                  1 ) ) ) ) ) ) )
+              =>
+                ( throw!
+                  ( ( "MustBeCalledAsMacroButFound"
+                      2 )
+                    1 ) ) ) ) ) )
+  =>
+    ( ( ( =>
+            =>
+              =>
+                ( 0
+                  1 )
+          "f" )
+        ( ( 0
+            ( "Binding"
+              "x" ) )
+          =>
+            0 ) )
+      =>
+        ( 0
+          "Foo" ) ) )
+
+00000: PushVar(00000)
+00001: PushVar(00001)
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00000)
+00010:   Return
+00011: PushFn(00009, 00000)
+00012:   Return
+00013: PushVar(00000)
+00014:   Return
+00015: PushFn(00013, 00000)
+00016:   Return
+00017: PushVar(00002)
+00018: PushVar(00001)
+00019: PushVar(00000)
+00020: Swap(00003)
+00021: Pop
+00022: Apply
+00023: Apply
+00024:   Return
+00025: PushFn(00017, 00002)
+00026:   Return
+00027: PushFn(00025, 00001)
+00028:   Return
+00029: PushVar(00000)
+00030:   Return
+00031: PushFn(00029, 00000)
+00032:   Return
+00033: PushVar(00000)
+00034:   Return
+00035: PushFn(00033, 00000)
+00036:   Return
+00037: PushVar(00003)
+00038: PushVar(00002)
+00039: PushVar(00001)
+00040: PushVar(00000)
+00041: Swap(00004)
+00042: If
+00043: Apply
+00044:   Return
+00045: PushFn(00037, 00003)
+00046:   Return
+00047: PushFn(00045, 00002)
+00048:   Return
+00049: PushFn(00047, 00001)
+00050:   Return
+00051: PushVar(00003)
+00052:   Return
+00053: PushEffect("throw")
+00054: PushString("ExpectedBindingButFound")
+00055: PushVar(00002)
+00056: PushVar(00001)
+00057: Swap(00002)
+00058: Apply
+00059: Swap(00002)
+00060: Apply
+00061: Swap(00002)
+00062: Apply
+00063:   Return
+00064: PushFn(00049, 00000)
+00065: PushVar(00001)
+00066: Swap(00002)
+00067: Apply
+00068: PushString("Binding")
+00069: Swap(00002)
+00070: Apply
+00071: PushFn(00051, 00003)
+00072: Swap(00002)
+00073: Apply
+00074: PushFn(00053, 00002)
+00075: Swap(00002)
+00076: Apply
+00077:   Return
+00078: PushFn(00035, 00000)
+00079: PushString("x")
+00080: Swap(00002)
+00081: Apply
+00082: PushFn(00064, 00002)
+00083: Swap(00002)
+00084: Apply
+00085:   Return
+00086: PushEffect("throw")
+00087: PushString("MustBeCalledAsMacroButFound")
+00088: PushVar(00002)
+00089: Swap(00002)
+00090: Apply
+00091: PushVar(00001)
+00092: Swap(00002)
+00093: Apply
+00094: Swap(00002)
+00095: Apply
+00096:   Return
+00097: PushFn(00027, 00000)
+00098: PushVar(00001)
+00099: Swap(00002)
+00100: Apply
+00101: PushFn(00031, 00000)
+00102: PushString("xs")
+00103: Swap(00002)
+00104: Apply
+00105: PushFn(00078, 00001)
+00106: Swap(00002)
+00107: Apply
+00108: Swap(00002)
+00109: Apply
+00110: PushFn(00086, 00002)
+00111: Swap(00002)
+00112: Apply
+00113:   Return
+00114: PushFn(00015, 00000)
+00115: PushString("block")
+00116: Swap(00002)
+00117: Apply
+00118: PushFn(00097, 00001)
+00119: Swap(00002)
+00120: Apply
+00121:   Return
+00122: PushVar(00000)
+00123: PushVar(00001)
+00124: Swap(00002)
+00125: Apply
+00126:   Return
+00127: PushFn(00122, 00001)
+00128:   Return
+00129: PushFn(00127, 00000)
+00130:   Return
+00131: PushVar(00000)
+00132:   Return
+00133: PushVar(00000)
+00134: PushString("Foo")
+00135: Swap(00002)
+00136: Apply
+00137:   Return
+00138: PushFn(00129, 00000)
+00139: PushString("f")
+00140: Swap(00002)
+00141: Apply
+00142: PushVar(00000)
+00143: PushString("Binding")
+00144: PushString("x")
+00145: Swap(00002)
+00146: Apply
+00147: Swap(00002)
+00148: Apply
+00149: PushFn(00131, 00000)
+00150: Swap(00002)
+00151: Apply
+00152: Swap(00002)
+00153: Apply
+00154: PushFn(00133, 00000)
+00155: Swap(00002)
+00156: Apply
+00157:   Return
+00158: PushFn(00007, 00000)
+00159: PushString("=>")
+00160: Swap(00002)
+00161: Apply
+00162: PushFn(00011, 00000)
+00163: PushString("binding")
+00164: Swap(00002)
+00165: Apply
+00166: PushFn(00114, 00000)
+00167: Swap(00002)
+00168: Apply
+00169: Swap(00002)
+00170: Apply
+00171: PushFn(00138, 00000)
+00172: Swap(00002)
+00173: Apply
+
+Foo
+
+---
+
+'=> = ('binding => { 'block => {
+    pop(binding, 'xs => { 'x => {
+        if(xs, Binding, {
+            block
+        }, {
+            throw!(ExpectedBindingButFound(xs(x)))
+        })
+    }}, {
+        throw!(MustBeCalledAsMacroButFound(binding, block))
+    })
+}})
+'f = ('x => { x })
+'will-throw = (Foo => { f })
+f(Foo)
+
+(=
+  '=>
+  (=>
+    'binding
+    {
+      (=>
+        'block
+        {
+          (pop
+            binding
+            (=>
+              'xs
+              {
+                (=>
+                  'x
+                  {
+                    (if
+                      xs
+                      Binding
+                      {
+                        block}
+                      {
+                        (throw!
+                          (ExpectedBindingButFound
+                            (xs
+                              x)))})})})
+            {
+              (throw!
+                (MustBeCalledAsMacroButFound
+                  binding
+                  block))})})}))
+(=
+  'f
+  (=>
+    'x
+    {
+      x}))
+(=
+  'will-throw
+  (=>
+    Foo
+    {
+      f}))
+(f
+  Foo)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "=>" )
+    ( ( =>
+          =>
+            0
+        "binding" )
+      =>
+        ( ( =>
+              =>
+                0
+            "block" )
+          =>
+            ( ( ( =>
+                    =>
+                      =>
+                        ( pop
+                          2
+                          1
+                          0 )
+                  1 )
+                ( ( =>
+                      =>
+                        0
+                    "xs" )
+                  =>
+                    ( ( =>
+                          =>
+                            0
+                        "x" )
+                      =>
+                        ( ( ( ( =>
+                                  =>
+                                    =>
+                                      =>
+                                        ( if
+                                          3
+                                          2
+                                          1
+                                          0 )
+                                1 )
+                              "Binding" )
+                            =>
+                              3 )
+                          =>
+                            ( throw!
+                              ( "ExpectedBindingButFound"
+                                ( 2
+                                  1 ) ) ) ) ) ) )
+              =>
+                ( throw!
+                  ( ( "MustBeCalledAsMacroButFound"
+                      2 )
+                    1 ) ) ) ) ) )
+  =>
+    ( ( ( =>
+            =>
+              =>
+                ( 0
+                  1 )
+          "f" )
+        ( ( 0
+            ( "Binding"
+              "x" ) )
+          =>
+            0 ) )
+      =>
+        ( ( ( =>
+                =>
+                  =>
+                    ( 0
+                      1 )
+              "will-throw" )
+            ( ( 1
+                ( "Value"
+                  "Foo" ) )
+              =>
+                1 ) )
+          =>
+            ( 1
+              "Foo" ) ) ) )
+
+00000: PushVar(00000)
+00001: PushVar(00001)
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00000)
+00010:   Return
+00011: PushFn(00009, 00000)
+00012:   Return
+00013: PushVar(00000)
+00014:   Return
+00015: PushFn(00013, 00000)
+00016:   Return
+00017: PushVar(00002)
+00018: PushVar(00001)
+00019: PushVar(00000)
+00020: Swap(00003)
+00021: Pop
+00022: Apply
+00023: Apply
+00024:   Return
+00025: PushFn(00017, 00002)
+00026:   Return
+00027: PushFn(00025, 00001)
+00028:   Return
+00029: PushVar(00000)
+00030:   Return
+00031: PushFn(00029, 00000)
+00032:   Return
+00033: PushVar(00000)
+00034:   Return
+00035: PushFn(00033, 00000)
+00036:   Return
+00037: PushVar(00003)
+00038: PushVar(00002)
+00039: PushVar(00001)
+00040: PushVar(00000)
+00041: Swap(00004)
+00042: If
+00043: Apply
+00044:   Return
+00045: PushFn(00037, 00003)
+00046:   Return
+00047: PushFn(00045, 00002)
+00048:   Return
+00049: PushFn(00047, 00001)
+00050:   Return
+00051: PushVar(00003)
+00052:   Return
+00053: PushEffect("throw")
+00054: PushString("ExpectedBindingButFound")
+00055: PushVar(00002)
+00056: PushVar(00001)
+00057: Swap(00002)
+00058: Apply
+00059: Swap(00002)
+00060: Apply
+00061: Swap(00002)
+00062: Apply
+00063:   Return
+00064: PushFn(00049, 00000)
+00065: PushVar(00001)
+00066: Swap(00002)
+00067: Apply
+00068: PushString("Binding")
+00069: Swap(00002)
+00070: Apply
+00071: PushFn(00051, 00003)
+00072: Swap(00002)
+00073: Apply
+00074: PushFn(00053, 00002)
+00075: Swap(00002)
+00076: Apply
+00077:   Return
+00078: PushFn(00035, 00000)
+00079: PushString("x")
+00080: Swap(00002)
+00081: Apply
+00082: PushFn(00064, 00002)
+00083: Swap(00002)
+00084: Apply
+00085:   Return
+00086: PushEffect("throw")
+00087: PushString("MustBeCalledAsMacroButFound")
+00088: PushVar(00002)
+00089: Swap(00002)
+00090: Apply
+00091: PushVar(00001)
+00092: Swap(00002)
+00093: Apply
+00094: Swap(00002)
+00095: Apply
+00096:   Return
+00097: PushFn(00027, 00000)
+00098: PushVar(00001)
+00099: Swap(00002)
+00100: Apply
+00101: PushFn(00031, 00000)
+00102: PushString("xs")
+00103: Swap(00002)
+00104: Apply
+00105: PushFn(00078, 00001)
+00106: Swap(00002)
+00107: Apply
+00108: Swap(00002)
+00109: Apply
+00110: PushFn(00086, 00002)
+00111: Swap(00002)
+00112: Apply
+00113:   Return
+00114: PushFn(00015, 00000)
+00115: PushString("block")
+00116: Swap(00002)
+00117: Apply
+00118: PushFn(00097, 00001)
+00119: Swap(00002)
+00120: Apply
+00121:   Return
+00122: PushVar(00000)
+00123: PushVar(00001)
+00124: Swap(00002)
+00125: Apply
+00126:   Return
+00127: PushFn(00122, 00001)
+00128:   Return
+00129: PushFn(00127, 00000)
+00130:   Return
+00131: PushVar(00000)
+00132:   Return
+00133: PushVar(00000)
+00134: PushVar(00001)
+00135: Swap(00002)
+00136: Apply
+00137:   Return
+00138: PushFn(00133, 00001)
+00139:   Return
+00140: PushFn(00138, 00000)
+00141:   Return
+00142: PushVar(00001)
+00143:   Return
+00144: PushVar(00001)
+00145: PushString("Foo")
+00146: Swap(00002)
+00147: Apply
+00148:   Return
+00149: PushFn(00140, 00000)
+00150: PushString("will-throw")
+00151: Swap(00002)
+00152: Apply
+00153: PushVar(00001)
+00154: PushString("Value")
+00155: PushString("Foo")
+00156: Swap(00002)
+00157: Apply
+00158: Swap(00002)
+00159: Apply
+00160: PushFn(00142, 00001)
+00161: Swap(00002)
+00162: Apply
+00163: Swap(00002)
+00164: Apply
+00165: PushFn(00144, 00001)
+00166: Swap(00002)
+00167: Apply
+00168:   Return
+00169: PushFn(00129, 00000)
+00170: PushString("f")
+00171: Swap(00002)
+00172: Apply
+00173: PushVar(00000)
+00174: PushString("Binding")
+00175: PushString("x")
+00176: Swap(00002)
+00177: Apply
+00178: Swap(00002)
+00179: Apply
+00180: PushFn(00131, 00000)
+00181: Swap(00002)
+00182: Apply
+00183: Swap(00002)
+00184: Apply
+00185: PushFn(00149, 00001)
+00186: Swap(00002)
+00187: Apply
+00188:   Return
+00189: PushFn(00007, 00000)
+00190: PushString("=>")
+00191: Swap(00002)
+00192: Apply
+00193: PushFn(00011, 00000)
+00194: PushString("binding")
+00195: Swap(00002)
+00196: Apply
+00197: PushFn(00114, 00000)
+00198: Swap(00002)
+00199: Apply
+00200: Swap(00002)
+00201: Apply
+00202: PushFn(00169, 00000)
+00203: Swap(00002)
+00204: Apply
+
+throw!(ExpectedBindingButFound(Value(Foo)))

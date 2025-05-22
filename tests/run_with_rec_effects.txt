@@ -253,7 +253,8 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
                                 2 ) ) ) ) ) ) ) ) )
   =>
     ( ( 0
-        "False" )
+        ( "Value"
+          "False" ) )
       =>
         ( ( ( "List"
               ( toggle!
@@ -416,28 +417,31 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00150: Apply
 00151:   Return
 00152: PushVar(00000)
-00153: PushString("False")
-00154: Swap(00002)
-00155: Apply
-00156: PushFn(00132, 00000)
+00153: PushString("Value")
+00154: PushString("False")
+00155: Swap(00002)
+00156: Apply
 00157: Swap(00002)
 00158: Apply
-00159:   Return
-00160: PushFn(00007, 00000)
-00161: PushString("with-toggle")
-00162: Swap(00002)
-00163: Apply
-00164: PushFn(00012, 00000)
-00165: PushString("loop")
-00166: Swap(00002)
-00167: Apply
-00168: PushFn(00124, 00000)
+00159: PushFn(00132, 00000)
+00160: Swap(00002)
+00161: Apply
+00162:   Return
+00163: PushFn(00007, 00000)
+00164: PushString("with-toggle")
+00165: Swap(00002)
+00166: Apply
+00167: PushFn(00012, 00000)
+00168: PushString("loop")
 00169: Swap(00002)
 00170: Apply
-00171: Swap(00002)
-00172: Apply
-00173: PushFn(00152, 00000)
+00171: PushFn(00124, 00000)
+00172: Swap(00002)
+00173: Apply
 00174: Swap(00002)
 00175: Apply
+00176: PushFn(00152, 00000)
+00177: Swap(00002)
+00178: Apply
 
 List(True, False, True)

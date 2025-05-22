@@ -847,7 +847,7 @@ Foo(try({
 00067: Swap(00002)
 00068: Apply
 
-Effect Some("effect") with Nil
+effect!(Nil)
 
 ---
 
