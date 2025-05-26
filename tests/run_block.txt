@@ -88,9 +88,8 @@ Pair(Foo, Bar)
   'f
   (=>
     'x
-    {
-      (Foo
-        x)}))
+    { (Foo
+        x) }))
 (f
   Bar)
 

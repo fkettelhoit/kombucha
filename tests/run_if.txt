@@ -3,10 +3,8 @@ if(Foo, Bar, { True }, { False })
 (if
   Foo
   Bar
-  {
-    True}
-  {
-    False})
+  { True }
+  { False })
 
 ( ( ( ( =>
           =>
@@ -66,14 +64,11 @@ False
   'f
   (=>
     'x
-    {
-      (if
+    { (if
         x
         Bar
-        {
-          True}
-        {
-          False})}))
+        { True }
+        { False }) }))
 (f
   Bar)
 
@@ -184,14 +179,11 @@ True
   'f
   (=>
     'x
-    {
-      (if
+    { (if
         x
         Foo
-        {
-          True}
-        {
-          False})}))
+        { True }
+        { False }) }))
 (Pair
   (f
     Foo)

@@ -6,13 +6,10 @@ pop(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })
     Baz)
   (=>
     'f
-    {
-      (=>
+    { (=>
         'x
-        {
-          x})})
-  {
-    Error})
+        { x }) })
+  { Error })
 
 ( ( ( =>
         =>
@@ -103,13 +100,10 @@ pop(Foo, 'f => { 'x => { x } }, { Error })
   Foo
   (=>
     'f
-    {
-      (=>
+    { (=>
         'x
-        {
-          x})})
-  {
-    Error})
+        { x }) })
+  { Error })
 
 ( ( ( =>
         =>
@@ -194,13 +188,10 @@ pop(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
     Baz)
   (=>
     'f
-    {
-      (=>
+    { (=>
         'x
-        {
-          f})})
-  {
-    Error})
+        { f }) })
+  { Error })
 
 ( ( ( =>
         =>
@@ -292,13 +283,10 @@ pop(Foo(Bar), 'f => { 'x => { f } }, { Error })
     Bar)
   (=>
     'f
-    {
-      (=>
+    { (=>
         'x
-        {
-          f})})
-  {
-    Error})
+        { f }) })
+  { Error })
 
 ( ( ( =>
         =>

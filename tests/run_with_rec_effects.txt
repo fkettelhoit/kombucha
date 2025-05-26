@@ -8,21 +8,17 @@
 
 ((=>
   'acc
-  {
-    (try
-      {
-        (effect!
-          Foo)}
+  { (try
+      { (effect!
+          Foo) }
       effect!
       (=>
         'r
-        {
-          (=>
+        { (=>
             'x
-            {
-              (r
+            { (r
                 (acc
-                  x))})}))})
+                  x)) }) })) })
   List)
 
 ( ( ( =>
@@ -156,42 +152,33 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
   'with-toggle
   (~>
     'loop
-    {
-      (=>
+    { (=>
         'val
-        {
-          (=>
+        { (=>
             'r
-            {
-              (try
-                {
-                  (r
-                    val)}
+            { (try
+                { (r
+                    val) }
                 toggle!
                 (=>
                   'r
-                  {
-                    (=>
+                  { (=>
                       '
-                      {
-                        (if
+                      { (if
                           val
                           True
-                          {
-                            (loop
+                          { (loop
                               False
-                              r)}
-                          {
-                            (loop
+                              r) }
+                          { (loop
                               True
-                              r)})})}))})})}))
+                              r) }) }) })) }) }) }))
 (with-toggle
   False
-  {
-    (List
+  { (List
       (toggle!)
       (toggle!)
-      (toggle!))})
+      (toggle!)) })
 
 ( ( ( =>
         =>

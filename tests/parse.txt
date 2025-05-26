@@ -18,10 +18,9 @@ Foo
 
 { foo, Foo, 'foo }
 
-{
-  foo
+{ foo
   Foo
-  'foo}
+  'foo }
 
 ---
 
@@ -74,8 +73,7 @@ if: x == y do: {
   (==
     x
     y)
-  {
-    (foo)}
+  { (foo) }
   Bar)
 
 ---
@@ -104,8 +102,7 @@ foo = Foo
   'id
   (=>
     'x
-    {
-      x}))
+    { x }))
 (=
   'x
   (id
@@ -126,8 +123,7 @@ f'('x, 'y) = {
   (f'
     'x
     'y)
-  {
-    (match-with
+  { (match-with
       (Pair
         x
         y)
@@ -136,34 +132,29 @@ f'('x, 'y) = {
           (Pair
             'x
             'x)
-          {
-            x})
+          { x })
         (=>
           (Pair
             'x
             'y)
-          {
-            Mismatch})
+          { Mismatch })
         (=>
           '
-          {
-            InvalidPair})))})
+          { InvalidPair }))) })
 
 ---
 
 if: x == y do: { print(Equal) } else: { print(NotEqual) }
-if: x == Foo do: Pair(x, x) else: Error"
+if: x == Foo do: Pair(x, x) else: Error
 
 (if-do-else
   (==
     x
     y)
-  {
-    (print
-      Equal)}
-  {
-    (print
-      NotEqual)})
+  { (print
+      Equal) }
+  { (print
+      NotEqual) })
 (if-do-else
   (==
     x
@@ -171,4 +162,4 @@ if: x == Foo do: Pair(x, x) else: Error"
   (Pair
     x
     x)
-  Error")
+  Error)

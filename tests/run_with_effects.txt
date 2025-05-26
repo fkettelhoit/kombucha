@@ -69,28 +69,23 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
   'foo
   (=>
     'x
-    {
-      (=>
+    { (=>
         'y
-        {
-          (pair!
+        { (pair!
             (Args
               x
-              y))})}))
+              y)) }) }))
 (try
-  {
-    (foo
+  { (foo
       Bar
-      Baz)}
+      Baz) }
   pair!
   (=>
     'r
-    {
-      (=>
+    { (=>
         'arg
-        {
-          (Pair
-            arg)})}))
+        { (Pair
+            arg) }) }))
 
 ( ( ( =>
         =>
@@ -260,16 +255,13 @@ Pair(Args(Bar, Baz))
 try({ Foo }, unused!, 'r => { ' => { Error }})
 
 (try
-  {
-    Foo}
+  { Foo }
   unused!
   (=>
     'r
-    {
-      (=>
+    { (=>
         '
-        {
-          Error})}))
+        { Error }) }))
 
 ( ( ( =>
         =>
@@ -353,19 +345,16 @@ Foo
 try({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
 
 (try
-  {
-    (effect!
-      Foo)}
+  { (effect!
+      Foo) }
   effect!
   (=>
     'r
-    {
-      (=>
+    { (=>
         'arg
-        {
-          (arg
+        { (arg
             (r
-              Bar))})}))
+              Bar)) }) }))
 
 ( ( ( =>
         =>
@@ -465,21 +454,18 @@ try({
 } })
 
 (try
-  {
-    (Foo
-      (eff!))}
+  { (Foo
+      (eff!)) }
   eff!
   (=>
     'r
-    {
-      (=>
+    { (=>
         '
-        {
-          (Pair
+        { (Pair
             (r
               Bar)
             (r
-              Baz))})}))
+              Baz)) }) }))
 
 ( ( ( =>
         =>
@@ -590,23 +576,20 @@ Pair(Foo(Bar), Foo(Baz))
   'foo
   Foo)
 (try
-  {
-    (List
+  { (List
       (elems!
-        foo))}
+        foo)) }
   elems!
   (=>
     'r
-    {
-      (=>
+    { (=>
         'x
-        {
-          (Twice
+        { (Twice
             (r
               x
               x)
             (r
-              Baz))})}))
+              Baz)) }) }))
 
 ( ( ( =>
         =>
@@ -753,20 +736,17 @@ Foo(try({
 
 (Foo
   (try
-    {
-      (Baz
+    { (Baz
         (effect!)
-        (effect!))}
+        (effect!)) }
     effect!
     (=>
       'r
-      {
-        (=>
+      { (=>
           '
-          {
-            (Bar
+          { (Bar
               (r
-                Qux))})})))
+                Qux)) }) })))
 
 ( "Foo"
   ( ( ( =>
@@ -890,30 +870,24 @@ try({
 })
 
 (try
-  {
-    (List
+  { (List
       (get!)
-      (get!))}
+      (get!)) }
   get!
   (=>
     'r
-    {
-      (=>
+    { (=>
         '
-        {
-          (try
-            {
-              (r
-                Foo)}
+        { (try
+            { (r
+                Foo) }
             get!
             (=>
               'r
-              {
-                (=>
+              { (=>
                   '
-                  {
-                    (r
-                      Bar)})}))})}))
+                  { (r
+                      Bar) }) })) }) }))
 
 ( ( ( =>
         =>
@@ -1095,17 +1069,13 @@ try({
 }, throw!, { Nil })
 
 (try
-  {
-    (try
-      {
-        (throw!)}
+  { (try
+      { (throw!) }
       throw!
-      {
-        Nil})
-    (throw!)}
+      { Nil })
+    (throw!) }
   throw!
-  {
-    Nil})
+  { Nil })
 
 ( ( ( =>
         =>

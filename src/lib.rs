@@ -959,13 +959,15 @@ mod tests {
             match &ast.1 {
                 A::Var(s) | A::String(s) | A::Binding(s) => buf.push_str(s),
                 A::Block(items) => {
-                    buf.push('{');
-                    for item in items {
-                        buf.push('\n');
-                        buf.push_str(&indent.repeat(lvl + 1));
+                    buf.push_str("{ ");
+                    for (i, item) in items.iter().enumerate() {
+                        if i != 0 {
+                            buf.push('\n');
+                            buf.push_str(&indent.repeat(lvl + 1));
+                        }
                         pretty(&item, lvl + 1, buf);
                     }
-                    buf.push('}')
+                    buf.push_str(" }")
                 }
                 A::Call(call, args) => {
                     buf.push('(');

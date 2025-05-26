@@ -11,32 +11,27 @@ map('x => { Foo(x) }, List(A, B, C))
   'map
   (~>
     'map
-    {
-      (=>
+    { (=>
         (
           'f
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                ((map
+              { ((map
                   f
                   xs)
                   (f
-                    x))})
-            {
-              xs})})}))
+                    x)) })
+            { xs }) }) }))
 (map
   (=>
     'x
-    {
-      (Foo
-        x)})
+    { (Foo
+        x) })
   (List
     A
     B
@@ -256,36 +251,31 @@ fold(('acc, 'x) => { acc(x) }, List, List(A, B, C))
   'fold
   (~>
     'fold
-    {
-      (=>
+    { (=>
         (
           'f
           'acc
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (fold
+              { (fold
                   f
                   (f
                     acc
                     x)
-                  xs)})
-            {
-              acc})})}))
+                  xs) })
+            { acc }) }) }))
 (fold
   (=>
     (
       'acc
       'x)
-    {
-      (acc
-        x)})
+    { (acc
+        x) })
   List
   (List
     A
@@ -556,27 +546,23 @@ List(
   'zip
   (~>
     'zip
-    {
-      (=>
+    { (=>
         (
           'xs
           'ys)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (pop
+              { (pop
                   ys
                   (=>
                     (
                       'ys
                       'y)
-                    {
-                      (=
+                    { (=
                         'zipped
                         (zip
                           xs
@@ -584,32 +570,24 @@ List(
                       (if
                         zipped
                         Nil
-                        {
-                          Nil}
-                        {
-                          (zipped
+                        { Nil }
+                        { (zipped
                             (
                               x
-                              y))})})
-                  {
-                    Nil})})
-            {
-              (pop
+                              y)) }) })
+                  { Nil }) })
+            { (pop
                 ys
                 (=>
                   (
                     'ys
                     'y)
-                  {
-                    Nil})
-                {
-                  (if
+                  { Nil })
+                { (if
                     xs
                     ys
-                    {
-                      xs}
-                    {
-                      Nil})})})})}))
+                    { xs }
+                    { Nil }) }) }) }) }))
 (List
   (zip
     (List
@@ -1228,48 +1206,42 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
   'rev
   (~>
     'rev
-    {
-      (=>
+    { (=>
         (
           'acc
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (rev
+              { (rev
                   (acc
                     x)
-                  xs)})
-            {
-              acc})})}))
+                  xs) })
+            { acc }) }) }))
 (=
   'apply
   (=>
     (
       'f
       'xs)
-    {
-      (rev
+    { (rev
         f
         (rev
           List
-          xs))}))
+          xs)) }))
 (apply
   (=>
     (
       'x
       'y
       'z)
-    {
-      (List
+    { (List
         x
         y
-        z)})
+        z) })
   (Vec
     A
     B
@@ -1582,33 +1554,27 @@ List(beforelast((X, Y, Z)), last((X, Y, Z)))
   'last
   (=>
     'xs
-    {
-      (pop
+    { (pop
         xs
         (=>
           (
             '_
             'x)
-          {
-            x})
-        {
-          xs})}))
+          { x })
+        { xs }) }))
 (=
   'beforelast
   (=>
     'xs
-    {
-      (pop
+    { (pop
         xs
         (=>
           (
             'xs
             '_)
-          {
-            (last
-              xs)})
-        {
-          xs})}))
+          { (last
+              xs) })
+        { xs }) }))
 (List
   (beforelast
     (

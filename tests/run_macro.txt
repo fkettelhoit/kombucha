@@ -16,39 +16,31 @@ f(Foo)
   '=>
   (=>
     'binding
-    {
-      (=>
+    { (=>
         'block
-        {
-          (pop
+        { (pop
             binding
             (=>
               'xs
-              {
-                (=>
+              { (=>
                   'x
-                  {
-                    (if
+                  { (if
                       xs
                       Binding
-                      {
-                        block}
-                      {
-                        (throw!
+                      { block }
+                      { (throw!
                           (ExpectedBindingButFound
                             (xs
-                              x)))})})})
-            {
-              (throw!
+                              x))) }) }) })
+            { (throw!
                 (MustBeCalledAsMacroButFound
                   binding
-                  block))})})}))
+                  block)) }) }) }))
 (=
   'f
   (=>
     'x
-    {
-      x}))
+    { x }))
 (f
   Foo)
 
@@ -323,45 +315,36 @@ f(Foo)
   '=>
   (=>
     'binding
-    {
-      (=>
+    { (=>
         'block
-        {
-          (pop
+        { (pop
             binding
             (=>
               'xs
-              {
-                (=>
+              { (=>
                   'x
-                  {
-                    (if
+                  { (if
                       xs
                       Binding
-                      {
-                        block}
-                      {
-                        (throw!
+                      { block }
+                      { (throw!
                           (ExpectedBindingButFound
                             (xs
-                              x)))})})})
-            {
-              (throw!
+                              x))) }) }) })
+            { (throw!
                 (MustBeCalledAsMacroButFound
                   binding
-                  block))})})}))
+                  block)) }) }) }))
 (=
   'f
   (=>
     'x
-    {
-      x}))
+    { x }))
 (=
   'will-throw
   (=>
     Foo
-    {
-      f}))
+    { f }))
 (f
   Foo)
 
@@ -686,47 +669,37 @@ List(
   '==
   (~>
     '==
-    {
-      (=>
+    { (=>
         (
           'a
           'b)
-        {
-          (pop
+        { (pop
             a
             (=>
               (
                 'xs
                 'x)
-              {
-                (pop
+              { (pop
                   b
                   (=>
                     (
                       'ys
                       'y)
-                    {
-                      (if
+                    { (if
                         (==
                           x
                           y)
                         True
-                        {
-                          (==
+                        { (==
                             xs
-                            ys)}
-                        {
-                          False})})
-                  {
-                    False})})
-            {
-              (if
+                            ys) }
+                        { False }) })
+                  { False }) })
+            { (if
                 a
                 b
-                {
-                  True}
-                {
-                  False})})})}))
+                { True }
+                { False }) }) }) }))
 (List
   (==
     Foo
@@ -1310,28 +1283,24 @@ try({
   'fold
   (~>
     'fold
-    {
-      (=>
+    { (=>
         (
           'f
           'acc
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (fold
+              { (fold
                   f
                   (f
                     acc
                     x)
-                  xs)})
-            {
-              acc})})}))
+                  xs) })
+            { acc }) }) }))
 (=
   'flatten
   (fold
@@ -1339,102 +1308,86 @@ try({
       (
         'acc
         'x)
-      {
-        (pop
+      { (pop
           x
           (=>
             (
               'xs
               'x)
-            {
-              (acc
-                x)})
-          {
-            acc})})))
+            { (acc
+                x) })
+          { acc }) })))
 (=
   'rev
   (~>
     'rev
-    {
-      (=>
+    { (=>
         (
           'acc
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (rev
+              { (rev
                   (acc
                     x)
-                  xs)})
-            {
-              acc})})}))
+                  xs) })
+            { acc }) }) }))
 (=
   'apply
   (=>
     (
       'f
       'xs)
-    {
-      (rev
+    { (rev
         f
         (rev
           List
-          xs))}))
+          xs)) }))
 (=
   'map
   (~>
     'map
-    {
-      (=>
+    { (=>
         (
           'f
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                ((map
+              { ((map
                   f
                   xs)
                   (f
-                    x))})
-            {
-              xs})})}))
+                    x)) })
+            { xs }) }) }))
 (=
   'zip
   (~>
     'zip
-    {
-      (=>
+    { (=>
         (
           'xs
           'ys)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (pop
+              { (pop
                   ys
                   (=>
                     (
                       'ys
                       'y)
-                    {
-                      (=
+                    { (=
                         'zipped
                         (zip
                           xs
@@ -1442,106 +1395,82 @@ try({
                       (if
                         zipped
                         Nil
-                        {
-                          Nil}
-                        {
-                          (zipped
+                        { Nil }
+                        { (zipped
                             (
                               x
-                              y))})})
-                  {
-                    Nil})})
-            {
-              (pop
+                              y)) }) })
+                  { Nil }) })
+            { (pop
                 ys
                 (=>
                   (
                     'ys
                     'y)
-                  {
-                    Nil})
-                {
-                  (if
+                  { Nil })
+                { (if
                     xs
                     ys
-                    {
-                      xs}
-                    {
-                      Nil})})})})}))
+                    { xs }
+                    { Nil }) }) }) }) }))
 (=
   '==
   (~>
     '==
-    {
-      (=>
+    { (=>
         (
           'a
           'b)
-        {
-          (pop
+        { (pop
             a
             (=>
               (
                 'xs
                 'x)
-              {
-                (pop
+              { (pop
                   b
                   (=>
                     (
                       'ys
                       'y)
-                    {
-                      (if
+                    { (if
                         (==
                           x
                           y)
                         True
-                        {
-                          (==
+                        { (==
                             xs
-                            ys)}
-                        {
-                          False})})
-                  {
-                    False})})
-            {
-              (if
+                            ys) }
+                        { False }) })
+                  { False }) })
+            { (if
                 a
                 b
-                {
-                  True}
-                {
-                  False})})})}))
+                { True }
+                { False }) }) }) }))
 (=
   'unify
   (~>
     'unify
-    {
-      (=>
+    { (=>
         (
           'pattern
           'value)
-        {
-          (pop
+        { (pop
             pattern
             (=>
               (
                 'type
                 'pattern)
-              {
-                (if
+              { (if
                   type
                   Binding
-                  {
-                    (List
-                      value)}
-                  {
-                    (if
+                  { (List
+                      value) }
+                  { (if
                       type
                       Compound
-                      {
-                        (=
+                      { (=
                           'unified
                           (map
                             (apply
@@ -1553,23 +1482,19 @@ try({
                           List
                           (flatten
                             List
-                            unified))}
-                      {
-                        (if
+                            unified)) }
+                      { (if
                           (==
                             pattern
                             value)
                           True
-                          {
-                            Nil}
-                          {
-                            (no-match!
+                          { Nil }
+                          { (no-match!
                               (
                                 pattern
-                                value))})})})})
-            {
-              (invalid!
-                pattern)})})}))
+                                value)) }) }) }) })
+            { (invalid!
+                pattern) }) }) }))
 (=
   '->
   (=>
@@ -1577,10 +1502,8 @@ try({
       'pattern
       'body
       'value)
-    {
-      (try
-        {
-          (=
+    { (try
+        { (=
             'unified
             (unify
               pattern
@@ -1588,49 +1511,40 @@ try({
           (if
             unified
             Nil
-            {
-              (body)}
-            {
-              (apply
+            { (body) }
+            { (apply
                 body
-                unified)})}
+                unified) }) }
         no-match!
         (=>
           (
             '_
             'arg)
-          {
-            (no-match!
-              arg)}))}))
+          { (no-match!
+              arg) })) }))
 (try
-  {
-    (List
+  { (List
       ((->
         Foo
-        {
-          Success})
+        { Success })
         Foo)
       ((->
         Foo
-        {
-          Success})
+        { Success })
         Bar)
       ((->
         'x
-        {
-          x})
+        { x })
         Foo)
       ((->
         'x
-        {
-          Bar})
+        { Bar })
         Foo)
       ((->
         (Pair
           Foo
           Bar)
-        {
-          Success})
+        { Success })
         (Pair
           Foo
           Bar))
@@ -1638,8 +1552,7 @@ try({
         (Pair
           'x
           'y)
-        {
-          x})
+        { x })
         (Pair
           Foo
           Bar))
@@ -1647,20 +1560,18 @@ try({
         (Pair
           Foo
           'y)
-        {
-          y})
+        { y })
         (Pair
           Foo
-          Bar)))}
+          Bar))) }
   no-match!
   (=>
     (
       'r
       'arg)
-    {
-      (r
+    { (r
         (NoMatch
-          arg))}))
+          arg)) }))
 
 ( ( ( =>
         =>
@@ -4048,112 +3959,95 @@ try({
   'fold
   (~>
     'fold
-    {
-      (=>
+    { (=>
         (
           'f
           'acc
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (fold
+              { (fold
                   f
                   (f
                     acc
                     x)
-                  xs)})
-            {
-              acc})})}))
+                  xs) })
+            { acc }) }) }))
 (=
   'rev
   (~>
     'rev
-    {
-      (=>
+    { (=>
         (
           'acc
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (rev
+              { (rev
                   (acc
                     x)
-                  xs)})
-            {
-              acc})})}))
+                  xs) })
+            { acc }) }) }))
 (=
   'apply
   (=>
     (
       'f
       'xs)
-    {
-      (rev
+    { (rev
         f
         (rev
           List
-          xs))}))
+          xs)) }))
 (=
   'map
   (~>
     'map
-    {
-      (=>
+    { (=>
         (
           'f
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                ((map
+              { ((map
                   f
                   xs)
                   (f
-                    x))})
-            {
-              xs})})}))
+                    x)) })
+            { xs }) }) }))
 (=
   'zip
   (~>
     'zip
-    {
-      (=>
+    { (=>
         (
           'xs
           'ys)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (pop
+              { (pop
                   ys
                   (=>
                     (
                       'ys
                       'y)
-                    {
-                      (=
+                    { (=
                         'zipped
                         (zip
                           xs
@@ -4161,77 +4055,59 @@ try({
                       (if
                         zipped
                         Nil
-                        {
-                          Nil}
-                        {
-                          (zipped
+                        { Nil }
+                        { (zipped
                             (
                               x
-                              y))})})
-                  {
-                    Nil})})
-            {
-              (pop
+                              y)) }) })
+                  { Nil }) })
+            { (pop
                 ys
                 (=>
                   (
                     'ys
                     'y)
-                  {
-                    Nil})
-                {
-                  (if
+                  { Nil })
+                { (if
                     xs
                     ys
-                    {
-                      xs}
-                    {
-                      Nil})})})})}))
+                    { xs }
+                    { Nil }) }) }) }) }))
 (=
   '==
   (~>
     '==
-    {
-      (=>
+    { (=>
         (
           'a
           'b)
-        {
-          (pop
+        { (pop
             a
             (=>
               (
                 'xs
                 'x)
-              {
-                (pop
+              { (pop
                   b
                   (=>
                     (
                       'ys
                       'y)
-                    {
-                      (if
+                    { (if
                         (==
                           x
                           y)
                         True
-                        {
-                          (==
+                        { (==
                             xs
-                            ys)}
-                        {
-                          False})})
-                  {
-                    False})})
-            {
-              (if
+                            ys) }
+                        { False }) })
+                  { False }) })
+            { (if
                 a
                 b
-                {
-                  True}
-                {
-                  False})})})}))
+                { True }
+                { False }) }) }) }))
 (=
   'flatten
   (fold
@@ -4239,49 +4115,40 @@ try({
       (
         'acc
         'x)
-      {
-        (pop
+      { (pop
           x
           (=>
             (
               'xs
               'x)
-            {
-              (acc
-                x)})
-          {
-            acc})})))
+            { (acc
+                x) })
+          { acc }) })))
 (=
   'last
   (=>
     'xs
-    {
-      (pop
+    { (pop
         xs
         (=>
           (
             '_
             'x)
-          {
-            x})
-        {
-          xs})}))
+          { x })
+        { xs }) }))
 (=
   'first
   (=>
     'xs
-    {
-      (pop
+    { (pop
         xs
         (=>
           (
             'xs
             '_)
-          {
-            (last
-              xs)})
-        {
-          xs})}))
+          { (last
+              xs) })
+        { xs }) }))
 (=
   'join
   (fold
@@ -4289,8 +4156,7 @@ try({
       (
         'acc
         'binding)
-      {
-        (=
+      { (=
           'var1
           (first
             binding))
@@ -4303,8 +4169,7 @@ try({
             (
               '_
               'b)
-            {
-              (=
+            { (=
                 'var2
                 (first
                   b))
@@ -4315,61 +4180,51 @@ try({
               (if
                 var1
                 var2
-                {
-                  (if
+                { (if
                     (==
                       val1
                       val2)
                     False
-                    {
-                      (no-match!
+                    { (no-match!
                         (
                           (
                             var2
                             val2)
                           (
                             var1
-                            val1)))}
-                    {
-                      Nil})}
-                {
-                  Nil})})
+                            val1))) }
+                    { Nil }) }
+                { Nil }) })
           Nil
           acc)
         (acc
-          binding)})
+          binding) })
     Bindings))
 (=
   'unify
   (~>
     'unify
-    {
-      (=>
+    { (=>
         (
           'pattern
           'value)
-        {
-          (pop
+        { (pop
             pattern
             (=>
               (
                 'type
                 'pattern)
-              {
-                (if
+              { (if
                   type
                   Binding
-                  {
-                    (Bindings
+                  { (Bindings
                       (
                         pattern
-                        value))}
-                  {
-                    (if
+                        value)) }
+                  { (if
                       type
                       Compound
-                      {
-                        (=
+                      { (=
                           'unified
                           (flatten
                             Bindings
@@ -4380,23 +4235,19 @@ try({
                                 pattern
                                 value))))
                         (join
-                          unified)}
-                      {
-                        (if
+                          unified) }
+                      { (if
                           (==
                             pattern
                             value)
                           True
-                          {
-                            Nil}
-                          {
-                            (no-match!
+                          { Nil }
+                          { (no-match!
                               (
                                 pattern
-                                value))})})})})
-            {
-              (invalid!
-                pattern)})})}))
+                                value)) }) }) }) })
+            { (invalid!
+                pattern) }) }) }))
 (=
   '->
   (=>
@@ -4404,10 +4255,8 @@ try({
       'pattern
       'body
       'value)
-    {
-      (try
-        {
-          (=
+    { (try
+        { (=
             'unified
             (unify
               pattern
@@ -4420,44 +4269,36 @@ try({
           (if
             unified
             Nil
-            {
-              (body)}
-            {
-              (apply
+            { (body) }
+            { (apply
                 body
-                args)})}
+                args) }) }
         no-match!
         (=>
           (
             '_
             'arg)
-          {
-            (no-match!
-              arg)}))}))
+          { (no-match!
+              arg) })) }))
 (try
-  {
-    (List
+  { (List
       ((->
         Foo
-        {
-          Bar})
+        { Bar })
         Foo)
       ((->
         'x
-        {
-          x})
+        { x })
         Foo)
       ((->
         'x
-        {
-          Bar})
+        { Bar })
         Foo)
       ((->
         (Pair
           Foo
           Bar)
-        {
-          Foo})
+        { Foo })
         (Pair
           Foo
           Bar))
@@ -4465,8 +4306,7 @@ try({
         (Pair
           'x
           'y)
-        {
-          y})
+        { y })
         (Pair
           Foo
           Bar))
@@ -4474,8 +4314,7 @@ try({
         (Pair
           'x
           Bar)
-        {
-          x})
+        { x })
         (Pair
           Foo
           Bar))
@@ -4483,8 +4322,7 @@ try({
         (Pair
           'x
           'x)
-        {
-          x})
+        { x })
         (Pair
           Bar
           Bar))
@@ -4492,20 +4330,18 @@ try({
         (Pair
           'x
           'x)
-        {
-          x})
+        { x })
         (Pair
           Foo
-          Bar)))}
+          Bar))) }
   no-match!
   (=>
     (
       'r
       'arg)
-    {
-      (r
+    { (r
         (NoMatch
-          arg))}))
+          arg)) }))
 
 ( ( ( =>
         =>
@@ -7619,112 +7455,95 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
   'fold
   (~>
     'fold
-    {
-      (=>
+    { (=>
         (
           'f
           'acc
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (fold
+              { (fold
                   f
                   (f
                     acc
                     x)
-                  xs)})
-            {
-              acc})})}))
+                  xs) })
+            { acc }) }) }))
 (=
   'rev
   (~>
     'rev
-    {
-      (=>
+    { (=>
         (
           'acc
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (rev
+              { (rev
                   (acc
                     x)
-                  xs)})
-            {
-              acc})})}))
+                  xs) })
+            { acc }) }) }))
 (=
   'apply
   (=>
     (
       'f
       'xs)
-    {
-      (rev
+    { (rev
         f
         (rev
           List
-          xs))}))
+          xs)) }))
 (=
   'map
   (~>
     'map
-    {
-      (=>
+    { (=>
         (
           'f
           'xs)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                ((map
+              { ((map
                   f
                   xs)
                   (f
-                    x))})
-            {
-              xs})})}))
+                    x)) })
+            { xs }) }) }))
 (=
   'zip
   (~>
     'zip
-    {
-      (=>
+    { (=>
         (
           'xs
           'ys)
-        {
-          (pop
+        { (pop
             xs
             (=>
               (
                 'xs
                 'x)
-              {
-                (pop
+              { (pop
                   ys
                   (=>
                     (
                       'ys
                       'y)
-                    {
-                      (=
+                    { (=
                         'zipped
                         (zip
                           xs
@@ -7732,77 +7551,59 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                       (if
                         zipped
                         Nil
-                        {
-                          Nil}
-                        {
-                          (zipped
+                        { Nil }
+                        { (zipped
                             (
                               x
-                              y))})})
-                  {
-                    Nil})})
-            {
-              (pop
+                              y)) }) })
+                  { Nil }) })
+            { (pop
                 ys
                 (=>
                   (
                     'ys
                     'y)
-                  {
-                    Nil})
-                {
-                  (if
+                  { Nil })
+                { (if
                     xs
                     ys
-                    {
-                      xs}
-                    {
-                      Nil})})})})}))
+                    { xs }
+                    { Nil }) }) }) }) }))
 (=
   '==
   (~>
     '==
-    {
-      (=>
+    { (=>
         (
           'a
           'b)
-        {
-          (pop
+        { (pop
             a
             (=>
               (
                 'xs
                 'x)
-              {
-                (pop
+              { (pop
                   b
                   (=>
                     (
                       'ys
                       'y)
-                    {
-                      (if
+                    { (if
                         (==
                           x
                           y)
                         True
-                        {
-                          (==
+                        { (==
                             xs
-                            ys)}
-                        {
-                          False})})
-                  {
-                    False})})
-            {
-              (if
+                            ys) }
+                        { False }) })
+                  { False }) })
+            { (if
                 a
                 b
-                {
-                  True}
-                {
-                  False})})})}))
+                { True }
+                { False }) }) }) }))
 (=
   'flatten
   (fold
@@ -7810,49 +7611,40 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
       (
         'acc
         'x)
-      {
-        (pop
+      { (pop
           x
           (=>
             (
               'xs
               'x)
-            {
-              (acc
-                x)})
-          {
-            acc})})))
+            { (acc
+                x) })
+          { acc }) })))
 (=
   'last
   (=>
     'xs
-    {
-      (pop
+    { (pop
         xs
         (=>
           (
             '_
             'x)
-          {
-            x})
-        {
-          xs})}))
+          { x })
+        { xs }) }))
 (=
   'first
   (=>
     'xs
-    {
-      (pop
+    { (pop
         xs
         (=>
           (
             'xs
             '_)
-          {
-            (last
-              xs)})
-        {
-          xs})}))
+          { (last
+              xs) })
+        { xs }) }))
 (=
   'join
   (fold
@@ -7860,8 +7652,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
       (
         'acc
         'binding)
-      {
-        (=
+      { (=
           'var1
           (first
             binding))
@@ -7874,8 +7665,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
             (
               '_
               'b)
-            {
-              (=
+            { (=
                 'var2
                 (first
                   b))
@@ -7886,61 +7676,51 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
               (if
                 var1
                 var2
-                {
-                  (if
+                { (if
                     (==
                       val1
                       val2)
                     False
-                    {
-                      (no-match!
+                    { (no-match!
                         (
                           (
                             var2
                             val2)
                           (
                             var1
-                            val1)))}
-                    {
-                      Nil})}
-                {
-                  Nil})})
+                            val1))) }
+                    { Nil }) }
+                { Nil }) })
           Nil
           acc)
         (acc
-          binding)})
+          binding) })
     Bindings))
 (=
   'unify
   (~>
     'unify
-    {
-      (=>
+    { (=>
         (
           'pattern
           'value)
-        {
-          (pop
+        { (pop
             pattern
             (=>
               (
                 'type
                 'pattern)
-              {
-                (if
+              { (if
                   type
                   Binding
-                  {
-                    (Bindings
+                  { (Bindings
                       (
                         pattern
-                        value))}
-                  {
-                    (if
+                        value)) }
+                  { (if
                       type
                       Compound
-                      {
-                        (=
+                      { (=
                           'zipped
                           (zip
                             pattern
@@ -7948,13 +7728,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                         (if
                           zipped
                           Nil
-                          {
-                            (no-match!
+                          { (no-match!
                               (
                                 pattern
-                                value))}
-                          {
-                            (=
+                                value)) }
+                          { (=
                               'unified
                               (flatten
                                 Bindings
@@ -7963,23 +7741,19 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                     unify)
                                   zipped)))
                             (join
-                              unified)})}
-                      {
-                        (if
+                              unified) }) }
+                      { (if
                           (==
                             pattern
                             value)
                           True
-                          {
-                            Nil}
-                          {
-                            (no-match!
+                          { Nil }
+                          { (no-match!
                               (
                                 pattern
-                                value))})})})})
-            {
-              (invalid!
-                pattern)})})}))
+                                value)) }) }) }) })
+            { (invalid!
+                pattern) }) }) }))
 (=
   '->
   (=>
@@ -7987,10 +7761,8 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
       'pattern
       'body
       'value)
-    {
-      (try
-        {
-          (=
+    { (try
+        { (=
             'unified
             (unify
               pattern
@@ -8003,53 +7775,44 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
           (if
             unified
             Nil
-            {
-              (body)}
-            {
-              (apply
+            { (body) }
+            { (apply
                 body
-                args)})}
+                args) }) }
         no-match!
         (=>
           (
             '_
             'arg)
-          {
-            (no-match!
-              arg)}))}))
+          { (no-match!
+              arg) })) }))
 (=
   'match-with
   (=>
     (
       'value
       'clauses)
-    {
-      (=
+    { (=
         'result
         (fold
           (=>
             (
               'result
               'clause)
-            {
-              (if
+            { (if
                 result
                 Nil
-                {
-                  (try
-                    {
-                      (Match
+                { (try
+                    { (Match
                         (clause
-                          value))}
+                          value)) }
                     no-match!
                     (=>
                       (
                         'r
                         'arg)
-                      {
-                        Nil}))}
-                {
-                  result})})
+                      { Nil })) }
+                { result }) })
           Nil
           (rev
             List
@@ -8060,11 +7823,9 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
           (
             '_
             'result)
-          {
-            result})
-        {
-          (no-match!
-            value)})}))
+          { result })
+        { (no-match!
+            value) }) }))
 (
   (match-with
     (Pair
@@ -8075,60 +7836,51 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
         (Pair
           'x
           'x)
-        {
-          (Twice
+        { (Twice
             x
-            x)})
+            x) })
       (->
         (Pair
           'x
           Foo)
-        {
-          SecondIsFoo})
+        { SecondIsFoo })
       (->
         (Pair
           'x
           'y)
-        {
-          y})
+        { y })
       (->
         '_
-        {
-          (throw!
-            InvalidPair)})))
+        { (throw!
+            InvalidPair) })))
   (try
-    {
-      (match-with
+    { (match-with
         Foo
         (
           (->
             (Pair
               'x
               'x)
-            {
-              (Twice
+            { (Twice
                 x
-                x)})
+                x) })
           (->
             (Pair
               'x
               Foo)
-            {
-              SecondIsFoo})
+            { SecondIsFoo })
           (->
             (Pair
               'x
               'y)
-            {
-              y})))}
+            { y }))) }
     no-match!
     (=>
       (
         '_
         'arg)
-      {
-        (NoMatch
-          arg)})))
+      { (NoMatch
+          arg) })))
 
 ( ( ( =>
         =>
