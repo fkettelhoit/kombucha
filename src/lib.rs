@@ -276,15 +276,14 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 for arg in args {
                     desugared_args.push(desugar_syntax(arg, ctx)?);
                 }
-                let f = match call {
-                    Call::Infix(f) => desugar_syntax(Ast(ast.0, A::Var(f)), ctx)?,
-                    Call::Prefix(f) => desugar_syntax(*f, ctx)?,
+                let mut f = match call {
+                    Call::Infix(f) => desugar_value(Ast(ast.0, A::Var(f)), ctx)?,
+                    Call::Prefix(f) => desugar_value(*f, ctx)?,
                     Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
-                        Some(v) => app(Expr::String(resolve_str("Value", ctx)), Expr::Var(v)),
+                        Some(v) => Expr::Var(v),
                         None => return Err((ast.0, E::UnboundVar(keywords.join("-")))),
                     },
                 };
-                let mut f = app(Expr::String(resolve_str("Compound", ctx)), f);
                 if desugared_args.is_empty() {
                     let nil = app(Expr::String(resolve_str("Value", ctx)), Expr::String(0));
                     f = app(f, nil)
@@ -292,7 +291,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 for arg in desugared_args {
                     f = app(f, arg)
                 }
-                Ok(f)
+                Ok(app(Expr::String(resolve_str("Compound", ctx)), f))
             }
             A::Var(_) | A::String(_) | A::Call(_, _) => Ok(app(
                 Expr::String(resolve_str("Value", ctx)),
@@ -610,9 +609,9 @@ impl<'c> Vm<'c> {
         let handlers = &mut self.handlers;
         while let Some(op) = self.bytecode.get(self.ip).copied() {
             let i = self.ip;
-            if cfg!(test) {
-                println!("==> {i}: {op:?}");
-            }
+            // if cfg!(test) {
+            //     println!("==> {i}: {op:?}");
+            // }
             self.ip += 1;
             match op {
                 Op::PushVar(v) => {
@@ -803,14 +802,14 @@ impl<'c> Vm<'c> {
                     temps.push(branch);
                 }
             }
-            if cfg!(test) {
-                for (i, v) in vars.iter().rev().enumerate() {
-                    println!("        {i}: {}", pretty(v, &self.strings));
-                }
-                for v in temps.iter() {
-                    println!("  {}", pretty(v, &self.strings));
-                }
-            }
+            // if cfg!(test) {
+            //     for (i, v) in vars.iter().rev().enumerate() {
+            //         println!("        {i}: {}", pretty(v, &self.strings));
+            //     }
+            //     for v in temps.iter() {
+            //         println!("  {}", pretty(v, &self.strings));
+            //     }
+            // }
         }
         Ok(VmState::Done(
             self.temps.pop().ok_or(self.ip)?,
@@ -1145,7 +1144,8 @@ mod tests {
                 let actual_stages = actual.len();
                 if expected_stages > actual_stages {
                     eprintln!("Code:\n{c}\n");
-                    eprintln!("Expected {expected_stages} stages, but found {actual_stages}");
+                    eprintln!("Expected {expected_stages} stages, but found {actual_stages}:");
+                    eprintln!("{}", actual.last().cloned().unwrap_or_default());
                     return Err(format!("Wrong number of stages in {}", p.display()));
                 }
                 match (expected.last(), actual.get(expected.len() - 1)) {
@@ -1313,5 +1313,10 @@ mod tests {
     #[test]
     fn test_run_with_rec_effects() -> Result<(), String> {
         test_with_print_effect(PathBuf::from("tests/run_with_rec_effects.txt"))
+    }
+
+    #[test]
+    fn test_run_with_std_fns() -> Result<(), String> {
+        test(PathBuf::from("tests/run_with_std_fns.txt"))
     }
 }
