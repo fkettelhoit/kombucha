@@ -22,7 +22,7 @@ enum Tok {
 fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
     let mut toks = vec![];
     let mut i = 0;
-    for (j, c) in code.chars().chain(once(' ')).enumerate() {
+    for (j, c) in code.char_indices().chain(once((code.len(), ' '))) {
         let tok = match c {
             '(' => Some(Tok::LParen),
             ')' => Some(Tok::RParen),
@@ -458,7 +458,16 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
         Expr::Try(v, e, h) => {
             let v = compile_expr(*v, ops, fns);
             let e = compile_expr(*e, ops, fns);
-            let h = compile_expr(*h, ops, fns);
+
+            let mut f = vec![];
+            let captured = compile_expr(*h, &mut f, fns);
+            f.push(Op::Apply);
+            f.push(Op::Apply);
+            f.push(Op::Return);
+            ops.push(Op::PushFn(fns.len(), captured));
+            fns.extend(f);
+            let h = if captured == 0 { 0 } else { captured - 1 };
+
             ops.push(Op::Swap(3));
             ops.push(Op::Try);
             ops.push(Op::Apply);
@@ -652,7 +661,6 @@ impl<'c> Vm<'c> {
                                     let res_frames = frames.drain(f..).collect::<Vec<_>>();
                                     let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
                                     handlers.pop();
-                                    println!("***\n***\n***\n***\nh: {h}");
                                     frames.push((vars.len(), handler.ret));
                                     vars.extend(handler.captured.iter().cloned());
                                     let coroutine = Coroutine {
@@ -661,8 +669,8 @@ impl<'c> Vm<'c> {
                                         frames: res_frames,
                                         handlers: res_handlers,
                                     };
-                                    vars.push(V::Resumable(self.ip, v, coroutine));
                                     temps.push(arg);
+                                    temps.push(V::Resumable(self.ip, v, coroutine));
                                     self.ip = handler.code;
                                 }
                                 None => return Ok(VmState::Resumable(Resumable(self, eff), arg)),
@@ -770,7 +778,7 @@ impl<'c> Vm<'c> {
                     match (eff, handler) {
                         (V::Effect(effect), V::Closure(code, captured)) => {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
-                            let ret = self.ip;
+                            let ret = self.ip + 2; // return
                             handlers.push(Handler {
                                 effect,
                                 code,
