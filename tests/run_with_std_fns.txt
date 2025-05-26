@@ -1567,3 +1567,318 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
 00206: Apply
 
 List(A, B, C)
+
+---
+
+'last = ('xs => {
+    pop(xs, ('_, 'x) => { x }, { xs })
+})
+'beforelast = ('xs => {
+    pop(xs, ('xs, '_) => { last(xs) }, { xs })
+})
+List(beforelast((X, Y, Z)), last((X, Y, Z)))
+
+(=
+  'last
+  (=>
+    'xs
+    {
+      (pop
+        xs
+        (=>
+          (
+            '_
+            'x)
+          {
+            x})
+        {
+          xs})}))
+(=
+  'beforelast
+  (=>
+    'xs
+    {
+      (pop
+        xs
+        (=>
+          (
+            'xs
+            '_)
+          {
+            (last
+              xs)})
+        {
+          xs})}))
+(List
+  (beforelast
+    (
+      X
+      Y
+      Z))
+  (last
+    (
+      X
+      Y
+      Z)))
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "last" )
+    ( ( =>
+          =>
+            0
+        "xs" )
+      =>
+        ( ( ( =>
+                =>
+                  =>
+                    ( pop
+                      2
+                      1
+                      0 )
+              0 )
+            ( ( =>
+                  =>
+                    0
+                ( ( ""
+                    "_" )
+                  "x" ) )
+              =>
+                =>
+                  0 ) )
+          =>
+            1 ) ) )
+  =>
+    ( ( ( =>
+            =>
+              =>
+                ( 0
+                  1 )
+          "beforelast" )
+        ( ( =>
+              =>
+                0
+            "xs" )
+          =>
+            ( ( ( =>
+                    =>
+                      =>
+                        ( pop
+                          2
+                          1
+                          0 )
+                  0 )
+                ( ( =>
+                      =>
+                        0
+                    ( ( ""
+                        "xs" )
+                      "_" ) )
+                  =>
+                    =>
+                      ( 3
+                        1 ) ) )
+              =>
+                1 ) ) )
+      =>
+        ( ( "List"
+            ( 0
+              ( ( ( ""
+                    "X" )
+                  "Y" )
+                "Z" ) ) )
+          ( 1
+            ( ( ( ""
+                  "X" )
+                "Y" )
+              "Z" ) ) ) ) )
+
+00000: PushVar(00000)
+00001: PushVar(00001)
+00002: Swap(00002)
+00003: Apply
+00004:   Return
+00005: PushFn(00000, 00001)
+00006:   Return
+00007: PushFn(00005, 00000)
+00008:   Return
+00009: PushVar(00000)
+00010:   Return
+00011: PushFn(00009, 00000)
+00012:   Return
+00013: PushVar(00002)
+00014: PushVar(00001)
+00015: PushVar(00000)
+00016: Swap(00003)
+00017: Pop
+00018: Apply
+00019: Apply
+00020:   Return
+00021: PushFn(00013, 00002)
+00022:   Return
+00023: PushFn(00021, 00001)
+00024:   Return
+00025: PushVar(00000)
+00026:   Return
+00027: PushFn(00025, 00000)
+00028:   Return
+00029: PushVar(00000)
+00030:   Return
+00031: PushFn(00029, 00000)
+00032:   Return
+00033: PushVar(00001)
+00034:   Return
+00035: PushFn(00023, 00000)
+00036: PushVar(00000)
+00037: Swap(00002)
+00038: Apply
+00039: PushFn(00027, 00000)
+00040: PushString("")
+00041: PushString("_")
+00042: Swap(00002)
+00043: Apply
+00044: PushString("x")
+00045: Swap(00002)
+00046: Apply
+00047: Swap(00002)
+00048: Apply
+00049: PushFn(00031, 00000)
+00050: Swap(00002)
+00051: Apply
+00052: Swap(00002)
+00053: Apply
+00054: PushFn(00033, 00001)
+00055: Swap(00002)
+00056: Apply
+00057:   Return
+00058: PushVar(00000)
+00059: PushVar(00001)
+00060: Swap(00002)
+00061: Apply
+00062:   Return
+00063: PushFn(00058, 00001)
+00064:   Return
+00065: PushFn(00063, 00000)
+00066:   Return
+00067: PushVar(00000)
+00068:   Return
+00069: PushFn(00067, 00000)
+00070:   Return
+00071: PushVar(00002)
+00072: PushVar(00001)
+00073: PushVar(00000)
+00074: Swap(00003)
+00075: Pop
+00076: Apply
+00077: Apply
+00078:   Return
+00079: PushFn(00071, 00002)
+00080:   Return
+00081: PushFn(00079, 00001)
+00082:   Return
+00083: PushVar(00000)
+00084:   Return
+00085: PushFn(00083, 00000)
+00086:   Return
+00087: PushVar(00003)
+00088: PushVar(00001)
+00089: Swap(00002)
+00090: Apply
+00091:   Return
+00092: PushFn(00087, 00003)
+00093:   Return
+00094: PushVar(00001)
+00095:   Return
+00096: PushFn(00081, 00000)
+00097: PushVar(00000)
+00098: Swap(00002)
+00099: Apply
+00100: PushFn(00085, 00000)
+00101: PushString("")
+00102: PushString("xs")
+00103: Swap(00002)
+00104: Apply
+00105: PushString("_")
+00106: Swap(00002)
+00107: Apply
+00108: Swap(00002)
+00109: Apply
+00110: PushFn(00092, 00002)
+00111: Swap(00002)
+00112: Apply
+00113: Swap(00002)
+00114: Apply
+00115: PushFn(00094, 00001)
+00116: Swap(00002)
+00117: Apply
+00118:   Return
+00119: PushString("List")
+00120: PushVar(00000)
+00121: PushString("")
+00122: PushString("X")
+00123: Swap(00002)
+00124: Apply
+00125: PushString("Y")
+00126: Swap(00002)
+00127: Apply
+00128: PushString("Z")
+00129: Swap(00002)
+00130: Apply
+00131: Swap(00002)
+00132: Apply
+00133: Swap(00002)
+00134: Apply
+00135: PushVar(00001)
+00136: PushString("")
+00137: PushString("X")
+00138: Swap(00002)
+00139: Apply
+00140: PushString("Y")
+00141: Swap(00002)
+00142: Apply
+00143: PushString("Z")
+00144: Swap(00002)
+00145: Apply
+00146: Swap(00002)
+00147: Apply
+00148: Swap(00002)
+00149: Apply
+00150:   Return
+00151: PushFn(00065, 00000)
+00152: PushString("beforelast")
+00153: Swap(00002)
+00154: Apply
+00155: PushFn(00069, 00000)
+00156: PushString("xs")
+00157: Swap(00002)
+00158: Apply
+00159: PushFn(00096, 00001)
+00160: Swap(00002)
+00161: Apply
+00162: Swap(00002)
+00163: Apply
+00164: PushFn(00119, 00001)
+00165: Swap(00002)
+00166: Apply
+00167:   Return
+00168: PushFn(00007, 00000)
+00169: PushString("last")
+00170: Swap(00002)
+00171: Apply
+00172: PushFn(00011, 00000)
+00173: PushString("xs")
+00174: Swap(00002)
+00175: Apply
+00176: PushFn(00035, 00000)
+00177: Swap(00002)
+00178: Apply
+00179: Swap(00002)
+00180: Apply
+00181: PushFn(00151, 00000)
+00182: Swap(00002)
+00183: Apply
+
+List(Y, Z)
