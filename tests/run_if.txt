@@ -15,12 +15,12 @@ if(Foo, Bar, { True }, { False })
                   2
                   1
                   0 )
-        "Foo" )
-      "Bar" )
+        Foo )
+      Bar )
     =>
-      "True" )
+      True )
   =>
-    "False" )
+    False )
 
 00000: PushVar(00003)
 00001: PushVar(00002)
@@ -93,14 +93,14 @@ False
                           1
                           0 )
                 0 )
-              "Bar" )
+              Bar )
             =>
-              "True" )
+              True )
           =>
-            "False" ) ) )
+            False ) ) )
   =>
     ( 0
-      "Bar" ) )
+      Bar ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -153,11 +153,11 @@ False
 00048: Apply
 00049:   Return
 00050: PushFn(00007, 00000)
-00051: PushString("f")
+00051: PushString(""f"")
 00052: Swap(00002)
 00053: Apply
 00054: PushFn(00011, 00000)
-00055: PushString("x")
+00055: PushString(""x"")
 00056: Swap(00002)
 00057: Apply
 00058: PushFn(00031, 00000)
@@ -211,17 +211,17 @@ True
                           1
                           0 )
                 0 )
-              "Foo" )
+              Foo )
             =>
-              "True" )
+              True )
           =>
-            "False" ) ) )
+            False ) ) )
   =>
-    ( ( "Pair"
+    ( ( Pair
         ( 0
-          "Foo" ) )
+          Foo ) )
       ( 0
-        "Bar" ) ) )
+        Bar ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -283,11 +283,11 @@ True
 00057: Apply
 00058:   Return
 00059: PushFn(00007, 00000)
-00060: PushString("f")
+00060: PushString(""f"")
 00061: Swap(00002)
 00062: Apply
 00063: PushFn(00011, 00000)
-00064: PushString("x")
+00064: PushString(""x"")
 00065: Swap(00002)
 00066: Apply
 00067: PushFn(00031, 00000)

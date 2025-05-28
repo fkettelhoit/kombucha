@@ -16,7 +16,7 @@
             ( 0
               1 )
       "x" )
-    "Foo" )
+    Foo )
   =>
     ( ( ( =>
             =>
@@ -24,9 +24,9 @@
                 ( 0
                   1 )
           "y" )
-        "Bar" )
+        Bar )
       =>
-        ( ( "Pair"
+        ( ( Pair
             1 )
           0 ) ) )
 
@@ -57,7 +57,7 @@
 00024: Apply
 00025:   Return
 00026: PushFn(00016, 00000)
-00027: PushString("y")
+00027: PushString(""y"")
 00028: Swap(00002)
 00029: Apply
 00030: PushString("Bar")
@@ -68,7 +68,7 @@
 00035: Apply
 00036:   Return
 00037: PushFn(00007, 00000)
-00038: PushString("x")
+00038: PushString(""x"")
 00039: Swap(00002)
 00040: Apply
 00041: PushString("Foo")
@@ -104,11 +104,11 @@ Pair(Foo, Bar)
             0
         "x" )
       =>
-        ( "Foo"
+        ( Foo
           0 ) ) )
   =>
     ( 0
-      "Bar" ) )
+      Bar ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -134,11 +134,11 @@ Pair(Foo, Bar)
 00021: Apply
 00022:   Return
 00023: PushFn(00007, 00000)
-00024: PushString("f")
+00024: PushString(""f"")
 00025: Swap(00002)
 00026: Apply
 00027: PushFn(00011, 00000)
-00028: PushString("x")
+00028: PushString(""x"")
 00029: Swap(00002)
 00030: Apply
 00031: PushFn(00013, 00000)

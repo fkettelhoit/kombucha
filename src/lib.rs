@@ -84,6 +84,8 @@ fn pos_at(i: usize, code: &str) -> String {
     format!("line {line}, col {col}")
 }
 
+const NIL: &str = "";
+
 fn parse(code: &str) -> Result<Prg<'_>, String> {
     struct E<'c>(usize, Option<(usize, &'c str)>, _E<'c>);
     enum _E<'c> {
@@ -150,9 +152,10 @@ fn parse(code: &str) -> Result<Prg<'_>, String> {
                 Tok::String => Ok(Ast(i, A::String(s))),
                 Tok::Binding => Ok(Ast(i, A::Binding(s))),
                 Tok::LParen => match _exprs(toks, i, Some(Tok::RParen))? {
+                    elems if elems.is_empty() => Ok(Ast(i, A::String(NIL))),
                     elems if elems.len() == 1 => Ok(elems.into_iter().next().unwrap()),
                     elems => {
-                        let empty_prefix_call = Call::Prefix(Box::new(Ast(i, A::String(""))));
+                        let empty_prefix_call = Call::Prefix(Box::new(Ast(i, A::String(NIL))));
                         Ok(Ast(i, A::Call(empty_prefix_call, elems)))
                     }
                 },
@@ -235,21 +238,44 @@ fn app(f: Expr, arg: Expr) -> Expr {
     Expr::App(Box::new(f), Box::new(arg))
 }
 
-fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String> {
+enum Reflect {
+    Nil = 0,
+    Value = 1,
+    Binding = 2,
+    Compound = 3,
+    Template = 4,
+}
+
+const VALUE: &str = "Value";
+const BINDING: &str = "Binding";
+const COMPOUND: &str = "Compound";
+const TEMPLATE: &str = "Template";
+
+fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
     enum E {
         UnboundVar(String),
         EmptyBlock,
     }
-    #[derive(Default)]
     struct Ctx<'c> {
-        vars: Vec<&'c str>,
-        strs: Vec<&'c str>,
         bindings: Vec<&'c str>,
+        vars: Vec<&'c str>,
+        strs: Vec<String>,
     }
+    let mut ctx = Ctx {
+        bindings: vec![],
+        vars: vec![],
+        strs: vec![String::new(); 5],
+    };
+    ctx.strs[Reflect::Nil as usize] = NIL.to_string();
+    ctx.strs[Reflect::Value as usize] = VALUE.to_string();
+    ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
+    ctx.strs[Reflect::Compound as usize] = COMPOUND.to_string();
+    ctx.strs[Reflect::Template as usize] = TEMPLATE.to_string();
+
     fn resolve_var(v: &str, ctx: &Ctx) -> Option<usize> {
         ctx.vars.iter().rev().position(|x| *x == v)
     }
-    fn resolve_str<'c>(s: &'c str, ctx: &mut Ctx<'c>) -> usize {
+    fn resolve_str<'c>(s: String, ctx: &mut Ctx<'c>) -> usize {
         ctx.strs.iter().position(|x| *x == s).unwrap_or_else(|| {
             ctx.strs.push(s);
             ctx.strs.len() - 1
@@ -276,29 +302,38 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 for arg in args {
                     desugared_args.push(desugar_syntax(arg, ctx)?);
                 }
+                let mut reflector = Reflect::Compound;
                 let mut f = match call {
                     Call::Infix(f) => desugar_value(Ast(ast.0, A::Var(f)), ctx)?,
-                    Call::Prefix(f) => desugar_value(*f, ctx)?,
+                    Call::Prefix(f) => {
+                        if let Ast(_, A::Binding(_)) = *f {
+                            reflector = Reflect::Template
+                        }
+                        desugar_value(*f, ctx)?
+                    }
                     Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
                         Some(v) => Expr::Var(v),
                         None => return Err((ast.0, E::UnboundVar(keywords.join("-")))),
                     },
                 };
                 if desugared_args.is_empty() {
-                    let nil = app(Expr::String(resolve_str("Value", ctx)), Expr::String(0));
+                    let nil = app(
+                        Expr::String(Reflect::Value as usize),
+                        Expr::String(Reflect::Nil as usize),
+                    );
                     f = app(f, nil)
                 }
                 for arg in desugared_args {
                     f = app(f, arg)
                 }
-                Ok(app(Expr::String(resolve_str("Compound", ctx)), f))
+                Ok(app(Expr::String(reflector as usize), f))
             }
             A::Var(_) | A::String(_) | A::Call(_, _) => Ok(app(
-                Expr::String(resolve_str("Value", ctx)),
+                Expr::String(Reflect::Value as usize),
                 desugar_value(ast, ctx)?,
             )),
             A::Binding(_) => Ok(app(
-                Expr::String(resolve_str("Binding", ctx)),
+                Expr::String(Reflect::Binding as usize),
                 desugar_value(ast, ctx)?,
             )),
             A::Block(_) => desugar_value(ast, ctx),
@@ -306,7 +341,9 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
     }
     fn desugar_value<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
         match ast {
-            A::Var(v) if v.ends_with("!") => Ok(Expr::Effect(resolve_str(&v[..v.len() - 1], ctx))),
+            A::Var(v) if v.ends_with("!") => {
+                Ok(Expr::Effect(resolve_str(v[..v.len() - 1].to_string(), ctx)))
+            }
             A::Var(v) => match resolve_var(v, ctx) {
                 Some(v) => Ok(Expr::Var(v)),
                 None if v == "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
@@ -330,10 +367,10 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                 )))))),
                 None => Err((pos, E::UnboundVar(v.to_string()))),
             },
-            A::String(s) => Ok(Expr::String(resolve_str(s, ctx))),
+            A::String(s) => Ok(Expr::String(resolve_str(s.to_string(), ctx))),
             A::Binding(b) => {
                 ctx.bindings.push(&b[1..]);
-                Ok(Expr::String(resolve_str(&b[1..], ctx)))
+                Ok(Expr::String(resolve_str(format!("\"{}\"", &b[1..]), ctx)))
             }
             A::Block(items) => {
                 let mut desugared = vec![];
@@ -369,7 +406,7 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
                     },
                 };
                 if args.is_empty() {
-                    f = Expr::App(Box::new(f), Box::new(Expr::String(0)))
+                    f = Expr::App(Box::new(f), Box::new(Expr::String(Reflect::Nil as usize)))
                 }
                 let is_builtin = matches!(f, Expr::Abs(_));
                 let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
@@ -385,8 +422,6 @@ fn desugar<'c>(Prg(block, code): Prg<'c>) -> Result<(Expr, Vec<&'c str>), String
             }
         }
     }
-    let mut ctx = Ctx::default();
-    ctx.strs.push("Nil");
     match desugar_value(Ast(0, A::Block(block)), &mut ctx) {
         Err((i, E::UnboundVar(v))) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
         Err((i, E::EmptyBlock)) => Err(format!("Empty block at {}", pos_at(i, code))),
@@ -488,8 +523,8 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Vm<'code> {
-    strings: Vec<&'code str>,
+pub struct Vm {
+    strings: Vec<String>,
     bytecode: Vec<Op>,
     ip: usize,
     vars: Vec<V>,
@@ -515,8 +550,8 @@ struct Handler {
     ret: usize,
 }
 
-impl<'code> Vm<'code> {
-    fn new(strings: Vec<&'code str>, bytecode: Vec<Op>, start: usize) -> Self {
+impl Vm {
+    fn new(strings: Vec<String>, bytecode: Vec<Op>, start: usize) -> Self {
         Vm {
             strings,
             bytecode,
@@ -526,7 +561,7 @@ impl<'code> Vm<'code> {
     }
 }
 
-fn compile_prg<'code>(expr: Expr, strings: Vec<&'code str>) -> Vm<'code> {
+fn compile_prg(expr: Expr, strings: Vec<String>) -> Vm {
     let mut main = vec![];
     let mut bytecode = vec![];
     compile_expr(expr, &mut main, &mut bytecode);
@@ -535,7 +570,7 @@ fn compile_prg<'code>(expr: Expr, strings: Vec<&'code str>) -> Vm<'code> {
     Vm::new(strings, bytecode, start)
 }
 
-pub fn compile<'code>(code: &'code str) -> Result<Vm<'code>, String> {
+pub fn compile(code: &str) -> Result<Vm, String> {
     let parsed = parse(code)?;
     let (expr, strings) = desugar(parsed)?;
     Ok(compile_prg(expr, strings.clone()))
@@ -552,8 +587,9 @@ pub enum V {
     Resumable(usize, usize, Coroutine),
 }
 
-pub fn pretty(v: &V, strs: &[&str]) -> String {
+pub fn pretty(v: &V, strs: &Vec<String>) -> String {
     match v {
+        V::String(s) if strs[*s] == NIL => "()".to_string(),
         V::String(s) => strs[*s].to_string(),
         V::Effect(eff) => format!("{}!", strs[*eff]),
         V::Fn(c, v, frame) => format!("{c}(captured:{v},frame:{frame})"),
@@ -562,8 +598,16 @@ pub fn pretty(v: &V, strs: &[&str]) -> String {
             format!("{c} [{}]", closed.join(", "))
         }
         V::Record(s, vs) => {
+            if vs.len() == 1 {
+                match *vs[0] {
+                    V::String(v) if strs[v] == NIL => {
+                        return format!("{}()", pretty(&V::String(*s), strs));
+                    }
+                    _ => {}
+                }
+            }
             let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-            format!("{}({})", pretty(&V::String(*s), strs), items.join(", "))
+            format!("{}({})", strs[*s].to_string(), items.join(", "))
         }
         V::Recursive(c, vs) => {
             let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
@@ -576,25 +620,25 @@ pub fn pretty(v: &V, strs: &[&str]) -> String {
 }
 
 #[derive(Debug)]
-pub enum VmState<'c> {
-    Done(V, Vec<&'c str>),
-    Resumable(Resumable<'c>, V),
+pub enum VmState {
+    Done(V, Vec<String>),
+    Resumable(Resumable, V),
 }
 
 #[derive(Debug)]
-pub struct Resumable<'c>(Vm<'c>, usize);
+pub struct Resumable(Vm, usize);
 
-impl<'c> Resumable<'c> {
-    pub fn strings(&self) -> &[&str] {
+impl Resumable {
+    pub fn strings(&self) -> &Vec<String> {
         &self.0.strings
     }
 
     pub fn get_effect_name(&self) -> Option<&str> {
         let Resumable(vm, eff) = self;
-        vm.strings.get(*eff).copied()
+        vm.strings.get(*eff).map(|s| s.as_str())
     }
 
-    pub fn intern_string(&mut self, s: &'c str) -> V {
+    pub fn intern_string(&mut self, s: String) -> V {
         let Resumable(vm, _) = self;
         let s = vm.strings.iter().position(|x| *x == s).unwrap_or_else(|| {
             vm.strings.push(s);
@@ -603,15 +647,19 @@ impl<'c> Resumable<'c> {
         V::String(s)
     }
 
-    pub fn run(self, arg: V) -> Result<VmState<'c>, usize> {
+    pub fn run(self, arg: V) -> Result<VmState, usize> {
         let Resumable(mut vm, _) = self;
         vm.temps.push(arg);
         vm.run()
     }
 }
 
-impl<'c> Vm<'c> {
-    pub fn run(mut self) -> Result<VmState<'c>, usize> {
+impl Vm {
+    pub fn nil() -> V {
+        V::String(Reflect::Nil as usize)
+    }
+
+    pub fn run(mut self) -> Result<VmState, usize> {
         let vars = &mut self.vars;
         let temps = &mut self.temps;
         let frames = &mut self.frames;
@@ -762,7 +810,7 @@ impl<'c> Vm<'c> {
                             temps.push(t);
                         }
                         (_, _, f) => {
-                            temps.push(V::String(0));
+                            temps.push(V::String(Reflect::Nil as usize));
                             temps.push(f);
                             self.ip += 1;
                         }
@@ -786,7 +834,7 @@ impl<'c> Vm<'c> {
                                 captured,
                                 ret,
                             });
-                            temps.push(V::String(0));
+                            temps.push(V::String(Reflect::Nil as usize));
                             temps.push(v);
                         }
                         _ => temps.push(v),
@@ -806,7 +854,7 @@ impl<'c> Vm<'c> {
                         (V::String(a), V::String(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
-                    temps.push(V::String(0));
+                    temps.push(V::String(Reflect::Nil as usize));
                     temps.push(branch);
                 }
             }
@@ -993,12 +1041,13 @@ mod tests {
         buf
     }
 
-    fn pretty_expr<'c>(expr: &Expr, strs: &[&'c str]) -> String {
-        fn pretty<'c>(expr: &Expr, strs: &[&'c str], lvl: usize, buf: &mut String) {
+    fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
+        fn pretty(expr: &Expr, strs: &Vec<String>, lvl: usize, buf: &mut String) {
             let indent = "  ";
             match expr {
                 Expr::Var(v) => buf.push_str(&v.to_string()),
-                Expr::String(s) => buf.push_str(&format!("\"{}\"", strs[*s])),
+                Expr::String(s) if strs[*s] == NIL => buf.push_str("()"),
+                Expr::String(s) => buf.push_str(&strs[*s]),
                 Expr::Effect(eff) => buf.push_str(&format!("{}!", strs[*eff])),
                 Expr::Abs(expr) => {
                     buf.push_str("=>\n");
@@ -1072,7 +1121,7 @@ mod tests {
     }
 
     fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
-        let bytecode = compile_prg(expr, strings.clone());
+        let bytecode = compile_prg(expr, strings.into_iter().map(|s| s.to_string()).collect());
         println!("{}", pretty_bytecode(&bytecode));
         match bytecode.run() {
             Ok(VmState::Done(v, strs)) => Ok(pretty(&v, &strs)),
@@ -1109,7 +1158,7 @@ mod tests {
             .collect())
     }
 
-    fn test_without_run<'c>(code: &'c str) -> (Vec<String>, Vec<Vm<'c>>) {
+    fn test_without_run(code: &str) -> (Vec<String>, Vec<Vm>) {
         let mut results = vec![];
         let mut compiled = vec![];
         match parse(code) {
@@ -1289,16 +1338,14 @@ mod tests {
             for vm in compiled {
                 let mut printed = vec![];
                 let mut result = vm.run();
-                let nil = "Nil";
                 loop {
                     match result {
-                        Ok(VmState::Resumable(mut res, arg)) => {
-                            let arg = pretty(&arg, res.strings());
-                            match res.get_effect_name().unwrap() {
+                        Ok(VmState::Resumable(vm, arg)) => {
+                            let arg = pretty(&arg, vm.strings());
+                            match vm.get_effect_name().unwrap() {
                                 eff if eff == "print" => {
                                     printed.push(format!("\"{arg}\"\n"));
-                                    let nil = res.intern_string(nil);
-                                    result = res.run(nil);
+                                    result = vm.run(Vm::nil());
                                 }
                                 name => break actual.push(format!("{name}!({arg})")),
                             }

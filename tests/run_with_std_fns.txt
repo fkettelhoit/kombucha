@@ -52,7 +52,7 @@ map('x => { Foo(x) }, List(A, B, C))
         ( ( =>
               =>
                 0
-            ( ( ""
+            ( ( ()
                 "f" )
               "xs" ) )
           =>
@@ -68,7 +68,7 @@ map('x => { Foo(x) }, List(A, B, C))
                   ( ( =>
                         =>
                           0
-                      ( ( ""
+                      ( ( ()
                           "xs" )
                         "x" ) )
                     =>
@@ -87,12 +87,12 @@ map('x => { Foo(x) }, List(A, B, C))
                 0
             "x" )
           =>
-            ( "Foo"
+            ( Foo
               0 ) ) )
-      ( ( ( "List"
-            "A" )
-          "B" )
-        "C" ) ) )
+      ( ( ( List
+            A )
+          B )
+        C ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -152,10 +152,10 @@ map('x => { Foo(x) }, List(A, B, C))
 00055: Apply
 00056: PushFn(00032, 00000)
 00057: PushString("")
-00058: PushString("xs")
+00058: PushString(""xs"")
 00059: Swap(00002)
 00060: Apply
-00061: PushString("x")
+00061: PushString(""x"")
 00062: Swap(00002)
 00063: Apply
 00064: Swap(00002)
@@ -173,10 +173,10 @@ map('x => { Foo(x) }, List(A, B, C))
 00076:   Return
 00077: PushFn(00016, 00000)
 00078: PushString("")
-00079: PushString("f")
+00079: PushString(""f"")
 00080: Swap(00002)
 00081: Apply
-00082: PushString("xs")
+00082: PushString(""xs"")
 00083: Swap(00002)
 00084: Apply
 00085: Swap(00002)
@@ -196,7 +196,7 @@ map('x => { Foo(x) }, List(A, B, C))
 00099:   Return
 00100: PushVar(00000)
 00101: PushFn(00093, 00000)
-00102: PushString("x")
+00102: PushString(""x"")
 00103: Swap(00002)
 00104: Apply
 00105: PushFn(00095, 00000)
@@ -218,11 +218,11 @@ map('x => { Foo(x) }, List(A, B, C))
 00121: Apply
 00122:   Return
 00123: PushFn(00007, 00000)
-00124: PushString("map")
+00124: PushString(""map"")
 00125: Swap(00002)
 00126: Apply
 00127: PushFn(00012, 00000)
-00128: PushString("map")
+00128: PushString(""map"")
 00129: Swap(00002)
 00130: Apply
 00131: PushFn(00077, 00000)
@@ -297,7 +297,7 @@ fold(('acc, 'x) => { acc(x) }, List, List(A, B, C))
         ( ( =>
               =>
                 0
-            ( ( ( ""
+            ( ( ( ()
                   "f" )
                 "acc" )
               "xs" ) )
@@ -315,7 +315,7 @@ fold(('acc, 'x) => { acc(x) }, List, List(A, B, C))
                     ( ( =>
                           =>
                             0
-                        ( ( ""
+                        ( ( ()
                             "xs" )
                           "x" ) )
                       =>
@@ -333,18 +333,18 @@ fold(('acc, 'x) => { acc(x) }, List, List(A, B, C))
           ( ( =>
                 =>
                   0
-              ( ( ""
+              ( ( ()
                   "acc" )
                 "x" ) )
             =>
               =>
                 ( 1
                   0 ) ) )
-        "List" )
-      ( ( ( "List"
-            "A" )
-          "B" )
-        "C" ) ) )
+        List )
+      ( ( ( List
+            A )
+          B )
+        C ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -407,10 +407,10 @@ fold(('acc, 'x) => { acc(x) }, List, List(A, B, C))
 00058: Apply
 00059: PushFn(00032, 00000)
 00060: PushString("")
-00061: PushString("xs")
+00061: PushString(""xs"")
 00062: Swap(00002)
 00063: Apply
-00064: PushString("x")
+00064: PushString(""x"")
 00065: Swap(00002)
 00066: Apply
 00067: Swap(00002)
@@ -430,13 +430,13 @@ fold(('acc, 'x) => { acc(x) }, List, List(A, B, C))
 00081:   Return
 00082: PushFn(00016, 00000)
 00083: PushString("")
-00084: PushString("f")
+00084: PushString(""f"")
 00085: Swap(00002)
 00086: Apply
-00087: PushString("acc")
+00087: PushString(""acc"")
 00088: Swap(00002)
 00089: Apply
-00090: PushString("xs")
+00090: PushString(""xs"")
 00091: Swap(00002)
 00092: Apply
 00093: Swap(00002)
@@ -459,10 +459,10 @@ fold(('acc, 'x) => { acc(x) }, List, List(A, B, C))
 00110: PushVar(00000)
 00111: PushFn(00101, 00000)
 00112: PushString("")
-00113: PushString("acc")
+00113: PushString(""acc"")
 00114: Swap(00002)
 00115: Apply
-00116: PushString("x")
+00116: PushString(""x"")
 00117: Swap(00002)
 00118: Apply
 00119: Swap(00002)
@@ -489,11 +489,11 @@ fold(('acc, 'x) => { acc(x) }, List, List(A, B, C))
 00140: Apply
 00141:   Return
 00142: PushFn(00007, 00000)
-00143: PushString("fold")
+00143: PushString(""fold"")
 00144: Swap(00002)
 00145: Apply
 00146: PushFn(00012, 00000)
-00147: PushString("fold")
+00147: PushString(""fold"")
 00148: Swap(00002)
 00149: Apply
 00150: PushFn(00082, 00000)
@@ -645,7 +645,7 @@ List(
         ( ( =>
               =>
                 0
-            ( ( ""
+            ( ( ()
                 "xs" )
               "ys" ) )
           =>
@@ -661,7 +661,7 @@ List(
                   ( ( =>
                         =>
                           0
-                      ( ( ""
+                      ( ( ()
                           "xs" )
                         "x" ) )
                     =>
@@ -677,7 +677,7 @@ List(
                             ( ( =>
                                   =>
                                     0
-                                ( ( ""
+                                ( ( ()
                                     "ys" )
                                   "y" ) )
                               =>
@@ -702,16 +702,16 @@ List(
                                                         1
                                                         0 )
                                               0 )
-                                            "Nil" )
+                                            Nil )
                                           =>
-                                            "Nil" )
+                                            Nil )
                                         =>
                                           ( 1
-                                            ( ( ""
+                                            ( ( ()
                                                 4 )
                                               2 ) ) ) ) ) )
                           =>
-                            "Nil" ) ) )
+                            Nil ) ) )
                 =>
                   ( ( ( =>
                           =>
@@ -724,12 +724,12 @@ List(
                       ( ( =>
                             =>
                               0
-                          ( ( ""
+                          ( ( ()
                               "ys" )
                             "y" ) )
                         =>
                           =>
-                            "Nil" ) )
+                            Nil ) )
                     =>
                       ( ( ( ( =>
                                 =>
@@ -745,49 +745,49 @@ List(
                           =>
                             4 )
                         =>
-                          "Nil" ) ) ) ) ) )
+                          Nil ) ) ) ) ) )
   =>
-    ( ( ( ( ( ( "List"
+    ( ( ( ( ( ( List
                 ( ( 0
-                    ( ( ( "List"
-                          "X" )
-                        "Y" )
-                      "Z" ) )
-                  ( ( ( "List"
-                        "A" )
-                      "B" )
-                    "C" ) ) )
+                    ( ( ( List
+                          X )
+                        Y )
+                      Z ) )
+                  ( ( ( List
+                        A )
+                      B )
+                    C ) ) )
               ( ( 0
-                  ( ( "List"
-                      "X" )
-                    "Y" ) )
-                ( ( ( "List"
-                      "A" )
-                    "B" )
-                  "C" ) ) )
+                  ( ( List
+                      X )
+                    Y ) )
+                ( ( ( List
+                      A )
+                    B )
+                  C ) ) )
             ( ( 0
-                ( ( ( "List"
-                      "X" )
-                    "Y" )
-                  "Z" ) )
-              ( ( "List"
-                  "A" )
-                "B" ) ) )
+                ( ( ( List
+                      X )
+                    Y )
+                  Z ) )
+              ( ( List
+                  A )
+                B ) ) )
           ( ( 0
-              ( ( ( "List"
-                    "X" )
-                  "Y" )
-                "Z" ) )
-            "Bar" ) )
+              ( ( ( List
+                    X )
+                  Y )
+                Z ) )
+            Bar ) )
         ( ( 0
-            "Foo" )
-          ( ( ( "List"
-                "A" )
-              "B" )
-            "C" ) ) )
+            Foo )
+          ( ( ( List
+                A )
+              B )
+            C ) ) )
       ( ( 0
-          "Foo" )
-        "Bar" ) ) )
+          Foo )
+        Bar ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -890,7 +890,7 @@ List(
 00098: Apply
 00099:   Return
 00100: PushFn(00057, 00000)
-00101: PushString("zipped")
+00101: PushString(""zipped"")
 00102: Swap(00002)
 00103: Apply
 00104: PushVar(00006)
@@ -916,10 +916,10 @@ List(
 00124: Apply
 00125: PushFn(00048, 00000)
 00126: PushString("")
-00127: PushString("ys")
+00127: PushString(""ys"")
 00128: Swap(00002)
 00129: Apply
-00130: PushString("y")
+00130: PushString(""y"")
 00131: Swap(00002)
 00132: Apply
 00133: Swap(00002)
@@ -993,10 +993,10 @@ List(
 00201: Apply
 00202: PushFn(00160, 00000)
 00203: PushString("")
-00204: PushString("ys")
+00204: PushString(""ys"")
 00205: Swap(00002)
 00206: Apply
-00207: PushString("y")
+00207: PushString(""y"")
 00208: Swap(00002)
 00209: Apply
 00210: Swap(00002)
@@ -1016,10 +1016,10 @@ List(
 00224: Apply
 00225: PushFn(00032, 00000)
 00226: PushString("")
-00227: PushString("xs")
+00227: PushString(""xs"")
 00228: Swap(00002)
 00229: Apply
-00230: PushString("x")
+00230: PushString(""x"")
 00231: Swap(00002)
 00232: Apply
 00233: Swap(00002)
@@ -1037,10 +1037,10 @@ List(
 00245:   Return
 00246: PushFn(00016, 00000)
 00247: PushString("")
-00248: PushString("xs")
+00248: PushString(""xs"")
 00249: Swap(00002)
 00250: Apply
-00251: PushString("ys")
+00251: PushString(""ys"")
 00252: Swap(00002)
 00253: Apply
 00254: Swap(00002)
@@ -1172,11 +1172,11 @@ List(
 00380: Apply
 00381:   Return
 00382: PushFn(00007, 00000)
-00383: PushString("zip")
+00383: PushString(""zip"")
 00384: Swap(00002)
 00385: Apply
 00386: PushFn(00012, 00000)
-00387: PushString("zip")
+00387: PushString(""zip"")
 00388: Swap(00002)
 00389: Apply
 00390: PushFn(00246, 00000)
@@ -1262,7 +1262,7 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
         ( ( =>
               =>
                 0
-            ( ( ""
+            ( ( ()
                 "acc" )
               "xs" ) )
           =>
@@ -1278,7 +1278,7 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
                   ( ( =>
                         =>
                           0
-                      ( ( ""
+                      ( ( ()
                           "xs" )
                         "x" ) )
                     =>
@@ -1299,7 +1299,7 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
         ( ( =>
               =>
                 0
-            ( ( ""
+            ( ( ()
                 "f" )
               "xs" ) )
           =>
@@ -1307,28 +1307,28 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
               ( ( 2
                   1 )
                 ( ( 2
-                    "List" )
+                    List )
                   0 ) ) ) )
       =>
         ( ( 0
             ( ( =>
                   =>
                     0
-                ( ( ( ""
+                ( ( ( ()
                       "x" )
                     "y" )
                   "z" ) )
               =>
                 =>
                   =>
-                    ( ( ( "List"
+                    ( ( ( List
                           2 )
                         1 )
                       0 ) ) )
-          ( ( ( "Vec"
-                "A" )
-              "B" )
-            "C" ) ) ) )
+          ( ( ( Vec
+                A )
+              B )
+            C ) ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -1385,10 +1385,10 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
 00052: Apply
 00053: PushFn(00032, 00000)
 00054: PushString("")
-00055: PushString("xs")
+00055: PushString(""xs"")
 00056: Swap(00002)
 00057: Apply
-00058: PushString("x")
+00058: PushString(""x"")
 00059: Swap(00002)
 00060: Apply
 00061: Swap(00002)
@@ -1406,10 +1406,10 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
 00073:   Return
 00074: PushFn(00016, 00000)
 00075: PushString("")
-00076: PushString("acc")
+00076: PushString(""acc"")
 00077: Swap(00002)
 00078: Apply
-00079: PushString("xs")
+00079: PushString(""xs"")
 00080: Swap(00002)
 00081: Apply
 00082: Swap(00002)
@@ -1469,13 +1469,13 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
 00136: PushVar(00000)
 00137: PushFn(00119, 00000)
 00138: PushString("")
-00139: PushString("x")
+00139: PushString(""x"")
 00140: Swap(00002)
 00141: Apply
-00142: PushString("y")
+00142: PushString(""y"")
 00143: Swap(00002)
 00144: Apply
-00145: PushString("z")
+00145: PushString(""z"")
 00146: Swap(00002)
 00147: Apply
 00148: Swap(00002)
@@ -1499,15 +1499,15 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
 00166: Apply
 00167:   Return
 00168: PushFn(00095, 00000)
-00169: PushString("apply")
+00169: PushString(""apply"")
 00170: Swap(00002)
 00171: Apply
 00172: PushFn(00099, 00000)
 00173: PushString("")
-00174: PushString("f")
+00174: PushString(""f"")
 00175: Swap(00002)
 00176: Apply
-00177: PushString("xs")
+00177: PushString(""xs"")
 00178: Swap(00002)
 00179: Apply
 00180: Swap(00002)
@@ -1522,11 +1522,11 @@ apply(('x, 'y, 'z) => { List(x, y, z) }, Vec(A, B, C))
 00189: Apply
 00190:   Return
 00191: PushFn(00007, 00000)
-00192: PushString("rev")
+00192: PushString(""rev"")
 00193: Swap(00002)
 00194: Apply
 00195: PushFn(00012, 00000)
-00196: PushString("rev")
+00196: PushString(""rev"")
 00197: Swap(00002)
 00198: Apply
 00199: PushFn(00074, 00000)
@@ -1609,7 +1609,7 @@ List(beforelast((X, Y, Z)), last((X, Y, Z)))
             ( ( =>
                   =>
                     0
-                ( ( ""
+                ( ( ()
                     "_" )
                   "x" ) )
               =>
@@ -1640,7 +1640,7 @@ List(beforelast((X, Y, Z)), last((X, Y, Z)))
                 ( ( =>
                       =>
                         0
-                    ( ( ""
+                    ( ( ()
                         "xs" )
                       "_" ) )
                   =>
@@ -1650,17 +1650,17 @@ List(beforelast((X, Y, Z)), last((X, Y, Z)))
               =>
                 1 ) ) )
       =>
-        ( ( "List"
+        ( ( List
             ( 0
-              ( ( ( ""
-                    "X" )
-                  "Y" )
-                "Z" ) ) )
+              ( ( ( ()
+                    X )
+                  Y )
+                Z ) ) )
           ( 1
-            ( ( ( ""
-                  "X" )
-                "Y" )
-              "Z" ) ) ) ) )
+            ( ( ( ()
+                  X )
+                Y )
+              Z ) ) ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -1703,10 +1703,10 @@ List(beforelast((X, Y, Z)), last((X, Y, Z)))
 00038: Apply
 00039: PushFn(00027, 00000)
 00040: PushString("")
-00041: PushString("_")
+00041: PushString(""_"")
 00042: Swap(00002)
 00043: Apply
-00044: PushString("x")
+00044: PushString(""x"")
 00045: Swap(00002)
 00046: Apply
 00047: Swap(00002)
@@ -1764,10 +1764,10 @@ List(beforelast((X, Y, Z)), last((X, Y, Z)))
 00099: Apply
 00100: PushFn(00085, 00000)
 00101: PushString("")
-00102: PushString("xs")
+00102: PushString(""xs"")
 00103: Swap(00002)
 00104: Apply
-00105: PushString("_")
+00105: PushString(""_"")
 00106: Swap(00002)
 00107: Apply
 00108: Swap(00002)
@@ -1814,11 +1814,11 @@ List(beforelast((X, Y, Z)), last((X, Y, Z)))
 00149: Apply
 00150:   Return
 00151: PushFn(00065, 00000)
-00152: PushString("beforelast")
+00152: PushString(""beforelast"")
 00153: Swap(00002)
 00154: Apply
 00155: PushFn(00069, 00000)
-00156: PushString("xs")
+00156: PushString(""xs"")
 00157: Swap(00002)
 00158: Apply
 00159: PushFn(00096, 00001)
@@ -1831,11 +1831,11 @@ List(beforelast((X, Y, Z)), last((X, Y, Z)))
 00166: Apply
 00167:   Return
 00168: PushFn(00007, 00000)
-00169: PushString("last")
+00169: PushString(""last"")
 00170: Swap(00002)
 00171: Apply
 00172: PushFn(00011, 00000)
-00173: PushString("xs")
+00173: PushString(""xs"")
 00174: Swap(00002)
 00175: Apply
 00176: PushFn(00035, 00000)
@@ -1941,17 +1941,17 @@ f(Foo)
                                           1
                                           0 )
                                 1 )
-                              "Binding" )
+                              Binding )
                             =>
                               3 )
                           =>
                             ( throw!
-                              ( "ExpectedBindingButFound"
+                              ( ExpectedBindingButFound
                                 ( 2
                                   1 ) ) ) ) ) ) )
               =>
                 ( throw!
-                  ( ( "MustBeCalledAsMacroButFound"
+                  ( ( MustBeCalledAsMacroButFound
                       2 )
                     1 ) ) ) ) ) )
   =>
@@ -1962,13 +1962,13 @@ f(Foo)
                   1 )
           "f" )
         ( ( 0
-            ( "Binding"
+            ( Binding
               "x" ) )
           =>
             0 ) )
       =>
         ( 0
-          "Foo" ) ) )
+          Foo ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -2049,7 +2049,7 @@ f(Foo)
 00076: Apply
 00077:   Return
 00078: PushFn(00035, 00000)
-00079: PushString("x")
+00079: PushString(""x"")
 00080: Swap(00002)
 00081: Apply
 00082: PushFn(00064, 00002)
@@ -2072,7 +2072,7 @@ f(Foo)
 00099: Swap(00002)
 00100: Apply
 00101: PushFn(00031, 00000)
-00102: PushString("xs")
+00102: PushString(""xs"")
 00103: Swap(00002)
 00104: Apply
 00105: PushFn(00078, 00001)
@@ -2085,7 +2085,7 @@ f(Foo)
 00112: Apply
 00113:   Return
 00114: PushFn(00015, 00000)
-00115: PushString("block")
+00115: PushString(""block"")
 00116: Swap(00002)
 00117: Apply
 00118: PushFn(00097, 00001)
@@ -2109,12 +2109,12 @@ f(Foo)
 00136: Apply
 00137:   Return
 00138: PushFn(00129, 00000)
-00139: PushString("f")
+00139: PushString(""f"")
 00140: Swap(00002)
 00141: Apply
 00142: PushVar(00000)
 00143: PushString("Binding")
-00144: PushString("x")
+00144: PushString(""x"")
 00145: Swap(00002)
 00146: Apply
 00147: Swap(00002)
@@ -2129,11 +2129,11 @@ f(Foo)
 00156: Apply
 00157:   Return
 00158: PushFn(00007, 00000)
-00159: PushString("=>")
+00159: PushString(""=>"")
 00160: Swap(00002)
 00161: Apply
 00162: PushFn(00011, 00000)
-00163: PushString("binding")
+00163: PushString(""binding"")
 00164: Swap(00002)
 00165: Apply
 00166: PushFn(00114, 00000)
@@ -2245,17 +2245,17 @@ f(Foo)
                                           1
                                           0 )
                                 1 )
-                              "Binding" )
+                              Binding )
                             =>
                               3 )
                           =>
                             ( throw!
-                              ( "ExpectedBindingButFound"
+                              ( ExpectedBindingButFound
                                 ( 2
                                   1 ) ) ) ) ) ) )
               =>
                 ( throw!
-                  ( ( "MustBeCalledAsMacroButFound"
+                  ( ( MustBeCalledAsMacroButFound
                       2 )
                     1 ) ) ) ) ) )
   =>
@@ -2266,7 +2266,7 @@ f(Foo)
                   1 )
           "f" )
         ( ( 0
-            ( "Binding"
+            ( Binding
               "x" ) )
           =>
             0 ) )
@@ -2278,13 +2278,13 @@ f(Foo)
                       1 )
               "will-throw" )
             ( ( 1
-                ( "Value"
-                  "Foo" ) )
+                ( Value
+                  Foo ) )
               =>
                 1 ) )
           =>
             ( 1
-              "Foo" ) ) ) )
+              Foo ) ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -2365,7 +2365,7 @@ f(Foo)
 00076: Apply
 00077:   Return
 00078: PushFn(00035, 00000)
-00079: PushString("x")
+00079: PushString(""x"")
 00080: Swap(00002)
 00081: Apply
 00082: PushFn(00064, 00002)
@@ -2388,7 +2388,7 @@ f(Foo)
 00099: Swap(00002)
 00100: Apply
 00101: PushFn(00031, 00000)
-00102: PushString("xs")
+00102: PushString(""xs"")
 00103: Swap(00002)
 00104: Apply
 00105: PushFn(00078, 00001)
@@ -2401,7 +2401,7 @@ f(Foo)
 00112: Apply
 00113:   Return
 00114: PushFn(00015, 00000)
-00115: PushString("block")
+00115: PushString(""block"")
 00116: Swap(00002)
 00117: Apply
 00118: PushFn(00097, 00001)
@@ -2436,7 +2436,7 @@ f(Foo)
 00147: Apply
 00148:   Return
 00149: PushFn(00140, 00000)
-00150: PushString("will-throw")
+00150: PushString(""will-throw"")
 00151: Swap(00002)
 00152: Apply
 00153: PushVar(00001)
@@ -2456,12 +2456,12 @@ f(Foo)
 00167: Apply
 00168:   Return
 00169: PushFn(00129, 00000)
-00170: PushString("f")
+00170: PushString(""f"")
 00171: Swap(00002)
 00172: Apply
 00173: PushVar(00000)
 00174: PushString("Binding")
-00175: PushString("x")
+00175: PushString(""x"")
 00176: Swap(00002)
 00177: Apply
 00178: Swap(00002)
@@ -2476,11 +2476,11 @@ f(Foo)
 00187: Apply
 00188:   Return
 00189: PushFn(00007, 00000)
-00190: PushString("=>")
+00190: PushString(""=>"")
 00191: Swap(00002)
 00192: Apply
 00193: PushFn(00011, 00000)
-00194: PushString("binding")
+00194: PushString(""binding"")
 00195: Swap(00002)
 00196: Apply
 00197: PushFn(00114, 00000)
@@ -2602,7 +2602,7 @@ List(
         ( ( =>
               =>
                 0
-            ( ( ""
+            ( ( ()
                 "a" )
               "b" ) )
           =>
@@ -2618,7 +2618,7 @@ List(
                   ( ( =>
                         =>
                           0
-                      ( ( ""
+                      ( ( ()
                           "xs" )
                         "x" ) )
                     =>
@@ -2634,7 +2634,7 @@ List(
                             ( ( =>
                                   =>
                                     0
-                                ( ( ""
+                                ( ( ()
                                     "ys" )
                                   "y" ) )
                               =>
@@ -2651,15 +2651,15 @@ List(
                                           ( ( 6
                                               2 )
                                             0 ) )
-                                        "True" )
+                                        True )
                                       =>
                                         ( ( 7
                                             4 )
                                           2 ) )
                                     =>
-                                      "False" ) ) )
+                                      False ) ) )
                           =>
-                            "False" ) ) )
+                            False ) ) )
                 =>
                   ( ( ( ( =>
                             =>
@@ -2673,27 +2673,27 @@ List(
                           2 )
                         1 )
                       =>
-                        "True" )
+                        True )
                     =>
-                      "False" ) ) ) ) )
+                      False ) ) ) ) )
   =>
-    ( ( ( ( ( ( ( ( "List"
+    ( ( ( ( ( ( ( ( List
                     ( ( 0
-                        "Foo" )
-                      "Foo" ) )
+                        Foo )
+                      Foo ) )
                   ( ( 0
-                      "Foo" )
-                    "Bar" ) )
+                      Foo )
+                    Bar ) )
                 ( ( 0
-                    ( "Foo"
-                      "Bar" ) )
-                  ( "Foo"
-                    "Bar" ) ) )
+                    ( Foo
+                      Bar ) )
+                  ( Foo
+                    Bar ) ) )
               ( ( 0
-                  ( "Foo"
-                    "Bar" ) )
-                ( "Foo"
-                  "Baz" ) ) )
+                  ( Foo
+                    Bar ) )
+                ( Foo
+                  Baz ) ) )
             ( ( 0
                 "a" )
               "a" ) )
@@ -2815,10 +2815,10 @@ List(
 00101: Apply
 00102: PushFn(00048, 00000)
 00103: PushString("")
-00104: PushString("ys")
+00104: PushString(""ys"")
 00105: Swap(00002)
 00106: Apply
-00107: PushString("y")
+00107: PushString(""y"")
 00108: Swap(00002)
 00109: Apply
 00110: Swap(00002)
@@ -2872,10 +2872,10 @@ List(
 00158: Apply
 00159: PushFn(00032, 00000)
 00160: PushString("")
-00161: PushString("xs")
+00161: PushString(""xs"")
 00162: Swap(00002)
 00163: Apply
-00164: PushString("x")
+00164: PushString(""x"")
 00165: Swap(00002)
 00166: Apply
 00167: Swap(00002)
@@ -2893,10 +2893,10 @@ List(
 00179:   Return
 00180: PushFn(00016, 00000)
 00181: PushString("")
-00182: PushString("a")
+00182: PushString(""a"")
 00183: Swap(00002)
 00184: Apply
-00185: PushString("b")
+00185: PushString(""b"")
 00186: Swap(00002)
 00187: Apply
 00188: Swap(00002)
@@ -2955,32 +2955,32 @@ List(
 00241: Swap(00002)
 00242: Apply
 00243: PushVar(00000)
-00244: PushString("a")
+00244: PushString(""a"")
 00245: Swap(00002)
 00246: Apply
-00247: PushString("a")
+00247: PushString(""a"")
 00248: Swap(00002)
 00249: Apply
 00250: Swap(00002)
 00251: Apply
 00252: PushVar(00000)
-00253: PushString("a")
+00253: PushString(""a"")
 00254: Swap(00002)
 00255: Apply
-00256: PushString("b")
+00256: PushString(""b"")
 00257: Swap(00002)
 00258: Apply
 00259: Swap(00002)
 00260: Apply
 00261: PushVar(00000)
-00262: PushString("f")
-00263: PushString("a")
+00262: PushString(""f"")
+00263: PushString(""a"")
 00264: Swap(00002)
 00265: Apply
 00266: Swap(00002)
 00267: Apply
-00268: PushString("f")
-00269: PushString("a")
+00268: PushString(""f"")
+00269: PushString(""a"")
 00270: Swap(00002)
 00271: Apply
 00272: Swap(00002)
@@ -2988,14 +2988,14 @@ List(
 00274: Swap(00002)
 00275: Apply
 00276: PushVar(00000)
-00277: PushString("f")
-00278: PushString("a")
+00277: PushString(""f"")
+00278: PushString(""a"")
 00279: Swap(00002)
 00280: Apply
 00281: Swap(00002)
 00282: Apply
-00283: PushString("g")
-00284: PushString("a")
+00283: PushString(""g"")
+00284: PushString(""a"")
 00285: Swap(00002)
 00286: Apply
 00287: Swap(00002)
@@ -3004,11 +3004,11 @@ List(
 00290: Apply
 00291:   Return
 00292: PushFn(00007, 00000)
-00293: PushString("==")
+00293: PushString(""=="")
 00294: Swap(00002)
 00295: Apply
 00296: PushFn(00012, 00000)
-00297: PushString("==")
+00297: PushString(""=="")
 00298: Swap(00002)
 00299: Apply
 00300: PushFn(00180, 00000)
@@ -3441,7 +3441,7 @@ try({
         ( ( =>
               =>
                 0
-            ( ( ( ""
+            ( ( ( ()
                   "f" )
                 "acc" )
               "xs" ) )
@@ -3459,7 +3459,7 @@ try({
                     ( ( =>
                           =>
                             0
-                        ( ( ""
+                        ( ( ()
                             "xs" )
                           "x" ) )
                       =>
@@ -3483,7 +3483,7 @@ try({
           ( ( =>
                 =>
                   0
-              ( ( ""
+              ( ( ()
                   "acc" )
                 "x" ) )
             =>
@@ -3499,7 +3499,7 @@ try({
                     ( ( =>
                           =>
                             0
-                        ( ( ""
+                        ( ( ()
                             "xs" )
                           "x" ) )
                       =>
@@ -3524,7 +3524,7 @@ try({
                 ( ( =>
                       =>
                         0
-                    ( ( ""
+                    ( ( ()
                         "acc" )
                       "xs" ) )
                   =>
@@ -3540,7 +3540,7 @@ try({
                           ( ( =>
                                 =>
                                   0
-                              ( ( ""
+                              ( ( ()
                                   "xs" )
                                 "x" ) )
                             =>
@@ -3561,7 +3561,7 @@ try({
                 ( ( =>
                       =>
                         0
-                    ( ( ""
+                    ( ( ()
                         "f" )
                       "xs" ) )
                   =>
@@ -3569,7 +3569,7 @@ try({
                       ( ( 2
                           1 )
                         ( ( 2
-                            "List" )
+                            List )
                           0 ) ) ) )
               =>
                 ( ( ( =>
@@ -3587,7 +3587,7 @@ try({
                         ( ( =>
                               =>
                                 0
-                            ( ( ""
+                            ( ( ()
                                 "f" )
                               "xs" ) )
                           =>
@@ -3603,7 +3603,7 @@ try({
                                   ( ( =>
                                         =>
                                           0
-                                      ( ( ""
+                                      ( ( ()
                                           "xs" )
                                         "x" ) )
                                     =>
@@ -3631,7 +3631,7 @@ try({
                             ( ( =>
                                   =>
                                     0
-                                ( ( ""
+                                ( ( ()
                                     "xs" )
                                   "ys" ) )
                               =>
@@ -3647,7 +3647,7 @@ try({
                                       ( ( =>
                                             =>
                                               0
-                                          ( ( ""
+                                          ( ( ()
                                               "xs" )
                                             "x" ) )
                                         =>
@@ -3663,7 +3663,7 @@ try({
                                                 ( ( =>
                                                       =>
                                                         0
-                                                    ( ( ""
+                                                    ( ( ()
                                                         "ys" )
                                                       "y" ) )
                                                   =>
@@ -3688,16 +3688,16 @@ try({
                                                                             1
                                                                             0 )
                                                                   0 )
-                                                                "Nil" )
+                                                                Nil )
                                                               =>
-                                                                "Nil" )
+                                                                Nil )
                                                             =>
                                                               ( 1
-                                                                ( ( ""
+                                                                ( ( ()
                                                                     4 )
                                                                   2 ) ) ) ) ) )
                                               =>
-                                                "Nil" ) ) )
+                                                Nil ) ) )
                                     =>
                                       ( ( ( =>
                                               =>
@@ -3710,12 +3710,12 @@ try({
                                           ( ( =>
                                                 =>
                                                   0
-                                              ( ( ""
+                                              ( ( ()
                                                   "ys" )
                                                 "y" ) )
                                             =>
                                               =>
-                                                "Nil" ) )
+                                                Nil ) )
                                         =>
                                           ( ( ( ( =>
                                                     =>
@@ -3731,7 +3731,7 @@ try({
                                               =>
                                                 4 )
                                             =>
-                                              "Nil" ) ) ) ) ) )
+                                              Nil ) ) ) ) ) )
                       =>
                         ( ( ( =>
                                 =>
@@ -3748,7 +3748,7 @@ try({
                                 ( ( =>
                                       =>
                                         0
-                                    ( ( ""
+                                    ( ( ()
                                         "a" )
                                       "b" ) )
                                   =>
@@ -3764,7 +3764,7 @@ try({
                                           ( ( =>
                                                 =>
                                                   0
-                                              ( ( ""
+                                              ( ( ()
                                                   "xs" )
                                                 "x" ) )
                                             =>
@@ -3780,7 +3780,7 @@ try({
                                                     ( ( =>
                                                           =>
                                                             0
-                                                        ( ( ""
+                                                        ( ( ()
                                                             "ys" )
                                                           "y" ) )
                                                       =>
@@ -3797,15 +3797,15 @@ try({
                                                                   ( ( 6
                                                                       2 )
                                                                     0 ) )
-                                                                "True" )
+                                                                True )
                                                               =>
                                                                 ( ( 7
                                                                     4 )
                                                                   2 ) )
                                                             =>
-                                                              "False" ) ) )
+                                                              False ) ) )
                                                   =>
-                                                    "False" ) ) )
+                                                    False ) ) )
                                         =>
                                           ( ( ( ( =>
                                                     =>
@@ -3819,9 +3819,9 @@ try({
                                                   2 )
                                                 1 )
                                               =>
-                                                "True" )
+                                                True )
                                             =>
-                                              "False" ) ) ) ) )
+                                              False ) ) ) ) )
                           =>
                             ( ( ( =>
                                     =>
@@ -3838,7 +3838,7 @@ try({
                                     ( ( =>
                                           =>
                                             0
-                                        ( ( ""
+                                        ( ( ()
                                             "pattern" )
                                           "value" ) )
                                       =>
@@ -3854,7 +3854,7 @@ try({
                                               ( ( =>
                                                     =>
                                                       0
-                                                  ( ( ""
+                                                  ( ( ()
                                                       "type" )
                                                     "pattern" ) )
                                                 =>
@@ -3869,9 +3869,9 @@ try({
                                                                       1
                                                                       0 )
                                                             1 )
-                                                          "Binding" )
+                                                          Binding )
                                                         =>
-                                                          ( "List"
+                                                          ( List
                                                             3 ) )
                                                       =>
                                                         ( ( ( ( =>
@@ -3884,7 +3884,7 @@ try({
                                                                           1
                                                                           0 )
                                                                 2 )
-                                                              "Compound" )
+                                                              Compound )
                                                             =>
                                                               ( ( ( =>
                                                                       =>
@@ -3900,9 +3900,9 @@ try({
                                                                       4 ) ) )
                                                                 =>
                                                                   ( ( 12
-                                                                      "List" )
+                                                                      List )
                                                                     ( ( 13
-                                                                        "List" )
+                                                                        List )
                                                                       0 ) ) ) )
                                                           =>
                                                             ( ( ( ( =>
@@ -3917,12 +3917,12 @@ try({
                                                                     ( ( 7
                                                                         2 )
                                                                       4 ) )
-                                                                  "True" )
+                                                                  True )
                                                                 =>
-                                                                  "Nil" )
+                                                                  Nil )
                                                               =>
                                                                 ( no-match!
-                                                                  ( ( ""
+                                                                  ( ( ()
                                                                       3 )
                                                                     5 ) ) ) ) ) ) )
                                             =>
@@ -3938,7 +3938,7 @@ try({
                                     ( ( =>
                                           =>
                                             0
-                                        ( ( ( ""
+                                        ( ( ( ()
                                               "pattern" )
                                             "body" )
                                           "value" ) )
@@ -3973,10 +3973,10 @@ try({
                                                                           1
                                                                           0 )
                                                                 0 )
-                                                              "Nil" )
+                                                              Nil )
                                                             =>
                                                               ( 4
-                                                                "Nil" ) )
+                                                                () ) )
                                                           =>
                                                             ( ( 10
                                                                 4 )
@@ -3985,7 +3985,7 @@ try({
                                               ( ( =>
                                                     =>
                                                       0
-                                                  ( ( ""
+                                                  ( ( ()
                                                       "_" )
                                                     "arg" ) )
                                                 =>
@@ -4001,77 +4001,77 @@ try({
                                                   1
                                                   0 )
                                           =>
-                                            ( ( ( ( ( ( ( "List"
+                                            ( ( ( ( ( ( ( List
                                                           ( ( ( 1
-                                                                ( "Value"
-                                                                  "Foo" ) )
+                                                                ( Value
+                                                                  Foo ) )
                                                               =>
-                                                                "Success" )
-                                                            "Foo" ) )
+                                                                Success )
+                                                            Foo ) )
                                                         ( ( ( 1
-                                                              ( "Value"
-                                                                "Foo" ) )
+                                                              ( Value
+                                                                Foo ) )
                                                             =>
-                                                              "Success" )
-                                                          "Bar" ) )
+                                                              Success )
+                                                          Bar ) )
                                                       ( ( ( 1
-                                                            ( "Binding"
+                                                            ( Binding
                                                               "x" ) )
                                                           =>
                                                             0 )
-                                                        "Foo" ) )
+                                                        Foo ) )
                                                     ( ( ( 1
-                                                          ( "Binding"
+                                                          ( Binding
                                                             "x" ) )
                                                         =>
-                                                          "Bar" )
-                                                      "Foo" ) )
+                                                          Bar )
+                                                      Foo ) )
                                                   ( ( ( 1
-                                                        ( "Value"
-                                                          ( ( "Pair"
-                                                              "Foo" )
-                                                            "Bar" ) ) )
+                                                        ( Value
+                                                          ( ( Pair
+                                                              Foo )
+                                                            Bar ) ) )
                                                       =>
-                                                        "Success" )
-                                                    ( ( "Pair"
-                                                        "Foo" )
-                                                      "Bar" ) ) )
+                                                        Success )
+                                                    ( ( Pair
+                                                        Foo )
+                                                      Bar ) ) )
                                                 ( ( ( 1
-                                                      ( "Compound"
-                                                        ( ( "Pair"
-                                                            ( "Binding"
+                                                      ( Compound
+                                                        ( ( Pair
+                                                            ( Binding
                                                               "x" ) )
-                                                          ( "Binding"
+                                                          ( Binding
                                                             "y" ) ) ) )
                                                     =>
                                                       =>
                                                         1 )
-                                                  ( ( "Pair"
-                                                      "Foo" )
-                                                    "Bar" ) ) )
+                                                  ( ( Pair
+                                                      Foo )
+                                                    Bar ) ) )
                                               ( ( ( 1
-                                                    ( "Compound"
-                                                      ( ( "Pair"
-                                                          ( "Value"
-                                                            "Foo" ) )
-                                                        ( "Binding"
+                                                    ( Compound
+                                                      ( ( Pair
+                                                          ( Value
+                                                            Foo ) )
+                                                        ( Binding
                                                           "y" ) ) ) )
                                                   =>
                                                     0 )
-                                                ( ( "Pair"
-                                                    "Foo" )
-                                                  "Bar" ) ) ) )
+                                                ( ( Pair
+                                                    Foo )
+                                                  Bar ) ) ) )
                                         no-match! )
                                       ( ( =>
                                             =>
                                               0
-                                          ( ( ""
+                                          ( ( ()
                                               "r" )
                                             "arg" ) )
                                         =>
                                           =>
                                             ( 1
-                                              ( "NoMatch"
+                                              ( NoMatch
                                                 0 ) ) ) ) ) ) ) ) ) ) ) ) )
 
 00000: PushVar(00000)
@@ -4135,10 +4135,10 @@ try({
 00058: Apply
 00059: PushFn(00032, 00000)
 00060: PushString("")
-00061: PushString("xs")
+00061: PushString(""xs"")
 00062: Swap(00002)
 00063: Apply
-00064: PushString("x")
+00064: PushString(""x"")
 00065: Swap(00002)
 00066: Apply
 00067: Swap(00002)
@@ -4158,13 +4158,13 @@ try({
 00081:   Return
 00082: PushFn(00016, 00000)
 00083: PushString("")
-00084: PushString("f")
+00084: PushString(""f"")
 00085: Swap(00002)
 00086: Apply
-00087: PushString("acc")
+00087: PushString(""acc"")
 00088: Swap(00002)
 00089: Apply
-00090: PushString("xs")
+00090: PushString(""xs"")
 00091: Swap(00002)
 00092: Apply
 00093: Swap(00002)
@@ -4217,10 +4217,10 @@ try({
 00140: Apply
 00141: PushFn(00126, 00000)
 00142: PushString("")
-00143: PushString("xs")
+00143: PushString(""xs"")
 00144: Swap(00002)
 00145: Apply
-00146: PushString("x")
+00146: PushString(""x"")
 00147: Swap(00002)
 00148: Apply
 00149: Swap(00002)
@@ -4291,10 +4291,10 @@ try({
 00214: Apply
 00215: PushFn(00194, 00000)
 00216: PushString("")
-00217: PushString("xs")
+00217: PushString(""xs"")
 00218: Swap(00002)
 00219: Apply
-00220: PushString("x")
+00220: PushString(""x"")
 00221: Swap(00002)
 00222: Apply
 00223: Swap(00002)
@@ -4312,10 +4312,10 @@ try({
 00235:   Return
 00236: PushFn(00178, 00000)
 00237: PushString("")
-00238: PushString("acc")
+00238: PushString(""acc"")
 00239: Swap(00002)
 00240: Apply
-00241: PushString("xs")
+00241: PushString(""xs"")
 00242: Swap(00002)
 00243: Apply
 00244: Swap(00002)
@@ -4411,10 +4411,10 @@ try({
 00334: Apply
 00335: PushFn(00311, 00000)
 00336: PushString("")
-00337: PushString("xs")
+00337: PushString(""xs"")
 00338: Swap(00002)
 00339: Apply
-00340: PushString("x")
+00340: PushString(""x"")
 00341: Swap(00002)
 00342: Apply
 00343: Swap(00002)
@@ -4432,10 +4432,10 @@ try({
 00355:   Return
 00356: PushFn(00295, 00000)
 00357: PushString("")
-00358: PushString("f")
+00358: PushString(""f"")
 00359: Swap(00002)
 00360: Apply
-00361: PushString("xs")
+00361: PushString(""xs"")
 00362: Swap(00002)
 00363: Apply
 00364: Swap(00002)
@@ -4545,7 +4545,7 @@ try({
 00468: Apply
 00469:   Return
 00470: PushFn(00427, 00000)
-00471: PushString("zipped")
+00471: PushString(""zipped"")
 00472: Swap(00002)
 00473: Apply
 00474: PushVar(00006)
@@ -4571,10 +4571,10 @@ try({
 00494: Apply
 00495: PushFn(00418, 00000)
 00496: PushString("")
-00497: PushString("ys")
+00497: PushString(""ys"")
 00498: Swap(00002)
 00499: Apply
-00500: PushString("y")
+00500: PushString(""y"")
 00501: Swap(00002)
 00502: Apply
 00503: Swap(00002)
@@ -4648,10 +4648,10 @@ try({
 00571: Apply
 00572: PushFn(00530, 00000)
 00573: PushString("")
-00574: PushString("ys")
+00574: PushString(""ys"")
 00575: Swap(00002)
 00576: Apply
-00577: PushString("y")
+00577: PushString(""y"")
 00578: Swap(00002)
 00579: Apply
 00580: Swap(00002)
@@ -4671,10 +4671,10 @@ try({
 00594: Apply
 00595: PushFn(00402, 00000)
 00596: PushString("")
-00597: PushString("xs")
+00597: PushString(""xs"")
 00598: Swap(00002)
 00599: Apply
-00600: PushString("x")
+00600: PushString(""x"")
 00601: Swap(00002)
 00602: Apply
 00603: Swap(00002)
@@ -4692,10 +4692,10 @@ try({
 00615:   Return
 00616: PushFn(00386, 00000)
 00617: PushString("")
-00618: PushString("xs")
+00618: PushString(""xs"")
 00619: Swap(00002)
 00620: Apply
-00621: PushString("ys")
+00621: PushString(""ys"")
 00622: Swap(00002)
 00623: Apply
 00624: Swap(00002)
@@ -4808,10 +4808,10 @@ try({
 00731: Apply
 00732: PushFn(00678, 00000)
 00733: PushString("")
-00734: PushString("ys")
+00734: PushString(""ys"")
 00735: Swap(00002)
 00736: Apply
-00737: PushString("y")
+00737: PushString(""y"")
 00738: Swap(00002)
 00739: Apply
 00740: Swap(00002)
@@ -4865,10 +4865,10 @@ try({
 00788: Apply
 00789: PushFn(00662, 00000)
 00790: PushString("")
-00791: PushString("xs")
+00791: PushString(""xs"")
 00792: Swap(00002)
 00793: Apply
-00794: PushString("x")
+00794: PushString(""x"")
 00795: Swap(00002)
 00796: Apply
 00797: Swap(00002)
@@ -4886,10 +4886,10 @@ try({
 00809:   Return
 00810: PushFn(00646, 00000)
 00811: PushString("")
-00812: PushString("a")
+00812: PushString(""a"")
 00813: Swap(00002)
 00814: Apply
-00815: PushString("b")
+00815: PushString(""b"")
 00816: Swap(00002)
 00817: Apply
 00818: Swap(00002)
@@ -4989,7 +4989,7 @@ try({
 00912: Apply
 00913:   Return
 00914: PushFn(00898, 00000)
-00915: PushString("unified")
+00915: PushString(""unified"")
 00916: Swap(00002)
 00917: Apply
 00918: PushVar(00009)
@@ -5102,10 +5102,10 @@ try({
 01025: Apply
 01026: PushFn(00856, 00000)
 01027: PushString("")
-01028: PushString("type")
+01028: PushString(""type"")
 01029: Swap(00002)
 01030: Apply
-01031: PushString("pattern")
+01031: PushString(""pattern"")
 01032: Swap(00002)
 01033: Apply
 01034: Swap(00002)
@@ -5123,10 +5123,10 @@ try({
 01046:   Return
 01047: PushFn(00840, 00000)
 01048: PushString("")
-01049: PushString("pattern")
+01049: PushString(""pattern"")
 01050: Swap(00002)
 01051: Apply
-01052: PushString("value")
+01052: PushString(""value"")
 01053: Swap(00002)
 01054: Apply
 01055: Swap(00002)
@@ -5188,7 +5188,7 @@ try({
 01111: PushFn(01109, 00001)
 01112:   Return
 01113: PushVar(00004)
-01114: PushString("Nil")
+01114: PushString("")
 01115: Swap(00002)
 01116: Apply
 01117:   Return
@@ -5215,7 +5215,7 @@ try({
 01138: Apply
 01139:   Return
 01140: PushFn(01097, 00000)
-01141: PushString("unified")
+01141: PushString(""unified"")
 01142: Swap(00002)
 01143: Apply
 01144: PushVar(00004)
@@ -5251,10 +5251,10 @@ try({
 01174: Apply
 01175: PushFn(01159, 00000)
 01176: PushString("")
-01177: PushString("_")
+01177: PushString(""_"")
 01178: Swap(00002)
 01179: Apply
-01180: PushString("arg")
+01180: PushString(""arg"")
 01181: Swap(00002)
 01182: Apply
 01183: Swap(00002)
@@ -5334,7 +5334,7 @@ try({
 01257: Apply
 01258: PushVar(00001)
 01259: PushString("Binding")
-01260: PushString("x")
+01260: PushString(""x"")
 01261: Swap(00002)
 01262: Apply
 01263: Swap(00002)
@@ -5349,7 +5349,7 @@ try({
 01272: Apply
 01273: PushVar(00001)
 01274: PushString("Binding")
-01275: PushString("x")
+01275: PushString(""x"")
 01276: Swap(00002)
 01277: Apply
 01278: Swap(00002)
@@ -5393,13 +5393,13 @@ try({
 01316: PushString("Compound")
 01317: PushString("Pair")
 01318: PushString("Binding")
-01319: PushString("x")
+01319: PushString(""x"")
 01320: Swap(00002)
 01321: Apply
 01322: Swap(00002)
 01323: Apply
 01324: PushString("Binding")
-01325: PushString("y")
+01325: PushString(""y"")
 01326: Swap(00002)
 01327: Apply
 01328: Swap(00002)
@@ -5432,7 +5432,7 @@ try({
 01355: Swap(00002)
 01356: Apply
 01357: PushString("Binding")
-01358: PushString("y")
+01358: PushString(""y"")
 01359: Swap(00002)
 01360: Apply
 01361: Swap(00002)
@@ -5479,10 +5479,10 @@ try({
 01402: Apply
 01403: PushFn(01384, 00000)
 01404: PushString("")
-01405: PushString("r")
+01405: PushString(""r"")
 01406: Swap(00002)
 01407: Apply
-01408: PushString("arg")
+01408: PushString(""arg"")
 01409: Swap(00002)
 01410: Apply
 01411: Swap(00002)
@@ -5494,18 +5494,18 @@ try({
 01417: Apply
 01418:   Return
 01419: PushFn(01068, 00000)
-01420: PushString("->")
+01420: PushString(""->"")
 01421: Swap(00002)
 01422: Apply
 01423: PushFn(01072, 00000)
 01424: PushString("")
-01425: PushString("pattern")
+01425: PushString(""pattern"")
 01426: Swap(00002)
 01427: Apply
-01428: PushString("body")
+01428: PushString(""body"")
 01429: Swap(00002)
 01430: Apply
-01431: PushString("value")
+01431: PushString(""value"")
 01432: Swap(00002)
 01433: Apply
 01434: Swap(00002)
@@ -5520,11 +5520,11 @@ try({
 01443: Apply
 01444:   Return
 01445: PushFn(00831, 00000)
-01446: PushString("unify")
+01446: PushString(""unify"")
 01447: Swap(00002)
 01448: Apply
 01449: PushFn(00836, 00000)
-01450: PushString("unify")
+01450: PushString(""unify"")
 01451: Swap(00002)
 01452: Apply
 01453: PushFn(01047, 00006)
@@ -5537,11 +5537,11 @@ try({
 01460: Apply
 01461:   Return
 01462: PushFn(00637, 00000)
-01463: PushString("==")
+01463: PushString(""=="")
 01464: Swap(00002)
 01465: Apply
 01466: PushFn(00642, 00000)
-01467: PushString("==")
+01467: PushString(""=="")
 01468: Swap(00002)
 01469: Apply
 01470: PushFn(00810, 00000)
@@ -5554,11 +5554,11 @@ try({
 01477: Apply
 01478:   Return
 01479: PushFn(00377, 00000)
-01480: PushString("zip")
+01480: PushString(""zip"")
 01481: Swap(00002)
 01482: Apply
 01483: PushFn(00382, 00000)
-01484: PushString("zip")
+01484: PushString(""zip"")
 01485: Swap(00002)
 01486: Apply
 01487: PushFn(00616, 00000)
@@ -5571,11 +5571,11 @@ try({
 01494: Apply
 01495:   Return
 01496: PushFn(00286, 00000)
-01497: PushString("map")
+01497: PushString(""map"")
 01498: Swap(00002)
 01499: Apply
 01500: PushFn(00291, 00000)
-01501: PushString("map")
+01501: PushString(""map"")
 01502: Swap(00002)
 01503: Apply
 01504: PushFn(00356, 00000)
@@ -5588,15 +5588,15 @@ try({
 01511: Apply
 01512:   Return
 01513: PushFn(00257, 00000)
-01514: PushString("apply")
+01514: PushString(""apply"")
 01515: Swap(00002)
 01516: Apply
 01517: PushFn(00261, 00000)
 01518: PushString("")
-01519: PushString("f")
+01519: PushString(""f"")
 01520: Swap(00002)
 01521: Apply
-01522: PushString("xs")
+01522: PushString(""xs"")
 01523: Swap(00002)
 01524: Apply
 01525: Swap(00002)
@@ -5611,11 +5611,11 @@ try({
 01534: Apply
 01535:   Return
 01536: PushFn(00169, 00000)
-01537: PushString("rev")
+01537: PushString(""rev"")
 01538: Swap(00002)
 01539: Apply
 01540: PushFn(00174, 00000)
-01541: PushString("rev")
+01541: PushString(""rev"")
 01542: Swap(00002)
 01543: Apply
 01544: PushFn(00236, 00000)
@@ -5628,16 +5628,16 @@ try({
 01551: Apply
 01552:   Return
 01553: PushFn(00106, 00000)
-01554: PushString("flatten")
+01554: PushString(""flatten"")
 01555: Swap(00002)
 01556: Apply
 01557: PushVar(00000)
 01558: PushFn(00110, 00000)
 01559: PushString("")
-01560: PushString("acc")
+01560: PushString(""acc"")
 01561: Swap(00002)
 01562: Apply
-01563: PushString("x")
+01563: PushString(""x"")
 01564: Swap(00002)
 01565: Apply
 01566: Swap(00002)
@@ -5654,11 +5654,11 @@ try({
 01577: Apply
 01578:   Return
 01579: PushFn(00007, 00000)
-01580: PushString("fold")
+01580: PushString(""fold"")
 01581: Swap(00002)
 01582: Apply
 01583: PushFn(00012, 00000)
-01584: PushString("fold")
+01584: PushString(""fold"")
 01585: Swap(00002)
 01586: Apply
 01587: PushFn(00082, 00000)
@@ -6211,7 +6211,7 @@ try({
         ( ( =>
               =>
                 0
-            ( ( ( ""
+            ( ( ( ()
                   "f" )
                 "acc" )
               "xs" ) )
@@ -6229,7 +6229,7 @@ try({
                     ( ( =>
                           =>
                             0
-                        ( ( ""
+                        ( ( ()
                             "xs" )
                           "x" ) )
                       =>
@@ -6258,7 +6258,7 @@ try({
             ( ( =>
                   =>
                     0
-                ( ( ""
+                ( ( ()
                     "acc" )
                   "xs" ) )
               =>
@@ -6274,7 +6274,7 @@ try({
                       ( ( =>
                             =>
                               0
-                          ( ( ""
+                          ( ( ()
                               "xs" )
                             "x" ) )
                         =>
@@ -6295,7 +6295,7 @@ try({
             ( ( =>
                   =>
                     0
-                ( ( ""
+                ( ( ()
                     "f" )
                   "xs" ) )
               =>
@@ -6303,7 +6303,7 @@ try({
                   ( ( 2
                       1 )
                     ( ( 2
-                        "List" )
+                        List )
                       0 ) ) ) )
           =>
             ( ( ( =>
@@ -6321,7 +6321,7 @@ try({
                     ( ( =>
                           =>
                             0
-                        ( ( ""
+                        ( ( ()
                             "f" )
                           "xs" ) )
                       =>
@@ -6337,7 +6337,7 @@ try({
                               ( ( =>
                                     =>
                                       0
-                                  ( ( ""
+                                  ( ( ()
                                       "xs" )
                                     "x" ) )
                                 =>
@@ -6365,7 +6365,7 @@ try({
                         ( ( =>
                               =>
                                 0
-                            ( ( ""
+                            ( ( ()
                                 "xs" )
                               "ys" ) )
                           =>
@@ -6381,7 +6381,7 @@ try({
                                   ( ( =>
                                         =>
                                           0
-                                      ( ( ""
+                                      ( ( ()
                                           "xs" )
                                         "x" ) )
                                     =>
@@ -6397,7 +6397,7 @@ try({
                                             ( ( =>
                                                   =>
                                                     0
-                                                ( ( ""
+                                                ( ( ()
                                                     "ys" )
                                                   "y" ) )
                                               =>
@@ -6422,16 +6422,16 @@ try({
                                                                         1
                                                                         0 )
                                                               0 )
-                                                            "Nil" )
+                                                            Nil )
                                                           =>
-                                                            "Nil" )
+                                                            Nil )
                                                         =>
                                                           ( 1
-                                                            ( ( ""
+                                                            ( ( ()
                                                                 4 )
                                                               2 ) ) ) ) ) )
                                           =>
-                                            "Nil" ) ) )
+                                            Nil ) ) )
                                 =>
                                   ( ( ( =>
                                           =>
@@ -6444,12 +6444,12 @@ try({
                                       ( ( =>
                                             =>
                                               0
-                                          ( ( ""
+                                          ( ( ()
                                               "ys" )
                                             "y" ) )
                                         =>
                                           =>
-                                            "Nil" ) )
+                                            Nil ) )
                                     =>
                                       ( ( ( ( =>
                                                 =>
@@ -6465,7 +6465,7 @@ try({
                                           =>
                                             4 )
                                         =>
-                                          "Nil" ) ) ) ) ) )
+                                          Nil ) ) ) ) ) )
                   =>
                     ( ( ( =>
                             =>
@@ -6482,7 +6482,7 @@ try({
                             ( ( =>
                                   =>
                                     0
-                                ( ( ""
+                                ( ( ()
                                     "a" )
                                   "b" ) )
                               =>
@@ -6498,7 +6498,7 @@ try({
                                       ( ( =>
                                             =>
                                               0
-                                          ( ( ""
+                                          ( ( ()
                                               "xs" )
                                             "x" ) )
                                         =>
@@ -6514,7 +6514,7 @@ try({
                                                 ( ( =>
                                                       =>
                                                         0
-                                                    ( ( ""
+                                                    ( ( ()
                                                         "ys" )
                                                       "y" ) )
                                                   =>
@@ -6531,15 +6531,15 @@ try({
                                                               ( ( 6
                                                                   2 )
                                                                 0 ) )
-                                                            "True" )
+                                                            True )
                                                           =>
                                                             ( ( 7
                                                                 4 )
                                                               2 ) )
                                                         =>
-                                                          "False" ) ) )
+                                                          False ) ) )
                                               =>
-                                                "False" ) ) )
+                                                False ) ) )
                                     =>
                                       ( ( ( ( =>
                                                 =>
@@ -6553,9 +6553,9 @@ try({
                                               2 )
                                             1 )
                                           =>
-                                            "True" )
+                                            True )
                                         =>
-                                          "False" ) ) ) ) )
+                                          False ) ) ) ) )
                       =>
                         ( ( ( =>
                                 =>
@@ -6567,7 +6567,7 @@ try({
                               ( ( =>
                                     =>
                                       0
-                                  ( ( ""
+                                  ( ( ()
                                       "acc" )
                                     "x" ) )
                                 =>
@@ -6583,7 +6583,7 @@ try({
                                         ( ( =>
                                               =>
                                                 0
-                                            ( ( ""
+                                            ( ( ()
                                                 "xs" )
                                               "x" ) )
                                           =>
@@ -6615,7 +6615,7 @@ try({
                                         ( ( =>
                                               =>
                                                 0
-                                            ( ( ""
+                                            ( ( ()
                                                 "_" )
                                               "x" ) )
                                           =>
@@ -6646,7 +6646,7 @@ try({
                                             ( ( =>
                                                   =>
                                                     0
-                                                ( ( ""
+                                                ( ( ()
                                                     "xs" )
                                                   "_" ) )
                                               =>
@@ -6666,7 +6666,7 @@ try({
                                             ( ( =>
                                                   =>
                                                     0
-                                                ( ( ""
+                                                ( ( ()
                                                     "acc" )
                                                   "binding" ) )
                                               =>
@@ -6696,7 +6696,7 @@ try({
                                                                   ( ( =>
                                                                         =>
                                                                           0
-                                                                      ( ( ""
+                                                                      ( ( ()
                                                                           "_" )
                                                                         "b" ) )
                                                                     =>
@@ -6743,23 +6743,23 @@ try({
                                                                                               ( ( 12
                                                                                                   5 )
                                                                                                 1 ) )
-                                                                                            "False" )
+                                                                                            False )
                                                                                           =>
                                                                                             ( no-match!
-                                                                                              ( ( ""
-                                                                                                  ( ( ""
+                                                                                              ( ( ()
+                                                                                                  ( ( ()
                                                                                                       3 )
                                                                                                     2 ) )
-                                                                                                ( ( ""
+                                                                                                ( ( ()
                                                                                                     7 )
                                                                                                   6 ) ) ) )
                                                                                         =>
-                                                                                          "Nil" ) )
+                                                                                          Nil ) )
                                                                                   =>
-                                                                                    "Nil" ) ) ) ) )
-                                                                "Nil" )
+                                                                                    Nil ) ) ) ) )
+                                                                Nil )
                                                               3 ) ) ) ) ) )
-                                          "Bindings" ) )
+                                          Bindings ) )
                                       =>
                                         ( ( ( =>
                                                 =>
@@ -6776,7 +6776,7 @@ try({
                                                 ( ( =>
                                                       =>
                                                         0
-                                                    ( ( ""
+                                                    ( ( ()
                                                         "pattern" )
                                                       "value" ) )
                                                   =>
@@ -6792,7 +6792,7 @@ try({
                                                           ( ( =>
                                                                 =>
                                                                   0
-                                                              ( ( ""
+                                                              ( ( ()
                                                                   "type" )
                                                                 "pattern" ) )
                                                             =>
@@ -6807,10 +6807,10 @@ try({
                                                                                   1
                                                                                   0 )
                                                                         1 )
-                                                                      "Binding" )
+                                                                      Binding )
                                                                     =>
-                                                                      ( "Bindings"
-                                                                        ( ( ""
+                                                                      ( Bindings
+                                                                        ( ( ()
                                                                             1 )
                                                                           3 ) ) )
                                                                   =>
@@ -6824,7 +6824,7 @@ try({
                                                                                       1
                                                                                       0 )
                                                                             2 )
-                                                                          "Compound" )
+                                                                          Compound )
                                                                         =>
                                                                           ( ( ( =>
                                                                                   =>
@@ -6833,7 +6833,7 @@ try({
                                                                                         1 )
                                                                                 "unified" )
                                                                               ( ( 10
-                                                                                  "Bindings" )
+                                                                                  Bindings )
                                                                                 ( ( 13
                                                                                     ( 14
                                                                                       6 ) )
@@ -6856,12 +6856,12 @@ try({
                                                                                 ( ( 11
                                                                                     2 )
                                                                                   4 ) )
-                                                                              "True" )
+                                                                              True )
                                                                             =>
-                                                                              "Nil" )
+                                                                              Nil )
                                                                           =>
                                                                             ( no-match!
-                                                                              ( ( ""
+                                                                              ( ( ()
                                                                                   3 )
                                                                                 5 ) ) ) ) ) ) )
                                                         =>
@@ -6877,7 +6877,7 @@ try({
                                                 ( ( =>
                                                       =>
                                                         0
-                                                    ( ( ( ""
+                                                    ( ( ( ()
                                                           "pattern" )
                                                         "body" )
                                                       "value" ) )
@@ -6922,10 +6922,10 @@ try({
                                                                                           1
                                                                                           0 )
                                                                                 1 )
-                                                                              "Nil" )
+                                                                              Nil )
                                                                             =>
                                                                               ( 5
-                                                                                "Nil" ) )
+                                                                                () ) )
                                                                           =>
                                                                             ( ( 15
                                                                                 5 )
@@ -6934,7 +6934,7 @@ try({
                                                           ( ( =>
                                                                 =>
                                                                   0
-                                                              ( ( ""
+                                                              ( ( ()
                                                                   "_" )
                                                                 "arg" ) )
                                                             =>
@@ -6950,97 +6950,97 @@ try({
                                                               1
                                                               0 )
                                                       =>
-                                                        ( ( ( ( ( ( ( ( "List"
+                                                        ( ( ( ( ( ( ( ( List
                                                                         ( ( ( 1
-                                                                              ( "Value"
-                                                                                "Foo" ) )
+                                                                              ( Value
+                                                                                Foo ) )
                                                                             =>
-                                                                              "Bar" )
-                                                                          "Foo" ) )
+                                                                              Bar )
+                                                                          Foo ) )
                                                                       ( ( ( 1
-                                                                            ( "Binding"
+                                                                            ( Binding
                                                                               "x" ) )
                                                                           =>
                                                                             0 )
-                                                                        "Foo" ) )
+                                                                        Foo ) )
                                                                     ( ( ( 1
-                                                                          ( "Binding"
+                                                                          ( Binding
                                                                             "x" ) )
                                                                         =>
-                                                                          "Bar" )
-                                                                      "Foo" ) )
+                                                                          Bar )
+                                                                      Foo ) )
                                                                   ( ( ( 1
-                                                                        ( "Value"
-                                                                          ( ( "Pair"
-                                                                              "Foo" )
-                                                                            "Bar" ) ) )
+                                                                        ( Value
+                                                                          ( ( Pair
+                                                                              Foo )
+                                                                            Bar ) ) )
                                                                       =>
-                                                                        "Foo" )
-                                                                    ( ( "Pair"
-                                                                        "Foo" )
-                                                                      "Bar" ) ) )
+                                                                        Foo )
+                                                                    ( ( Pair
+                                                                        Foo )
+                                                                      Bar ) ) )
                                                                 ( ( ( 1
-                                                                      ( "Compound"
-                                                                        ( ( "Pair"
-                                                                            ( "Binding"
+                                                                      ( Compound
+                                                                        ( ( Pair
+                                                                            ( Binding
                                                                               "x" ) )
-                                                                          ( "Binding"
+                                                                          ( Binding
                                                                             "y" ) ) ) )
                                                                     =>
                                                                       =>
                                                                         0 )
-                                                                  ( ( "Pair"
-                                                                      "Foo" )
-                                                                    "Bar" ) ) )
+                                                                  ( ( Pair
+                                                                      Foo )
+                                                                    Bar ) ) )
                                                               ( ( ( 1
-                                                                    ( "Compound"
-                                                                      ( ( "Pair"
-                                                                          ( "Binding"
+                                                                    ( Compound
+                                                                      ( ( Pair
+                                                                          ( Binding
                                                                             "x" ) )
-                                                                        ( "Value"
-                                                                          "Bar" ) ) ) )
+                                                                        ( Value
+                                                                          Bar ) ) ) )
                                                                   =>
                                                                     0 )
-                                                                ( ( "Pair"
-                                                                    "Foo" )
-                                                                  "Bar" ) ) )
+                                                                ( ( Pair
+                                                                    Foo )
+                                                                  Bar ) ) )
                                                             ( ( ( 1
-                                                                  ( "Compound"
-                                                                    ( ( "Pair"
-                                                                        ( "Binding"
+                                                                  ( Compound
+                                                                    ( ( Pair
+                                                                        ( Binding
                                                                           "x" ) )
-                                                                      ( "Binding"
+                                                                      ( Binding
                                                                         "x" ) ) ) )
                                                                 =>
                                                                   =>
                                                                     0 )
-                                                              ( ( "Pair"
-                                                                  "Bar" )
-                                                                "Bar" ) ) )
+                                                              ( ( Pair
+                                                                  Bar )
+                                                                Bar ) ) )
                                                           ( ( ( 1
-                                                                ( "Compound"
-                                                                  ( ( "Pair"
-                                                                      ( "Binding"
+                                                                ( Compound
+                                                                  ( ( Pair
+                                                                      ( Binding
                                                                         "x" ) )
-                                                                    ( "Binding"
+                                                                    ( Binding
                                                                       "x" ) ) ) )
                                                               =>
                                                                 =>
                                                                   0 )
-                                                            ( ( "Pair"
-                                                                "Foo" )
-                                                              "Bar" ) ) ) )
+                                                            ( ( Pair
+                                                                Foo )
+                                                              Bar ) ) ) )
                                                     no-match! )
                                                   ( ( =>
                                                         =>
                                                           0
-                                                      ( ( ""
+                                                      ( ( ()
                                                           "r" )
                                                         "arg" ) )
                                                     =>
                                                       =>
                                                         ( 1
-                                                          ( "NoMatch"
+                                                          ( NoMatch
                                                             0 ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
 
 00000: PushVar(00000)
@@ -7104,10 +7104,10 @@ try({
 00058: Apply
 00059: PushFn(00032, 00000)
 00060: PushString("")
-00061: PushString("xs")
+00061: PushString(""xs"")
 00062: Swap(00002)
 00063: Apply
-00064: PushString("x")
+00064: PushString(""x"")
 00065: Swap(00002)
 00066: Apply
 00067: Swap(00002)
@@ -7127,13 +7127,13 @@ try({
 00081:   Return
 00082: PushFn(00016, 00000)
 00083: PushString("")
-00084: PushString("f")
+00084: PushString(""f"")
 00085: Swap(00002)
 00086: Apply
-00087: PushString("acc")
+00087: PushString(""acc"")
 00088: Swap(00002)
 00089: Apply
-00090: PushString("xs")
+00090: PushString(""xs"")
 00091: Swap(00002)
 00092: Apply
 00093: Swap(00002)
@@ -7197,10 +7197,10 @@ try({
 00151: Apply
 00152: PushFn(00131, 00000)
 00153: PushString("")
-00154: PushString("xs")
+00154: PushString(""xs"")
 00155: Swap(00002)
 00156: Apply
-00157: PushString("x")
+00157: PushString(""x"")
 00158: Swap(00002)
 00159: Apply
 00160: Swap(00002)
@@ -7218,10 +7218,10 @@ try({
 00172:   Return
 00173: PushFn(00115, 00000)
 00174: PushString("")
-00175: PushString("acc")
+00175: PushString(""acc"")
 00176: Swap(00002)
 00177: Apply
-00178: PushString("xs")
+00178: PushString(""xs"")
 00179: Swap(00002)
 00180: Apply
 00181: Swap(00002)
@@ -7317,10 +7317,10 @@ try({
 00271: Apply
 00272: PushFn(00248, 00000)
 00273: PushString("")
-00274: PushString("xs")
+00274: PushString(""xs"")
 00275: Swap(00002)
 00276: Apply
-00277: PushString("x")
+00277: PushString(""x"")
 00278: Swap(00002)
 00279: Apply
 00280: Swap(00002)
@@ -7338,10 +7338,10 @@ try({
 00292:   Return
 00293: PushFn(00232, 00000)
 00294: PushString("")
-00295: PushString("f")
+00295: PushString(""f"")
 00296: Swap(00002)
 00297: Apply
-00298: PushString("xs")
+00298: PushString(""xs"")
 00299: Swap(00002)
 00300: Apply
 00301: Swap(00002)
@@ -7451,7 +7451,7 @@ try({
 00405: Apply
 00406:   Return
 00407: PushFn(00364, 00000)
-00408: PushString("zipped")
+00408: PushString(""zipped"")
 00409: Swap(00002)
 00410: Apply
 00411: PushVar(00006)
@@ -7477,10 +7477,10 @@ try({
 00431: Apply
 00432: PushFn(00355, 00000)
 00433: PushString("")
-00434: PushString("ys")
+00434: PushString(""ys"")
 00435: Swap(00002)
 00436: Apply
-00437: PushString("y")
+00437: PushString(""y"")
 00438: Swap(00002)
 00439: Apply
 00440: Swap(00002)
@@ -7554,10 +7554,10 @@ try({
 00508: Apply
 00509: PushFn(00467, 00000)
 00510: PushString("")
-00511: PushString("ys")
+00511: PushString(""ys"")
 00512: Swap(00002)
 00513: Apply
-00514: PushString("y")
+00514: PushString(""y"")
 00515: Swap(00002)
 00516: Apply
 00517: Swap(00002)
@@ -7577,10 +7577,10 @@ try({
 00531: Apply
 00532: PushFn(00339, 00000)
 00533: PushString("")
-00534: PushString("xs")
+00534: PushString(""xs"")
 00535: Swap(00002)
 00536: Apply
-00537: PushString("x")
+00537: PushString(""x"")
 00538: Swap(00002)
 00539: Apply
 00540: Swap(00002)
@@ -7598,10 +7598,10 @@ try({
 00552:   Return
 00553: PushFn(00323, 00000)
 00554: PushString("")
-00555: PushString("xs")
+00555: PushString(""xs"")
 00556: Swap(00002)
 00557: Apply
-00558: PushString("ys")
+00558: PushString(""ys"")
 00559: Swap(00002)
 00560: Apply
 00561: Swap(00002)
@@ -7714,10 +7714,10 @@ try({
 00668: Apply
 00669: PushFn(00615, 00000)
 00670: PushString("")
-00671: PushString("ys")
+00671: PushString(""ys"")
 00672: Swap(00002)
 00673: Apply
-00674: PushString("y")
+00674: PushString(""y"")
 00675: Swap(00002)
 00676: Apply
 00677: Swap(00002)
@@ -7771,10 +7771,10 @@ try({
 00725: Apply
 00726: PushFn(00599, 00000)
 00727: PushString("")
-00728: PushString("xs")
+00728: PushString(""xs"")
 00729: Swap(00002)
 00730: Apply
-00731: PushString("x")
+00731: PushString(""x"")
 00732: Swap(00002)
 00733: Apply
 00734: Swap(00002)
@@ -7792,10 +7792,10 @@ try({
 00746:   Return
 00747: PushFn(00583, 00000)
 00748: PushString("")
-00749: PushString("a")
+00749: PushString(""a"")
 00750: Swap(00002)
 00751: Apply
-00752: PushString("b")
+00752: PushString(""b"")
 00753: Swap(00002)
 00754: Apply
 00755: Swap(00002)
@@ -7848,10 +7848,10 @@ try({
 00802: Apply
 00803: PushFn(00788, 00000)
 00804: PushString("")
-00805: PushString("xs")
+00805: PushString(""xs"")
 00806: Swap(00002)
 00807: Apply
-00808: PushString("x")
+00808: PushString(""x"")
 00809: Swap(00002)
 00810: Apply
 00811: Swap(00002)
@@ -7908,10 +7908,10 @@ try({
 00862: Apply
 00863: PushFn(00851, 00000)
 00864: PushString("")
-00865: PushString("_")
+00865: PushString(""_"")
 00866: Swap(00002)
 00867: Apply
-00868: PushString("x")
+00868: PushString(""x"")
 00869: Swap(00002)
 00870: Apply
 00871: Swap(00002)
@@ -7969,10 +7969,10 @@ try({
 00923: Apply
 00924: PushFn(00909, 00000)
 00925: PushString("")
-00926: PushString("xs")
+00926: PushString(""xs"")
 00927: Swap(00002)
 00928: Apply
-00929: PushString("_")
+00929: PushString(""_"")
 00930: Swap(00002)
 00931: Apply
 00932: Swap(00002)
@@ -8134,7 +8134,7 @@ try({
 01088: Apply
 01089:   Return
 01090: PushFn(00999, 00000)
-01091: PushString("val2")
+01091: PushString(""val2"")
 01092: Swap(00002)
 01093: Apply
 01094: PushVar(00008)
@@ -8148,7 +8148,7 @@ try({
 01102: Apply
 01103:   Return
 01104: PushFn(00990, 00000)
-01105: PushString("var2")
+01105: PushString(""var2"")
 01106: Swap(00002)
 01107: Apply
 01108: PushVar(00006)
@@ -8167,10 +8167,10 @@ try({
 01121: PushVar(00012)
 01122: PushFn(00981, 00000)
 01123: PushString("")
-01124: PushString("_")
+01124: PushString(""_"")
 01125: Swap(00002)
 01126: Apply
-01127: PushString("b")
+01127: PushString(""b"")
 01128: Swap(00002)
 01129: Apply
 01130: Swap(00002)
@@ -8190,7 +8190,7 @@ try({
 01144: Apply
 01145:   Return
 01146: PushFn(00972, 00000)
-01147: PushString("val1")
+01147: PushString(""val1"")
 01148: Swap(00002)
 01149: Apply
 01150: PushVar(00004)
@@ -8204,7 +8204,7 @@ try({
 01158: Apply
 01159:   Return
 01160: PushFn(00963, 00000)
-01161: PushString("var1")
+01161: PushString(""var1"")
 01162: Swap(00002)
 01163: Apply
 01164: PushVar(00002)
@@ -8307,7 +8307,7 @@ try({
 01261: Apply
 01262:   Return
 01263: PushFn(01256, 00000)
-01264: PushString("unified")
+01264: PushString(""unified"")
 01265: Swap(00002)
 01266: Apply
 01267: PushVar(00010)
@@ -8426,10 +8426,10 @@ try({
 01380: Apply
 01381: PushFn(01208, 00000)
 01382: PushString("")
-01383: PushString("type")
+01383: PushString(""type"")
 01384: Swap(00002)
 01385: Apply
-01386: PushString("pattern")
+01386: PushString(""pattern"")
 01387: Swap(00002)
 01388: Apply
 01389: Swap(00002)
@@ -8447,10 +8447,10 @@ try({
 01401:   Return
 01402: PushFn(01192, 00000)
 01403: PushString("")
-01404: PushString("pattern")
+01404: PushString(""pattern"")
 01405: Swap(00002)
 01406: Apply
-01407: PushString("value")
+01407: PushString(""value"")
 01408: Swap(00002)
 01409: Apply
 01410: Swap(00002)
@@ -8521,7 +8521,7 @@ try({
 01475: PushFn(01473, 00001)
 01476:   Return
 01477: PushVar(00005)
-01478: PushString("Nil")
+01478: PushString("")
 01479: Swap(00002)
 01480: Apply
 01481:   Return
@@ -8548,7 +8548,7 @@ try({
 01502: Apply
 01503:   Return
 01504: PushFn(01461, 00000)
-01505: PushString("args")
+01505: PushString(""args"")
 01506: Swap(00002)
 01507: Apply
 01508: PushVar(00012)
@@ -8565,7 +8565,7 @@ try({
 01519: Apply
 01520:   Return
 01521: PushFn(01452, 00000)
-01522: PushString("unified")
+01522: PushString(""unified"")
 01523: Swap(00002)
 01524: Apply
 01525: PushVar(00004)
@@ -8601,10 +8601,10 @@ try({
 01555: Apply
 01556: PushFn(01540, 00000)
 01557: PushString("")
-01558: PushString("_")
+01558: PushString(""_"")
 01559: Swap(00002)
 01560: Apply
-01561: PushString("arg")
+01561: PushString(""arg"")
 01562: Swap(00002)
 01563: Apply
 01564: Swap(00002)
@@ -8675,7 +8675,7 @@ try({
 01629: Apply
 01630: PushVar(00001)
 01631: PushString("Binding")
-01632: PushString("x")
+01632: PushString(""x"")
 01633: Swap(00002)
 01634: Apply
 01635: Swap(00002)
@@ -8690,7 +8690,7 @@ try({
 01644: Apply
 01645: PushVar(00001)
 01646: PushString("Binding")
-01647: PushString("x")
+01647: PushString(""x"")
 01648: Swap(00002)
 01649: Apply
 01650: Swap(00002)
@@ -8734,13 +8734,13 @@ try({
 01688: PushString("Compound")
 01689: PushString("Pair")
 01690: PushString("Binding")
-01691: PushString("x")
+01691: PushString(""x"")
 01692: Swap(00002)
 01693: Apply
 01694: Swap(00002)
 01695: Apply
 01696: PushString("Binding")
-01697: PushString("y")
+01697: PushString(""y"")
 01698: Swap(00002)
 01699: Apply
 01700: Swap(00002)
@@ -8767,7 +8767,7 @@ try({
 01721: PushString("Compound")
 01722: PushString("Pair")
 01723: PushString("Binding")
-01724: PushString("x")
+01724: PushString(""x"")
 01725: Swap(00002)
 01726: Apply
 01727: Swap(00002)
@@ -8800,13 +8800,13 @@ try({
 01754: PushString("Compound")
 01755: PushString("Pair")
 01756: PushString("Binding")
-01757: PushString("x")
+01757: PushString(""x"")
 01758: Swap(00002)
 01759: Apply
 01760: Swap(00002)
 01761: Apply
 01762: PushString("Binding")
-01763: PushString("x")
+01763: PushString(""x"")
 01764: Swap(00002)
 01765: Apply
 01766: Swap(00002)
@@ -8833,13 +8833,13 @@ try({
 01787: PushString("Compound")
 01788: PushString("Pair")
 01789: PushString("Binding")
-01790: PushString("x")
+01790: PushString(""x"")
 01791: Swap(00002)
 01792: Apply
 01793: Swap(00002)
 01794: Apply
 01795: PushString("Binding")
-01796: PushString("x")
+01796: PushString(""x"")
 01797: Swap(00002)
 01798: Apply
 01799: Swap(00002)
@@ -8886,10 +8886,10 @@ try({
 01840: Apply
 01841: PushFn(01822, 00000)
 01842: PushString("")
-01843: PushString("r")
+01843: PushString(""r"")
 01844: Swap(00002)
 01845: Apply
-01846: PushString("arg")
+01846: PushString(""arg"")
 01847: Swap(00002)
 01848: Apply
 01849: Swap(00002)
@@ -8901,18 +8901,18 @@ try({
 01855: Apply
 01856:   Return
 01857: PushFn(01423, 00000)
-01858: PushString("->")
+01858: PushString(""->"")
 01859: Swap(00002)
 01860: Apply
 01861: PushFn(01427, 00000)
 01862: PushString("")
-01863: PushString("pattern")
+01863: PushString(""pattern"")
 01864: Swap(00002)
 01865: Apply
-01866: PushString("body")
+01866: PushString(""body"")
 01867: Swap(00002)
 01868: Apply
-01869: PushString("value")
+01869: PushString(""value"")
 01870: Swap(00002)
 01871: Apply
 01872: Swap(00002)
@@ -8927,11 +8927,11 @@ try({
 01881: Apply
 01882:   Return
 01883: PushFn(01183, 00000)
-01884: PushString("unify")
+01884: PushString(""unify"")
 01885: Swap(00002)
 01886: Apply
 01887: PushFn(01188, 00000)
-01888: PushString("unify")
+01888: PushString(""unify"")
 01889: Swap(00002)
 01890: Apply
 01891: PushFn(01402, 00008)
@@ -8944,16 +8944,16 @@ try({
 01898: Apply
 01899:   Return
 01900: PushFn(00950, 00000)
-01901: PushString("join")
+01901: PushString(""join"")
 01902: Swap(00002)
 01903: Apply
 01904: PushVar(00008)
 01905: PushFn(00954, 00000)
 01906: PushString("")
-01907: PushString("acc")
+01907: PushString(""acc"")
 01908: Swap(00002)
 01909: Apply
-01910: PushString("binding")
+01910: PushString(""binding"")
 01911: Swap(00002)
 01912: Apply
 01913: Swap(00002)
@@ -8973,11 +8973,11 @@ try({
 01927: Apply
 01928:   Return
 01929: PushFn(00889, 00000)
-01930: PushString("first")
+01930: PushString(""first"")
 01931: Swap(00002)
 01932: Apply
 01933: PushFn(00893, 00000)
-01934: PushString("xs")
+01934: PushString(""xs"")
 01935: Swap(00002)
 01936: Apply
 01937: PushFn(00920, 00001)
@@ -8990,11 +8990,11 @@ try({
 01944: Apply
 01945:   Return
 01946: PushFn(00831, 00000)
-01947: PushString("last")
+01947: PushString(""last"")
 01948: Swap(00002)
 01949: Apply
 01950: PushFn(00835, 00000)
-01951: PushString("xs")
+01951: PushString(""xs"")
 01952: Swap(00002)
 01953: Apply
 01954: PushFn(00859, 00000)
@@ -9007,16 +9007,16 @@ try({
 01961: Apply
 01962:   Return
 01963: PushFn(00768, 00000)
-01964: PushString("flatten")
+01964: PushString(""flatten"")
 01965: Swap(00002)
 01966: Apply
 01967: PushVar(00005)
 01968: PushFn(00772, 00000)
 01969: PushString("")
-01970: PushString("acc")
+01970: PushString(""acc"")
 01971: Swap(00002)
 01972: Apply
-01973: PushString("x")
+01973: PushString(""x"")
 01974: Swap(00002)
 01975: Apply
 01976: Swap(00002)
@@ -9033,11 +9033,11 @@ try({
 01987: Apply
 01988:   Return
 01989: PushFn(00574, 00000)
-01990: PushString("==")
+01990: PushString(""=="")
 01991: Swap(00002)
 01992: Apply
 01993: PushFn(00579, 00000)
-01994: PushString("==")
+01994: PushString(""=="")
 01995: Swap(00002)
 01996: Apply
 01997: PushFn(00747, 00000)
@@ -9050,11 +9050,11 @@ try({
 02004: Apply
 02005:   Return
 02006: PushFn(00314, 00000)
-02007: PushString("zip")
+02007: PushString(""zip"")
 02008: Swap(00002)
 02009: Apply
 02010: PushFn(00319, 00000)
-02011: PushString("zip")
+02011: PushString(""zip"")
 02012: Swap(00002)
 02013: Apply
 02014: PushFn(00553, 00000)
@@ -9067,11 +9067,11 @@ try({
 02021: Apply
 02022:   Return
 02023: PushFn(00223, 00000)
-02024: PushString("map")
+02024: PushString(""map"")
 02025: Swap(00002)
 02026: Apply
 02027: PushFn(00228, 00000)
-02028: PushString("map")
+02028: PushString(""map"")
 02029: Swap(00002)
 02030: Apply
 02031: PushFn(00293, 00000)
@@ -9084,15 +9084,15 @@ try({
 02038: Apply
 02039:   Return
 02040: PushFn(00194, 00000)
-02041: PushString("apply")
+02041: PushString(""apply"")
 02042: Swap(00002)
 02043: Apply
 02044: PushFn(00198, 00000)
 02045: PushString("")
-02046: PushString("f")
+02046: PushString(""f"")
 02047: Swap(00002)
 02048: Apply
-02049: PushString("xs")
+02049: PushString(""xs"")
 02050: Swap(00002)
 02051: Apply
 02052: Swap(00002)
@@ -9107,11 +9107,11 @@ try({
 02061: Apply
 02062:   Return
 02063: PushFn(00106, 00000)
-02064: PushString("rev")
+02064: PushString(""rev"")
 02065: Swap(00002)
 02066: Apply
 02067: PushFn(00111, 00000)
-02068: PushString("rev")
+02068: PushString(""rev"")
 02069: Swap(00002)
 02070: Apply
 02071: PushFn(00173, 00000)
@@ -9124,11 +9124,11 @@ try({
 02078: Apply
 02079:   Return
 02080: PushFn(00007, 00000)
-02081: PushString("fold")
+02081: PushString(""fold"")
 02082: Swap(00002)
 02083: Apply
 02084: PushFn(00012, 00000)
-02085: PushString("fold")
+02085: PushString(""fold"")
 02086: Swap(00002)
 02087: Apply
 02088: PushFn(00082, 00000)
@@ -9140,7 +9140,7 @@ try({
 02094: Swap(00002)
 02095: Apply
 
-List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
+List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 
 ---
 
@@ -9750,7 +9750,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
         ( ( =>
               =>
                 0
-            ( ( ( ""
+            ( ( ( ()
                   "f" )
                 "acc" )
               "xs" ) )
@@ -9768,7 +9768,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                     ( ( =>
                           =>
                             0
-                        ( ( ""
+                        ( ( ()
                             "xs" )
                           "x" ) )
                       =>
@@ -9797,7 +9797,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
             ( ( =>
                   =>
                     0
-                ( ( ""
+                ( ( ()
                     "acc" )
                   "xs" ) )
               =>
@@ -9813,7 +9813,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                       ( ( =>
                             =>
                               0
-                          ( ( ""
+                          ( ( ()
                               "xs" )
                             "x" ) )
                         =>
@@ -9834,7 +9834,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
             ( ( =>
                   =>
                     0
-                ( ( ""
+                ( ( ()
                     "f" )
                   "xs" ) )
               =>
@@ -9842,7 +9842,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                   ( ( 2
                       1 )
                     ( ( 2
-                        "List" )
+                        List )
                       0 ) ) ) )
           =>
             ( ( ( =>
@@ -9860,7 +9860,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                     ( ( =>
                           =>
                             0
-                        ( ( ""
+                        ( ( ()
                             "f" )
                           "xs" ) )
                       =>
@@ -9876,7 +9876,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                               ( ( =>
                                     =>
                                       0
-                                  ( ( ""
+                                  ( ( ()
                                       "xs" )
                                     "x" ) )
                                 =>
@@ -9904,7 +9904,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                         ( ( =>
                               =>
                                 0
-                            ( ( ""
+                            ( ( ()
                                 "xs" )
                               "ys" ) )
                           =>
@@ -9920,7 +9920,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                   ( ( =>
                                         =>
                                           0
-                                      ( ( ""
+                                      ( ( ()
                                           "xs" )
                                         "x" ) )
                                     =>
@@ -9936,7 +9936,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                             ( ( =>
                                                   =>
                                                     0
-                                                ( ( ""
+                                                ( ( ()
                                                     "ys" )
                                                   "y" ) )
                                               =>
@@ -9961,16 +9961,16 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                         1
                                                                         0 )
                                                               0 )
-                                                            "Nil" )
+                                                            Nil )
                                                           =>
-                                                            "Nil" )
+                                                            Nil )
                                                         =>
                                                           ( 1
-                                                            ( ( ""
+                                                            ( ( ()
                                                                 4 )
                                                               2 ) ) ) ) ) )
                                           =>
-                                            "Nil" ) ) )
+                                            Nil ) ) )
                                 =>
                                   ( ( ( =>
                                           =>
@@ -9983,12 +9983,12 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                       ( ( =>
                                             =>
                                               0
-                                          ( ( ""
+                                          ( ( ()
                                               "ys" )
                                             "y" ) )
                                         =>
                                           =>
-                                            "Nil" ) )
+                                            Nil ) )
                                     =>
                                       ( ( ( ( =>
                                                 =>
@@ -10004,7 +10004,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                           =>
                                             4 )
                                         =>
-                                          "Nil" ) ) ) ) ) )
+                                          Nil ) ) ) ) ) )
                   =>
                     ( ( ( =>
                             =>
@@ -10021,7 +10021,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                             ( ( =>
                                   =>
                                     0
-                                ( ( ""
+                                ( ( ()
                                     "a" )
                                   "b" ) )
                               =>
@@ -10037,7 +10037,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                       ( ( =>
                                             =>
                                               0
-                                          ( ( ""
+                                          ( ( ()
                                               "xs" )
                                             "x" ) )
                                         =>
@@ -10053,7 +10053,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                 ( ( =>
                                                       =>
                                                         0
-                                                    ( ( ""
+                                                    ( ( ()
                                                         "ys" )
                                                       "y" ) )
                                                   =>
@@ -10070,15 +10070,15 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                               ( ( 6
                                                                   2 )
                                                                 0 ) )
-                                                            "True" )
+                                                            True )
                                                           =>
                                                             ( ( 7
                                                                 4 )
                                                               2 ) )
                                                         =>
-                                                          "False" ) ) )
+                                                          False ) ) )
                                               =>
-                                                "False" ) ) )
+                                                False ) ) )
                                     =>
                                       ( ( ( ( =>
                                                 =>
@@ -10092,9 +10092,9 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                               2 )
                                             1 )
                                           =>
-                                            "True" )
+                                            True )
                                         =>
-                                          "False" ) ) ) ) )
+                                          False ) ) ) ) )
                       =>
                         ( ( ( =>
                                 =>
@@ -10106,7 +10106,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                               ( ( =>
                                     =>
                                       0
-                                  ( ( ""
+                                  ( ( ()
                                       "acc" )
                                     "x" ) )
                                 =>
@@ -10122,7 +10122,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                         ( ( =>
                                               =>
                                                 0
-                                            ( ( ""
+                                            ( ( ()
                                                 "xs" )
                                               "x" ) )
                                           =>
@@ -10154,7 +10154,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                         ( ( =>
                                               =>
                                                 0
-                                            ( ( ""
+                                            ( ( ()
                                                 "_" )
                                               "x" ) )
                                           =>
@@ -10185,7 +10185,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                             ( ( =>
                                                   =>
                                                     0
-                                                ( ( ""
+                                                ( ( ()
                                                     "xs" )
                                                   "_" ) )
                                               =>
@@ -10205,7 +10205,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                             ( ( =>
                                                   =>
                                                     0
-                                                ( ( ""
+                                                ( ( ()
                                                     "acc" )
                                                   "binding" ) )
                                               =>
@@ -10235,7 +10235,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                   ( ( =>
                                                                         =>
                                                                           0
-                                                                      ( ( ""
+                                                                      ( ( ()
                                                                           "_" )
                                                                         "b" ) )
                                                                     =>
@@ -10282,23 +10282,23 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                               ( ( 12
                                                                                                   5 )
                                                                                                 1 ) )
-                                                                                            "False" )
+                                                                                            False )
                                                                                           =>
                                                                                             ( no-match!
-                                                                                              ( ( ""
-                                                                                                  ( ( ""
+                                                                                              ( ( ()
+                                                                                                  ( ( ()
                                                                                                       3 )
                                                                                                     2 ) )
-                                                                                                ( ( ""
+                                                                                                ( ( ()
                                                                                                     7 )
                                                                                                   6 ) ) ) )
                                                                                         =>
-                                                                                          "Nil" ) )
+                                                                                          Nil ) )
                                                                                   =>
-                                                                                    "Nil" ) ) ) ) )
-                                                                "Nil" )
+                                                                                    Nil ) ) ) ) )
+                                                                Nil )
                                                               3 ) ) ) ) ) )
-                                          "Bindings" ) )
+                                          Bindings ) )
                                       =>
                                         ( ( ( =>
                                                 =>
@@ -10315,7 +10315,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                 ( ( =>
                                                       =>
                                                         0
-                                                    ( ( ""
+                                                    ( ( ()
                                                         "pattern" )
                                                       "value" ) )
                                                   =>
@@ -10331,7 +10331,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                           ( ( =>
                                                                 =>
                                                                   0
-                                                              ( ( ""
+                                                              ( ( ()
                                                                   "type" )
                                                                 "pattern" ) )
                                                             =>
@@ -10346,10 +10346,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                   1
                                                                                   0 )
                                                                         1 )
-                                                                      "Binding" )
+                                                                      Binding )
                                                                     =>
-                                                                      ( "Bindings"
-                                                                        ( ( ""
+                                                                      ( Bindings
+                                                                        ( ( ()
                                                                             1 )
                                                                           3 ) ) )
                                                                   =>
@@ -10363,7 +10363,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                       1
                                                                                       0 )
                                                                             2 )
-                                                                          "Compound" )
+                                                                          Compound )
                                                                         =>
                                                                           ( ( ( =>
                                                                                   =>
@@ -10385,10 +10385,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                                 1
                                                                                                 0 )
                                                                                       0 )
-                                                                                    "Nil" )
+                                                                                    Nil )
                                                                                   =>
                                                                                     ( no-match!
-                                                                                      ( ( ""
+                                                                                      ( ( ()
                                                                                           4 )
                                                                                         6 ) ) )
                                                                                 =>
@@ -10399,7 +10399,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                                 1 )
                                                                                         "unified" )
                                                                                       ( ( 12
-                                                                                          "Bindings" )
+                                                                                          Bindings )
                                                                                         ( ( 15
                                                                                             ( 16
                                                                                               8 ) )
@@ -10420,12 +10420,12 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                 ( ( 11
                                                                                     2 )
                                                                                   4 ) )
-                                                                              "True" )
+                                                                              True )
                                                                             =>
-                                                                              "Nil" )
+                                                                              Nil )
                                                                           =>
                                                                             ( no-match!
-                                                                              ( ( ""
+                                                                              ( ( ()
                                                                                   3 )
                                                                                 5 ) ) ) ) ) ) )
                                                         =>
@@ -10441,7 +10441,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                 ( ( =>
                                                       =>
                                                         0
-                                                    ( ( ( ""
+                                                    ( ( ( ()
                                                           "pattern" )
                                                         "body" )
                                                       "value" ) )
@@ -10486,10 +10486,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                           1
                                                                                           0 )
                                                                                 1 )
-                                                                              "Nil" )
+                                                                              Nil )
                                                                             =>
                                                                               ( 5
-                                                                                "Nil" ) )
+                                                                                () ) )
                                                                           =>
                                                                             ( ( 15
                                                                                 5 )
@@ -10498,7 +10498,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                           ( ( =>
                                                                 =>
                                                                   0
-                                                              ( ( ""
+                                                              ( ( ()
                                                                   "_" )
                                                                 "arg" ) )
                                                             =>
@@ -10515,7 +10515,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                     ( ( =>
                                                           =>
                                                             0
-                                                        ( ( ""
+                                                        ( ( ()
                                                             "value" )
                                                           "clauses" ) )
                                                       =>
@@ -10530,7 +10530,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                     ( ( =>
                                                                           =>
                                                                             0
-                                                                        ( ( ""
+                                                                        ( ( ()
                                                                             "result" )
                                                                           "clause" ) )
                                                                       =>
@@ -10545,7 +10545,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                             1
                                                                                             0 )
                                                                                   1 )
-                                                                                "Nil" )
+                                                                                Nil )
                                                                               =>
                                                                                 ( ( ( =>
                                                                                         =>
@@ -10555,24 +10555,24 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                                               1
                                                                                               0 )
                                                                                       =>
-                                                                                        ( "Match"
+                                                                                        ( Match
                                                                                           ( 2
                                                                                             5 ) ) )
                                                                                     no-match! )
                                                                                   ( ( =>
                                                                                         =>
                                                                                           0
-                                                                                      ( ( ""
+                                                                                      ( ( ()
                                                                                           "r" )
                                                                                         "arg" ) )
                                                                                     =>
                                                                                       =>
-                                                                                        "Nil" ) ) )
+                                                                                        Nil ) ) )
                                                                             =>
                                                                               2 ) ) )
-                                                                  "Nil" )
+                                                                  Nil )
                                                                 ( ( 12
-                                                                    "List" )
+                                                                    List )
                                                                   0 ) ) )
                                                             =>
                                                               ( ( ( =>
@@ -10586,7 +10586,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                   ( ( =>
                                                                         =>
                                                                           0
-                                                                      ( ( ""
+                                                                      ( ( ()
                                                                           "_" )
                                                                         "result" ) )
                                                                     =>
@@ -10596,49 +10596,49 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                   ( no-match!
                                                                     3 ) ) ) ) )
                                                   =>
-                                                    ( ( ""
+                                                    ( ( ()
                                                         ( ( 0
-                                                            ( ( "Pair"
-                                                                "Foo" )
-                                                              "Bar" ) )
-                                                          ( ( ( ( ""
+                                                            ( ( Pair
+                                                                Foo )
+                                                              Bar ) )
+                                                          ( ( ( ( ()
                                                                   ( ( 1
-                                                                      ( "Compound"
-                                                                        ( ( "Pair"
-                                                                            ( "Binding"
+                                                                      ( Compound
+                                                                        ( ( Pair
+                                                                            ( Binding
                                                                               "x" ) )
-                                                                          ( "Binding"
+                                                                          ( Binding
                                                                             "x" ) ) ) )
                                                                     =>
                                                                       =>
-                                                                        ( ( "Twice"
+                                                                        ( ( Twice
                                                                             0 )
                                                                           0 ) ) )
                                                                 ( ( 1
-                                                                    ( "Compound"
-                                                                      ( ( "Pair"
-                                                                          ( "Binding"
+                                                                    ( Compound
+                                                                      ( ( Pair
+                                                                          ( Binding
                                                                             "x" ) )
-                                                                        ( "Value"
-                                                                          "Foo" ) ) ) )
+                                                                        ( Value
+                                                                          Foo ) ) ) )
                                                                   =>
-                                                                    "SecondIsFoo" ) )
+                                                                    SecondIsFoo ) )
                                                               ( ( 1
-                                                                  ( "Compound"
-                                                                    ( ( "Pair"
-                                                                        ( "Binding"
+                                                                  ( Compound
+                                                                    ( ( Pair
+                                                                        ( Binding
                                                                           "x" ) )
-                                                                      ( "Binding"
+                                                                      ( Binding
                                                                         "y" ) ) ) )
                                                                 =>
                                                                   =>
                                                                     0 ) )
                                                             ( ( 1
-                                                                ( "Binding"
+                                                                ( Binding
                                                                   "_" ) )
                                                               =>
                                                                 ( throw!
-                                                                  "InvalidPair" ) ) ) ) )
+                                                                  InvalidPair ) ) ) ) )
                                                       ( ( ( =>
                                                               =>
                                                                 =>
@@ -10648,35 +10648,35 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                                     0 )
                                                             =>
                                                               ( ( 1
-                                                                  "Foo" )
-                                                                ( ( ( ""
+                                                                  Foo )
+                                                                ( ( ( ()
                                                                       ( ( 2
-                                                                          ( "Compound"
-                                                                            ( ( "Pair"
-                                                                                ( "Binding"
+                                                                          ( Compound
+                                                                            ( ( Pair
+                                                                                ( Binding
                                                                                   "x" ) )
-                                                                              ( "Binding"
+                                                                              ( Binding
                                                                                 "x" ) ) ) )
                                                                         =>
                                                                           =>
-                                                                            ( ( "Twice"
+                                                                            ( ( Twice
                                                                                 0 )
                                                                               0 ) ) )
                                                                     ( ( 2
-                                                                        ( "Compound"
-                                                                          ( ( "Pair"
-                                                                              ( "Binding"
+                                                                        ( Compound
+                                                                          ( ( Pair
+                                                                              ( Binding
                                                                                 "x" ) )
-                                                                            ( "Value"
-                                                                              "Foo" ) ) ) )
+                                                                            ( Value
+                                                                              Foo ) ) ) )
                                                                       =>
-                                                                        "SecondIsFoo" ) )
+                                                                        SecondIsFoo ) )
                                                                   ( ( 2
-                                                                      ( "Compound"
-                                                                        ( ( "Pair"
-                                                                            ( "Binding"
+                                                                      ( Compound
+                                                                        ( ( Pair
+                                                                            ( Binding
                                                                               "x" ) )
-                                                                          ( "Binding"
+                                                                          ( Binding
                                                                             "y" ) ) ) )
                                                                     =>
                                                                       =>
@@ -10685,12 +10685,12 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
                                                         ( ( =>
                                                               =>
                                                                 0
-                                                            ( ( ""
+                                                            ( ( ()
                                                                 "_" )
                                                               "arg" ) )
                                                           =>
                                                             =>
-                                                              ( "NoMatch"
+                                                              ( NoMatch
                                                                 0 ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
 
 00000: PushVar(00000)
@@ -10754,10 +10754,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00058: Apply
 00059: PushFn(00032, 00000)
 00060: PushString("")
-00061: PushString("xs")
+00061: PushString(""xs"")
 00062: Swap(00002)
 00063: Apply
-00064: PushString("x")
+00064: PushString(""x"")
 00065: Swap(00002)
 00066: Apply
 00067: Swap(00002)
@@ -10777,13 +10777,13 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00081:   Return
 00082: PushFn(00016, 00000)
 00083: PushString("")
-00084: PushString("f")
+00084: PushString(""f"")
 00085: Swap(00002)
 00086: Apply
-00087: PushString("acc")
+00087: PushString(""acc"")
 00088: Swap(00002)
 00089: Apply
-00090: PushString("xs")
+00090: PushString(""xs"")
 00091: Swap(00002)
 00092: Apply
 00093: Swap(00002)
@@ -10847,10 +10847,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00151: Apply
 00152: PushFn(00131, 00000)
 00153: PushString("")
-00154: PushString("xs")
+00154: PushString(""xs"")
 00155: Swap(00002)
 00156: Apply
-00157: PushString("x")
+00157: PushString(""x"")
 00158: Swap(00002)
 00159: Apply
 00160: Swap(00002)
@@ -10868,10 +10868,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00172:   Return
 00173: PushFn(00115, 00000)
 00174: PushString("")
-00175: PushString("acc")
+00175: PushString(""acc"")
 00176: Swap(00002)
 00177: Apply
-00178: PushString("xs")
+00178: PushString(""xs"")
 00179: Swap(00002)
 00180: Apply
 00181: Swap(00002)
@@ -10967,10 +10967,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00271: Apply
 00272: PushFn(00248, 00000)
 00273: PushString("")
-00274: PushString("xs")
+00274: PushString(""xs"")
 00275: Swap(00002)
 00276: Apply
-00277: PushString("x")
+00277: PushString(""x"")
 00278: Swap(00002)
 00279: Apply
 00280: Swap(00002)
@@ -10988,10 +10988,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00292:   Return
 00293: PushFn(00232, 00000)
 00294: PushString("")
-00295: PushString("f")
+00295: PushString(""f"")
 00296: Swap(00002)
 00297: Apply
-00298: PushString("xs")
+00298: PushString(""xs"")
 00299: Swap(00002)
 00300: Apply
 00301: Swap(00002)
@@ -11101,7 +11101,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00405: Apply
 00406:   Return
 00407: PushFn(00364, 00000)
-00408: PushString("zipped")
+00408: PushString(""zipped"")
 00409: Swap(00002)
 00410: Apply
 00411: PushVar(00006)
@@ -11127,10 +11127,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00431: Apply
 00432: PushFn(00355, 00000)
 00433: PushString("")
-00434: PushString("ys")
+00434: PushString(""ys"")
 00435: Swap(00002)
 00436: Apply
-00437: PushString("y")
+00437: PushString(""y"")
 00438: Swap(00002)
 00439: Apply
 00440: Swap(00002)
@@ -11204,10 +11204,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00508: Apply
 00509: PushFn(00467, 00000)
 00510: PushString("")
-00511: PushString("ys")
+00511: PushString(""ys"")
 00512: Swap(00002)
 00513: Apply
-00514: PushString("y")
+00514: PushString(""y"")
 00515: Swap(00002)
 00516: Apply
 00517: Swap(00002)
@@ -11227,10 +11227,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00531: Apply
 00532: PushFn(00339, 00000)
 00533: PushString("")
-00534: PushString("xs")
+00534: PushString(""xs"")
 00535: Swap(00002)
 00536: Apply
-00537: PushString("x")
+00537: PushString(""x"")
 00538: Swap(00002)
 00539: Apply
 00540: Swap(00002)
@@ -11248,10 +11248,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00552:   Return
 00553: PushFn(00323, 00000)
 00554: PushString("")
-00555: PushString("xs")
+00555: PushString(""xs"")
 00556: Swap(00002)
 00557: Apply
-00558: PushString("ys")
+00558: PushString(""ys"")
 00559: Swap(00002)
 00560: Apply
 00561: Swap(00002)
@@ -11364,10 +11364,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00668: Apply
 00669: PushFn(00615, 00000)
 00670: PushString("")
-00671: PushString("ys")
+00671: PushString(""ys"")
 00672: Swap(00002)
 00673: Apply
-00674: PushString("y")
+00674: PushString(""y"")
 00675: Swap(00002)
 00676: Apply
 00677: Swap(00002)
@@ -11421,10 +11421,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00725: Apply
 00726: PushFn(00599, 00000)
 00727: PushString("")
-00728: PushString("xs")
+00728: PushString(""xs"")
 00729: Swap(00002)
 00730: Apply
-00731: PushString("x")
+00731: PushString(""x"")
 00732: Swap(00002)
 00733: Apply
 00734: Swap(00002)
@@ -11442,10 +11442,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00746:   Return
 00747: PushFn(00583, 00000)
 00748: PushString("")
-00749: PushString("a")
+00749: PushString(""a"")
 00750: Swap(00002)
 00751: Apply
-00752: PushString("b")
+00752: PushString(""b"")
 00753: Swap(00002)
 00754: Apply
 00755: Swap(00002)
@@ -11498,10 +11498,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00802: Apply
 00803: PushFn(00788, 00000)
 00804: PushString("")
-00805: PushString("xs")
+00805: PushString(""xs"")
 00806: Swap(00002)
 00807: Apply
-00808: PushString("x")
+00808: PushString(""x"")
 00809: Swap(00002)
 00810: Apply
 00811: Swap(00002)
@@ -11558,10 +11558,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00862: Apply
 00863: PushFn(00851, 00000)
 00864: PushString("")
-00865: PushString("_")
+00865: PushString(""_"")
 00866: Swap(00002)
 00867: Apply
-00868: PushString("x")
+00868: PushString(""x"")
 00869: Swap(00002)
 00870: Apply
 00871: Swap(00002)
@@ -11619,10 +11619,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 00923: Apply
 00924: PushFn(00909, 00000)
 00925: PushString("")
-00926: PushString("xs")
+00926: PushString(""xs"")
 00927: Swap(00002)
 00928: Apply
-00929: PushString("_")
+00929: PushString(""_"")
 00930: Swap(00002)
 00931: Apply
 00932: Swap(00002)
@@ -11784,7 +11784,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01088: Apply
 01089:   Return
 01090: PushFn(00999, 00000)
-01091: PushString("val2")
+01091: PushString(""val2"")
 01092: Swap(00002)
 01093: Apply
 01094: PushVar(00008)
@@ -11798,7 +11798,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01102: Apply
 01103:   Return
 01104: PushFn(00990, 00000)
-01105: PushString("var2")
+01105: PushString(""var2"")
 01106: Swap(00002)
 01107: Apply
 01108: PushVar(00006)
@@ -11817,10 +11817,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01121: PushVar(00012)
 01122: PushFn(00981, 00000)
 01123: PushString("")
-01124: PushString("_")
+01124: PushString(""_"")
 01125: Swap(00002)
 01126: Apply
-01127: PushString("b")
+01127: PushString(""b"")
 01128: Swap(00002)
 01129: Apply
 01130: Swap(00002)
@@ -11840,7 +11840,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01144: Apply
 01145:   Return
 01146: PushFn(00972, 00000)
-01147: PushString("val1")
+01147: PushString(""val1"")
 01148: Swap(00002)
 01149: Apply
 01150: PushVar(00004)
@@ -11854,7 +11854,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01158: Apply
 01159:   Return
 01160: PushFn(00963, 00000)
-01161: PushString("var1")
+01161: PushString(""var1"")
 01162: Swap(00002)
 01163: Apply
 01164: PushVar(00002)
@@ -11991,7 +11991,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01295: Apply
 01296:   Return
 01297: PushFn(01290, 00000)
-01298: PushString("unified")
+01298: PushString(""unified"")
 01299: Swap(00002)
 01300: Apply
 01301: PushVar(00012)
@@ -12031,7 +12031,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01335: Apply
 01336:   Return
 01337: PushFn(01256, 00000)
-01338: PushString("zipped")
+01338: PushString(""zipped"")
 01339: Swap(00002)
 01340: Apply
 01341: PushVar(00012)
@@ -12135,10 +12135,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01439: Apply
 01440: PushFn(01208, 00000)
 01441: PushString("")
-01442: PushString("type")
+01442: PushString(""type"")
 01443: Swap(00002)
 01444: Apply
-01445: PushString("pattern")
+01445: PushString(""pattern"")
 01446: Swap(00002)
 01447: Apply
 01448: Swap(00002)
@@ -12156,10 +12156,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01460:   Return
 01461: PushFn(01192, 00000)
 01462: PushString("")
-01463: PushString("pattern")
+01463: PushString(""pattern"")
 01464: Swap(00002)
 01465: Apply
-01466: PushString("value")
+01466: PushString(""value"")
 01467: Swap(00002)
 01468: Apply
 01469: Swap(00002)
@@ -12230,7 +12230,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01534: PushFn(01532, 00001)
 01535:   Return
 01536: PushVar(00005)
-01537: PushString("Nil")
+01537: PushString("")
 01538: Swap(00002)
 01539: Apply
 01540:   Return
@@ -12257,7 +12257,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01561: Apply
 01562:   Return
 01563: PushFn(01520, 00000)
-01564: PushString("args")
+01564: PushString(""args"")
 01565: Swap(00002)
 01566: Apply
 01567: PushVar(00012)
@@ -12274,7 +12274,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01578: Apply
 01579:   Return
 01580: PushFn(01511, 00000)
-01581: PushString("unified")
+01581: PushString(""unified"")
 01582: Swap(00002)
 01583: Apply
 01584: PushVar(00004)
@@ -12310,10 +12310,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01614: Apply
 01615: PushFn(01599, 00000)
 01616: PushString("")
-01617: PushString("_")
+01617: PushString(""_"")
 01618: Swap(00002)
 01619: Apply
-01620: PushString("arg")
+01620: PushString(""arg"")
 01621: Swap(00002)
 01622: Apply
 01623: Swap(00002)
@@ -12409,10 +12409,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01713: Apply
 01714: PushFn(01701, 00000)
 01715: PushString("")
-01716: PushString("r")
+01716: PushString(""r"")
 01717: Swap(00002)
 01718: Apply
-01719: PushString("arg")
+01719: PushString(""arg"")
 01720: Swap(00002)
 01721: Apply
 01722: Swap(00002)
@@ -12472,10 +12472,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01776: Apply
 01777: PushFn(01762, 00000)
 01778: PushString("")
-01779: PushString("_")
+01779: PushString(""_"")
 01780: Swap(00002)
 01781: Apply
-01782: PushString("result")
+01782: PushString(""result"")
 01783: Swap(00002)
 01784: Apply
 01785: Swap(00002)
@@ -12490,16 +12490,16 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01794: Apply
 01795:   Return
 01796: PushFn(01655, 00000)
-01797: PushString("result")
+01797: PushString(""result"")
 01798: Swap(00002)
 01799: Apply
 01800: PushVar(00013)
 01801: PushFn(01659, 00000)
 01802: PushString("")
-01803: PushString("result")
+01803: PushString(""result"")
 01804: Swap(00002)
 01805: Apply
-01806: PushString("clause")
+01806: PushString(""clause"")
 01807: Swap(00002)
 01808: Apply
 01809: Swap(00002)
@@ -12591,13 +12591,13 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01895: PushString("Compound")
 01896: PushString("Pair")
 01897: PushString("Binding")
-01898: PushString("x")
+01898: PushString(""x"")
 01899: Swap(00002)
 01900: Apply
 01901: Swap(00002)
 01902: Apply
 01903: PushString("Binding")
-01904: PushString("x")
+01904: PushString(""x"")
 01905: Swap(00002)
 01906: Apply
 01907: Swap(00002)
@@ -12615,7 +12615,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01919: PushString("Compound")
 01920: PushString("Pair")
 01921: PushString("Binding")
-01922: PushString("x")
+01922: PushString(""x"")
 01923: Swap(00002)
 01924: Apply
 01925: Swap(00002)
@@ -12639,13 +12639,13 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01943: PushString("Compound")
 01944: PushString("Pair")
 01945: PushString("Binding")
-01946: PushString("x")
+01946: PushString(""x"")
 01947: Swap(00002)
 01948: Apply
 01949: Swap(00002)
 01950: Apply
 01951: PushString("Binding")
-01952: PushString("y")
+01952: PushString(""y"")
 01953: Swap(00002)
 01954: Apply
 01955: Swap(00002)
@@ -12689,13 +12689,13 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 01993: PushString("Compound")
 01994: PushString("Pair")
 01995: PushString("Binding")
-01996: PushString("x")
+01996: PushString(""x"")
 01997: Swap(00002)
 01998: Apply
 01999: Swap(00002)
 02000: Apply
 02001: PushString("Binding")
-02002: PushString("x")
+02002: PushString(""x"")
 02003: Swap(00002)
 02004: Apply
 02005: Swap(00002)
@@ -12713,7 +12713,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02017: PushString("Compound")
 02018: PushString("Pair")
 02019: PushString("Binding")
-02020: PushString("x")
+02020: PushString(""x"")
 02021: Swap(00002)
 02022: Apply
 02023: Swap(00002)
@@ -12737,13 +12737,13 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02041: PushString("Compound")
 02042: PushString("Pair")
 02043: PushString("Binding")
-02044: PushString("x")
+02044: PushString(""x"")
 02045: Swap(00002)
 02046: Apply
 02047: Swap(00002)
 02048: Apply
 02049: PushString("Binding")
-02050: PushString("y")
+02050: PushString(""y"")
 02051: Swap(00002)
 02052: Apply
 02053: Swap(00002)
@@ -12759,7 +12759,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02063: Apply
 02064: PushVar(00001)
 02065: PushString("Binding")
-02066: PushString("_")
+02066: PushString(""_"")
 02067: Swap(00002)
 02068: Apply
 02069: Swap(00002)
@@ -12782,10 +12782,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02086: Apply
 02087: PushFn(01971, 00000)
 02088: PushString("")
-02089: PushString("_")
+02089: PushString(""_"")
 02090: Swap(00002)
 02091: Apply
-02092: PushString("arg")
+02092: PushString(""arg"")
 02093: Swap(00002)
 02094: Apply
 02095: Swap(00002)
@@ -12799,15 +12799,15 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02103: Apply
 02104:   Return
 02105: PushFn(01642, 00000)
-02106: PushString("match-with")
+02106: PushString(""match-with"")
 02107: Swap(00002)
 02108: Apply
 02109: PushFn(01646, 00000)
 02110: PushString("")
-02111: PushString("value")
+02111: PushString(""value"")
 02112: Swap(00002)
 02113: Apply
-02114: PushString("clauses")
+02114: PushString(""clauses"")
 02115: Swap(00002)
 02116: Apply
 02117: Swap(00002)
@@ -12822,18 +12822,18 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02126: Apply
 02127:   Return
 02128: PushFn(01482, 00000)
-02129: PushString("->")
+02129: PushString(""->"")
 02130: Swap(00002)
 02131: Apply
 02132: PushFn(01486, 00000)
 02133: PushString("")
-02134: PushString("pattern")
+02134: PushString(""pattern"")
 02135: Swap(00002)
 02136: Apply
-02137: PushString("body")
+02137: PushString(""body"")
 02138: Swap(00002)
 02139: Apply
-02140: PushString("value")
+02140: PushString(""value"")
 02141: Swap(00002)
 02142: Apply
 02143: Swap(00002)
@@ -12848,11 +12848,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02152: Apply
 02153:   Return
 02154: PushFn(01183, 00000)
-02155: PushString("unify")
+02155: PushString(""unify"")
 02156: Swap(00002)
 02157: Apply
 02158: PushFn(01188, 00000)
-02159: PushString("unify")
+02159: PushString(""unify"")
 02160: Swap(00002)
 02161: Apply
 02162: PushFn(01461, 00008)
@@ -12865,16 +12865,16 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02169: Apply
 02170:   Return
 02171: PushFn(00950, 00000)
-02172: PushString("join")
+02172: PushString(""join"")
 02173: Swap(00002)
 02174: Apply
 02175: PushVar(00008)
 02176: PushFn(00954, 00000)
 02177: PushString("")
-02178: PushString("acc")
+02178: PushString(""acc"")
 02179: Swap(00002)
 02180: Apply
-02181: PushString("binding")
+02181: PushString(""binding"")
 02182: Swap(00002)
 02183: Apply
 02184: Swap(00002)
@@ -12894,11 +12894,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02198: Apply
 02199:   Return
 02200: PushFn(00889, 00000)
-02201: PushString("first")
+02201: PushString(""first"")
 02202: Swap(00002)
 02203: Apply
 02204: PushFn(00893, 00000)
-02205: PushString("xs")
+02205: PushString(""xs"")
 02206: Swap(00002)
 02207: Apply
 02208: PushFn(00920, 00001)
@@ -12911,11 +12911,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02215: Apply
 02216:   Return
 02217: PushFn(00831, 00000)
-02218: PushString("last")
+02218: PushString(""last"")
 02219: Swap(00002)
 02220: Apply
 02221: PushFn(00835, 00000)
-02222: PushString("xs")
+02222: PushString(""xs"")
 02223: Swap(00002)
 02224: Apply
 02225: PushFn(00859, 00000)
@@ -12928,16 +12928,16 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02232: Apply
 02233:   Return
 02234: PushFn(00768, 00000)
-02235: PushString("flatten")
+02235: PushString(""flatten"")
 02236: Swap(00002)
 02237: Apply
 02238: PushVar(00005)
 02239: PushFn(00772, 00000)
 02240: PushString("")
-02241: PushString("acc")
+02241: PushString(""acc"")
 02242: Swap(00002)
 02243: Apply
-02244: PushString("x")
+02244: PushString(""x"")
 02245: Swap(00002)
 02246: Apply
 02247: Swap(00002)
@@ -12954,11 +12954,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02258: Apply
 02259:   Return
 02260: PushFn(00574, 00000)
-02261: PushString("==")
+02261: PushString(""=="")
 02262: Swap(00002)
 02263: Apply
 02264: PushFn(00579, 00000)
-02265: PushString("==")
+02265: PushString(""=="")
 02266: Swap(00002)
 02267: Apply
 02268: PushFn(00747, 00000)
@@ -12971,11 +12971,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02275: Apply
 02276:   Return
 02277: PushFn(00314, 00000)
-02278: PushString("zip")
+02278: PushString(""zip"")
 02279: Swap(00002)
 02280: Apply
 02281: PushFn(00319, 00000)
-02282: PushString("zip")
+02282: PushString(""zip"")
 02283: Swap(00002)
 02284: Apply
 02285: PushFn(00553, 00000)
@@ -12988,11 +12988,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02292: Apply
 02293:   Return
 02294: PushFn(00223, 00000)
-02295: PushString("map")
+02295: PushString(""map"")
 02296: Swap(00002)
 02297: Apply
 02298: PushFn(00228, 00000)
-02299: PushString("map")
+02299: PushString(""map"")
 02300: Swap(00002)
 02301: Apply
 02302: PushFn(00293, 00000)
@@ -13005,15 +13005,15 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02309: Apply
 02310:   Return
 02311: PushFn(00194, 00000)
-02312: PushString("apply")
+02312: PushString(""apply"")
 02313: Swap(00002)
 02314: Apply
 02315: PushFn(00198, 00000)
 02316: PushString("")
-02317: PushString("f")
+02317: PushString(""f"")
 02318: Swap(00002)
 02319: Apply
-02320: PushString("xs")
+02320: PushString(""xs"")
 02321: Swap(00002)
 02322: Apply
 02323: Swap(00002)
@@ -13028,11 +13028,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02332: Apply
 02333:   Return
 02334: PushFn(00106, 00000)
-02335: PushString("rev")
+02335: PushString(""rev"")
 02336: Swap(00002)
 02337: Apply
 02338: PushFn(00111, 00000)
-02339: PushString("rev")
+02339: PushString(""rev"")
 02340: Swap(00002)
 02341: Apply
 02342: PushFn(00173, 00000)
@@ -13045,11 +13045,11 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch(((x, Foo), (x, Bar))))
 02349: Apply
 02350:   Return
 02351: PushFn(00007, 00000)
-02352: PushString("fold")
+02352: PushString(""fold"")
 02353: Swap(00002)
 02354: Apply
 02355: PushFn(00012, 00000)
-02356: PushString("fold")
+02356: PushString(""fold"")
 02357: Swap(00002)
 02358: Apply
 02359: PushFn(00082, 00000)

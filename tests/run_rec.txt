@@ -20,10 +20,10 @@
               0
         "f" )
       =>
-        "Foo" ) )
+        Foo ) )
   =>
     ( 0
-      "Bar" ) )
+      Bar ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -47,11 +47,11 @@
 00019: Apply
 00020:   Return
 00021: PushFn(00007, 00000)
-00022: PushString("f")
+00022: PushString(""f"")
 00023: Swap(00002)
 00024: Apply
 00025: PushFn(00012, 00000)
-00026: PushString("f")
+00026: PushString(""f"")
 00027: Swap(00002)
 00028: Apply
 00029: PushFn(00014, 00000)
@@ -97,11 +97,11 @@ Foo(Bar)
                 0
             "x" )
           =>
-            ( "Foo"
+            ( Foo
               0 ) ) ) )
   =>
     ( 0
-      "Bar" ) )
+      Bar ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -127,7 +127,7 @@ Foo(Bar)
 00021: Apply
 00022:   Return
 00023: PushFn(00016, 00000)
-00024: PushString("x")
+00024: PushString(""x"")
 00025: Swap(00002)
 00026: Apply
 00027: PushFn(00018, 00000)
@@ -140,11 +140,11 @@ Foo(Bar)
 00034: Apply
 00035:   Return
 00036: PushFn(00007, 00000)
-00037: PushString("f")
+00037: PushString(""f"")
 00038: Swap(00002)
 00039: Apply
 00040: PushFn(00012, 00000)
-00041: PushString("f")
+00041: PushString(""f"")
 00042: Swap(00002)
 00043: Apply
 00044: PushFn(00023, 00000)
@@ -188,8 +188,8 @@ pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })
                 0
           "r" )
         =>
-          ( ( "Foo"
-              "Bar" )
+          ( ( Foo
+              Bar )
             0 ) ) )
     ( ( =>
           =>
@@ -203,7 +203,7 @@ pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })
           =>
             1 ) ) )
   =>
-    "Error" )
+    Error )
 
 00000: PushVar(00002)
 00001: PushVar(00001)
@@ -241,7 +241,7 @@ pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })
 00033: PushVar(00001)
 00034:   Return
 00035: PushFn(00031, 00000)
-00036: PushString("x")
+00036: PushString(""x"")
 00037: Swap(00002)
 00038: Apply
 00039: PushFn(00033, 00001)
@@ -252,7 +252,7 @@ pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })
 00044:   Return
 00045: PushFn(00010, 00000)
 00046: PushFn(00015, 00000)
-00047: PushString("r")
+00047: PushString(""r"")
 00048: Swap(00002)
 00049: Apply
 00050: PushFn(00017, 00000)
@@ -261,7 +261,7 @@ pop('r ~> { Foo(Bar, r) }, 'f => { 'x => { f } }, { Error })
 00053: Swap(00002)
 00054: Apply
 00055: PushFn(00027, 00000)
-00056: PushString("f")
+00056: PushString(""f"")
 00057: Swap(00002)
 00058: Apply
 00059: PushFn(00035, 00000)
@@ -304,9 +304,9 @@ pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
               ~>
                 0
           "r" )
-        ( ( "Foo"
-            "Bar" )
-          "Baz" ) ) )
+        ( ( Foo
+            Bar )
+          Baz ) ) )
     ( ( =>
           =>
             0
@@ -319,7 +319,7 @@ pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
           =>
             1 ) ) )
   =>
-    "Error" )
+    Error )
 
 00000: PushVar(00002)
 00001: PushVar(00001)
@@ -349,7 +349,7 @@ pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
 00025: PushVar(00001)
 00026:   Return
 00027: PushFn(00023, 00000)
-00028: PushString("x")
+00028: PushString(""x"")
 00029: Swap(00002)
 00030: Apply
 00031: PushFn(00025, 00001)
@@ -360,7 +360,7 @@ pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
 00036:   Return
 00037: PushFn(00010, 00000)
 00038: PushFn(00015, 00000)
-00039: PushString("r")
+00039: PushString(""r"")
 00040: Swap(00002)
 00041: Apply
 00042: PushString("Foo")
@@ -375,7 +375,7 @@ pop('r ~> Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
 00051: Swap(00002)
 00052: Apply
 00053: PushFn(00019, 00000)
-00054: PushString("f")
+00054: PushString(""f"")
 00055: Swap(00002)
 00056: Apply
 00057: PushFn(00027, 00000)
@@ -426,8 +426,8 @@ pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Erro
                 0
           "r" )
         =>
-          ( ( "Cons"
-              "Foo" )
+          ( ( Cons
+              Foo )
             0 ) ) )
     ( ( =>
           =>
@@ -459,9 +459,9 @@ pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Erro
                       =>
                         1 ) ) )
               =>
-                "Error" ) ) ) )
+                Error ) ) ) )
   =>
-    "Error" )
+    Error )
 
 00000: PushVar(00002)
 00001: PushVar(00001)
@@ -519,7 +519,7 @@ pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Erro
 00053: PushVar(00001)
 00054:   Return
 00055: PushFn(00051, 00000)
-00056: PushString("x")
+00056: PushString(""x"")
 00057: Swap(00002)
 00058: Apply
 00059: PushFn(00053, 00001)
@@ -533,7 +533,7 @@ pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Erro
 00067: Swap(00002)
 00068: Apply
 00069: PushFn(00047, 00000)
-00070: PushString("f")
+00070: PushString(""f"")
 00071: Swap(00002)
 00072: Apply
 00073: PushFn(00055, 00000)
@@ -546,7 +546,7 @@ pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Erro
 00080: Apply
 00081:   Return
 00082: PushFn(00031, 00000)
-00083: PushString("x")
+00083: PushString(""x"")
 00084: Swap(00002)
 00085: Apply
 00086: PushFn(00065, 00000)
@@ -557,7 +557,7 @@ pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Erro
 00091:   Return
 00092: PushFn(00010, 00000)
 00093: PushFn(00015, 00000)
-00094: PushString("r")
+00094: PushString(""r"")
 00095: Swap(00002)
 00096: Apply
 00097: PushFn(00017, 00000)
@@ -566,7 +566,7 @@ pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { pop(x, 'f => { 'x => { f } }, { Erro
 00100: Swap(00002)
 00101: Apply
 00102: PushFn(00027, 00000)
-00103: PushString("f")
+00103: PushString(""f"")
 00104: Swap(00002)
 00105: Apply
 00106: PushFn(00082, 00000)
@@ -613,7 +613,7 @@ Cons(Foo)
             ( 0
               1 )
       "foo" )
-    "Foo" )
+    Foo )
   =>
     ( ( ( =>
             =>
@@ -628,7 +628,7 @@ Cons(Foo)
                     0
               "r" )
             =>
-              ( ( "Cons"
+              ( ( Cons
                   1 )
                 0 ) ) )
         ( ( =>
@@ -661,9 +661,9 @@ Cons(Foo)
                           =>
                             1 ) ) )
                   =>
-                    "Error" ) ) ) )
+                    Error ) ) ) )
       =>
-        "Error" ) )
+        Error ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -730,7 +730,7 @@ Cons(Foo)
 00062: PushVar(00001)
 00063:   Return
 00064: PushFn(00060, 00000)
-00065: PushString("x")
+00065: PushString(""x"")
 00066: Swap(00002)
 00067: Apply
 00068: PushFn(00062, 00001)
@@ -744,7 +744,7 @@ Cons(Foo)
 00076: Swap(00002)
 00077: Apply
 00078: PushFn(00056, 00000)
-00079: PushString("f")
+00079: PushString(""f"")
 00080: Swap(00002)
 00081: Apply
 00082: PushFn(00064, 00000)
@@ -757,7 +757,7 @@ Cons(Foo)
 00089: Apply
 00090:   Return
 00091: PushFn(00040, 00000)
-00092: PushString("x")
+00092: PushString(""x"")
 00093: Swap(00002)
 00094: Apply
 00095: PushFn(00074, 00000)
@@ -768,7 +768,7 @@ Cons(Foo)
 00100:   Return
 00101: PushFn(00019, 00000)
 00102: PushFn(00024, 00000)
-00103: PushString("r")
+00103: PushString(""r"")
 00104: Swap(00002)
 00105: Apply
 00106: PushFn(00026, 00001)
@@ -777,7 +777,7 @@ Cons(Foo)
 00109: Swap(00002)
 00110: Apply
 00111: PushFn(00036, 00000)
-00112: PushString("f")
+00112: PushString(""f"")
 00113: Swap(00002)
 00114: Apply
 00115: PushFn(00091, 00000)
@@ -790,7 +790,7 @@ Cons(Foo)
 00122: Apply
 00123:   Return
 00124: PushFn(00007, 00000)
-00125: PushString("foo")
+00125: PushString(""foo"")
 00126: Swap(00002)
 00127: Apply
 00128: PushString("Foo")
@@ -867,9 +867,9 @@ Cons(Foo)
                 1 ) ) ) )
   =>
     ( 0
-      ( ( "Foo"
-          "Bar" )
-        "Baz" ) ) )
+      ( ( Foo
+          Bar )
+        Baz ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -915,7 +915,7 @@ Cons(Foo)
 00041: Apply
 00042:   Return
 00043: PushFn(00036, 00000)
-00044: PushString("_")
+00044: PushString(""_"")
 00045: Swap(00002)
 00046: Apply
 00047: PushFn(00038, 00003)
@@ -929,7 +929,7 @@ Cons(Foo)
 00055: Swap(00002)
 00056: Apply
 00057: PushFn(00032, 00000)
-00058: PushString("xs")
+00058: PushString(""xs"")
 00059: Swap(00002)
 00060: Apply
 00061: PushFn(00043, 00002)
@@ -942,7 +942,7 @@ Cons(Foo)
 00068: Apply
 00069:   Return
 00070: PushFn(00016, 00000)
-00071: PushString("xs")
+00071: PushString(""xs"")
 00072: Swap(00002)
 00073: Apply
 00074: PushFn(00053, 00001)
@@ -961,11 +961,11 @@ Cons(Foo)
 00087: Apply
 00088:   Return
 00089: PushFn(00007, 00000)
-00090: PushString("f")
+00090: PushString(""f"")
 00091: Swap(00002)
 00092: Apply
 00093: PushFn(00012, 00000)
-00094: PushString("f")
+00094: PushString(""f"")
 00095: Swap(00002)
 00096: Apply
 00097: PushFn(00070, 00000)
@@ -1010,7 +1010,7 @@ Foo
             ( 0
               1 )
       "foo" )
-    "Foo" )
+    Foo )
   =>
     ( ( ( =>
             =>
@@ -1018,7 +1018,7 @@ Foo
                 ( 0
                   1 )
           "bar" )
-        "Bar" )
+        Bar )
       =>
         ( 1
           ( 0
@@ -1050,7 +1050,7 @@ Foo
                       =>
                         1 ) ) )
               =>
-                "Error" ) ) ) ) )
+                Error ) ) ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -1106,7 +1106,7 @@ Foo
 00051: PushVar(00001)
 00052:   Return
 00053: PushFn(00049, 00000)
-00054: PushString("x")
+00054: PushString(""x"")
 00055: Swap(00002)
 00056: Apply
 00057: PushFn(00051, 00001)
@@ -1119,7 +1119,7 @@ Foo
 00064: PushVar(00000)
 00065: PushFn(00028, 00000)
 00066: PushFn(00033, 00000)
-00067: PushString("r")
+00067: PushString(""r"")
 00068: Swap(00002)
 00069: Apply
 00070: PushFn(00035, 00002)
@@ -1128,7 +1128,7 @@ Foo
 00073: Swap(00002)
 00074: Apply
 00075: PushFn(00045, 00000)
-00076: PushString("f")
+00076: PushString(""f"")
 00077: Swap(00002)
 00078: Apply
 00079: PushFn(00053, 00000)
@@ -1145,7 +1145,7 @@ Foo
 00090: Apply
 00091:   Return
 00092: PushFn(00016, 00000)
-00093: PushString("bar")
+00093: PushString(""bar"")
 00094: Swap(00002)
 00095: Apply
 00096: PushString("Bar")
@@ -1156,7 +1156,7 @@ Foo
 00101: Apply
 00102:   Return
 00103: PushFn(00007, 00000)
-00104: PushString("foo")
+00104: PushString(""foo"")
 00105: Swap(00002)
 00106: Apply
 00107: PushString("Foo")

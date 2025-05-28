@@ -19,9 +19,9 @@ enum Expr {
     App(Box<Expr>, Vec<Expr>),
 }
 
-fn convert_value(v: &V, strs: &[&str]) -> Expr {
-    fn convert_str(s: usize, strs: &[&str]) -> Expr {
-        match strs[s] {
+fn convert_value(v: &V, strs: &Vec<String>) -> Expr {
+    fn convert_str(s: usize, strs: &Vec<String>) -> Expr {
+        match strs[s].as_str() {
             "I" => Expr::I,
             "K" => Expr::K,
             "S" => Expr::S,

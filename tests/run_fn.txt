@@ -10,8 +10,8 @@
           0
       "x" )
     =>
-      "Bar" )
-  "Foo" )
+      Bar )
+  Foo )
 
 00000: PushVar(00000)
 00001:   Return
@@ -20,7 +20,7 @@
 00004: PushString("Bar")
 00005:   Return
 00006: PushFn(00002, 00000)
-00007: PushString("x")
+00007: PushString(""x"")
 00008: Swap(00002)
 00009: Apply
 00010: PushFn(00004, 00000)
@@ -47,7 +47,7 @@ Bar
       "x" )
     =>
       0 )
-  "Foo" )
+  Foo )
 
 00000: PushVar(00000)
 00001:   Return
@@ -56,7 +56,7 @@ Bar
 00004: PushVar(00000)
 00005:   Return
 00006: PushFn(00002, 00000)
-00007: PushString("x")
+00007: PushString(""x"")
 00008: Swap(00002)
 00009: Apply
 00010: PushFn(00004, 00000)
@@ -91,8 +91,8 @@ Foo
             "y" )
           =>
             1 ) )
-    "Foo" )
-  "Bar" )
+    Foo )
+  Bar )
 
 00000: PushVar(00000)
 00001:   Return
@@ -105,7 +105,7 @@ Foo
 00008: PushVar(00001)
 00009:   Return
 00010: PushFn(00006, 00000)
-00011: PushString("y")
+00011: PushString(""y"")
 00012: Swap(00002)
 00013: Apply
 00014: PushFn(00008, 00001)
@@ -113,7 +113,7 @@ Foo
 00016: Apply
 00017:   Return
 00018: PushFn(00002, 00000)
-00019: PushString("x")
+00019: PushString(""x"")
 00020: Swap(00002)
 00021: Apply
 00022: PushFn(00010, 00000)
@@ -161,13 +161,13 @@ Foo
                       0
                   "z" )
                 =>
-                  ( ( ( "Vec"
+                  ( ( ( Vec
                         0 )
                       2 )
                     0 ) ) ) )
-      "Foo" )
-    "Bar" )
-  "Baz" )
+      Foo )
+    Bar )
+  Baz )
 
 00000: PushVar(00000)
 00001:   Return
@@ -193,7 +193,7 @@ Foo
 00021: Apply
 00022:   Return
 00023: PushFn(00010, 00000)
-00024: PushString("z")
+00024: PushString(""z"")
 00025: Swap(00002)
 00026: Apply
 00027: PushFn(00012, 00002)
@@ -201,7 +201,7 @@ Foo
 00029: Apply
 00030:   Return
 00031: PushFn(00006, 00000)
-00032: PushString("y")
+00032: PushString(""y"")
 00033: Swap(00002)
 00034: Apply
 00035: PushFn(00023, 00001)
@@ -209,7 +209,7 @@ Foo
 00037: Apply
 00038:   Return
 00039: PushFn(00002, 00000)
-00040: PushString("x")
+00040: PushString(""x"")
 00041: Swap(00002)
 00042: Apply
 00043: PushFn(00031, 00000)

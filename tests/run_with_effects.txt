@@ -4,7 +4,7 @@ print!(Foo)
   Foo)
 
 ( print!
-  "Foo" )
+  Foo )
 
 00000: PushEffect("print")
 00001: PushString("Foo")
@@ -12,7 +12,7 @@ print!(Foo)
 00003: Apply
 
 "Foo"
-Nil
+()
 
 ---
 
@@ -28,11 +28,11 @@ print!(Foo), print!(Bar), print!(FooBar)
 ( =>
     ( =>
         ( print!
-          "FooBar" )
+          FooBar )
       ( print!
-        "Bar" ) )
+        Bar ) )
   ( print!
-    "Foo" ) )
+    Foo ) )
 
 00000: PushEffect("print")
 00001: PushString("FooBar")
@@ -58,7 +58,7 @@ print!(Foo), print!(Bar), print!(FooBar)
 "Foo"
 "Bar"
 "FooBar"
-Nil
+()
 
 ---
 
@@ -104,7 +104,7 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
             "y" )
           =>
             ( pair!
-              ( ( "Args"
+              ( ( Args
                   1 )
                 0 ) ) ) ) )
   =>
@@ -117,8 +117,8 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
                   0 )
           =>
             ( ( 1
-                "Bar" )
-              "Baz" ) )
+                Bar )
+              Baz ) )
         pair! )
       ( ( =>
             =>
@@ -130,7 +130,7 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
                   0
               "arg" )
             =>
-              ( "Pair"
+              ( Pair
                 0 ) ) ) ) )
 
 00000: PushVar(00000)
@@ -162,7 +162,7 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
 00026: Apply
 00027:   Return
 00028: PushFn(00015, 00000)
-00029: PushString("y")
+00029: PushString(""y"")
 00030: Swap(00002)
 00031: Apply
 00032: PushFn(00017, 00001)
@@ -207,7 +207,7 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
 00071: Apply
 00072:   Return
 00073: PushFn(00066, 00000)
-00074: PushString("arg")
+00074: PushString(""arg"")
 00075: Swap(00002)
 00076: Apply
 00077: PushFn(00068, 00000)
@@ -222,7 +222,7 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
 00086: Swap(00002)
 00087: Apply
 00088: PushFn(00062, 00000)
-00089: PushString("r")
+00089: PushString(""r"")
 00090: Swap(00002)
 00091: Apply
 00092: PushFn(00073, 00000)
@@ -232,11 +232,11 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
 00096: Apply
 00097:   Return
 00098: PushFn(00007, 00000)
-00099: PushString("foo")
+00099: PushString(""foo"")
 00100: Swap(00002)
 00101: Apply
 00102: PushFn(00011, 00000)
-00103: PushString("x")
+00103: PushString(""x"")
 00104: Swap(00002)
 00105: Apply
 00106: PushFn(00028, 00000)
@@ -271,7 +271,7 @@ try({ Foo }, unused!, 'r => { ' => { Error }})
               1
               0 )
       =>
-        "Foo" )
+        Foo )
     unused! )
   ( ( =>
         =>
@@ -283,7 +283,7 @@ try({ Foo }, unused!, 'r => { ' => { Error }})
               0
           "" )
         =>
-          "Error" ) ) )
+          Error ) ) )
 
 00000: PushVar(00000)
 00001: Apply
@@ -314,7 +314,7 @@ try({ Foo }, unused!, 'r => { ' => { Error }})
 00026: PushString("Error")
 00027:   Return
 00028: PushFn(00024, 00000)
-00029: PushString("")
+00029: PushString("""")
 00030: Swap(00002)
 00031: Apply
 00032: PushFn(00026, 00000)
@@ -329,7 +329,7 @@ try({ Foo }, unused!, 'r => { ' => { Error }})
 00041: Swap(00002)
 00042: Apply
 00043: PushFn(00020, 00000)
-00044: PushString("r")
+00044: PushString(""r"")
 00045: Swap(00002)
 00046: Apply
 00047: PushFn(00028, 00000)
@@ -365,7 +365,7 @@ try({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
               0 )
       =>
         ( effect!
-          "Foo" ) )
+          Foo ) )
     effect! )
   ( ( =>
         =>
@@ -379,7 +379,7 @@ try({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
         =>
           ( 0
             ( 1
-              "Bar" ) ) ) ) )
+              Bar ) ) ) ) )
 
 00000: PushVar(00000)
 00001: Apply
@@ -419,7 +419,7 @@ try({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
 00035: Apply
 00036:   Return
 00037: PushFn(00027, 00000)
-00038: PushString("arg")
+00038: PushString(""arg"")
 00039: Swap(00002)
 00040: Apply
 00041: PushFn(00029, 00001)
@@ -434,7 +434,7 @@ try({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
 00050: Swap(00002)
 00051: Apply
 00052: PushFn(00023, 00000)
-00053: PushString("r")
+00053: PushString(""r"")
 00054: Swap(00002)
 00055: Apply
 00056: PushFn(00037, 00000)
@@ -475,9 +475,9 @@ try({
               1
               0 )
       =>
-        ( "Foo"
+        ( Foo
           ( eff!
-            "Nil" ) ) )
+            () ) ) )
     eff! )
   ( ( =>
         =>
@@ -489,11 +489,11 @@ try({
               0
           "" )
         =>
-          ( ( "Pair"
+          ( ( Pair
               ( 1
-                "Bar" ) )
+                Bar ) )
             ( 1
-              "Baz" ) ) ) ) )
+              Baz ) ) ) ) )
 
 00000: PushVar(00000)
 00001: Apply
@@ -513,7 +513,7 @@ try({
 00015:   Return
 00016: PushString("Foo")
 00017: PushEffect("eff")
-00018: PushString("Nil")
+00018: PushString("")
 00019: Swap(00002)
 00020: Apply
 00021: Swap(00002)
@@ -542,7 +542,7 @@ try({
 00044: Apply
 00045:   Return
 00046: PushFn(00030, 00000)
-00047: PushString("")
+00047: PushString("""")
 00048: Swap(00002)
 00049: Apply
 00050: PushFn(00032, 00001)
@@ -557,7 +557,7 @@ try({
 00059: Swap(00002)
 00060: Apply
 00061: PushFn(00026, 00000)
-00062: PushString("r")
+00062: PushString(""r"")
 00063: Swap(00002)
 00064: Apply
 00065: PushFn(00046, 00000)
@@ -597,7 +597,7 @@ Pair(Foo(Bar), Foo(Baz))
             ( 0
               1 )
       "foo" )
-    "Foo" )
+    Foo )
   =>
     ( ( ( =>
             =>
@@ -607,7 +607,7 @@ Pair(Foo(Bar), Foo(Baz))
                   1
                   0 )
           =>
-            ( "List"
+            ( List
               ( elems!
                 1 ) ) )
         elems! )
@@ -621,12 +621,12 @@ Pair(Foo(Bar), Foo(Baz))
                   0
               "x" )
             =>
-              ( ( "Twice"
+              ( ( Twice
                   ( ( 1
                       0 )
                     0 ) )
                 ( 1
-                  "Baz" ) ) ) ) ) )
+                  Baz ) ) ) ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
@@ -687,7 +687,7 @@ Pair(Foo(Bar), Foo(Baz))
 00056: Apply
 00057:   Return
 00058: PushFn(00039, 00000)
-00059: PushString("x")
+00059: PushString(""x"")
 00060: Swap(00002)
 00061: Apply
 00062: PushFn(00041, 00001)
@@ -702,7 +702,7 @@ Pair(Foo(Bar), Foo(Baz))
 00071: Swap(00002)
 00072: Apply
 00073: PushFn(00035, 00000)
-00074: PushString("r")
+00074: PushString(""r"")
 00075: Swap(00002)
 00076: Apply
 00077: PushFn(00058, 00000)
@@ -712,7 +712,7 @@ Pair(Foo(Bar), Foo(Baz))
 00081: Apply
 00082:   Return
 00083: PushFn(00007, 00000)
-00084: PushString("foo")
+00084: PushString(""foo"")
 00085: Swap(00002)
 00086: Apply
 00087: PushString("Foo")
@@ -748,7 +748,7 @@ Foo(try({
               (r
                 Qux)) }) })))
 
-( "Foo"
+( Foo
   ( ( ( =>
           =>
             =>
@@ -757,11 +757,11 @@ Foo(try({
                 1
                 0 )
         =>
-          ( ( "Baz"
+          ( ( Baz
               ( effect!
-                "Nil" ) )
+                () ) )
             ( effect!
-              "Nil" ) ) )
+              () ) ) )
       effect! )
     ( ( =>
           =>
@@ -773,9 +773,9 @@ Foo(try({
                 0
             "" )
           =>
-            ( "Bar"
+            ( Bar
               ( 1
-                "Qux" ) ) ) ) ) )
+                Qux ) ) ) ) ) )
 
 00000: PushVar(00000)
 00001: Apply
@@ -795,13 +795,13 @@ Foo(try({
 00015:   Return
 00016: PushString("Baz")
 00017: PushEffect("effect")
-00018: PushString("Nil")
+00018: PushString("")
 00019: Swap(00002)
 00020: Apply
 00021: Swap(00002)
 00022: Apply
 00023: PushEffect("effect")
-00024: PushString("Nil")
+00024: PushString("")
 00025: Swap(00002)
 00026: Apply
 00027: Swap(00002)
@@ -824,7 +824,7 @@ Foo(try({
 00044: Apply
 00045:   Return
 00046: PushFn(00036, 00000)
-00047: PushString("")
+00047: PushString("""")
 00048: Swap(00002)
 00049: Apply
 00050: PushFn(00038, 00001)
@@ -840,7 +840,7 @@ Foo(try({
 00060: Swap(00002)
 00061: Apply
 00062: PushFn(00032, 00000)
-00063: PushString("r")
+00063: PushString(""r"")
 00064: Swap(00002)
 00065: Apply
 00066: PushFn(00046, 00000)
@@ -851,7 +851,7 @@ Foo(try({
 00071: Swap(00002)
 00072: Apply
 
-effect!(Nil)
+effect!(())
 
 ---
 
@@ -897,11 +897,11 @@ try({
               1
               0 )
       =>
-        ( ( "List"
+        ( ( List
             ( get!
-              "Nil" ) )
+              () ) )
           ( get!
-            "Nil" ) ) )
+            () ) ) )
     get! )
   ( ( =>
         =>
@@ -922,7 +922,7 @@ try({
                         0 )
                 =>
                   ( 2
-                    "Foo" ) )
+                    Foo ) )
               get! )
             ( ( =>
                   =>
@@ -935,7 +935,7 @@ try({
                     "" )
                   =>
                     ( 1
-                      "Bar" ) ) ) ) ) ) )
+                      Bar ) ) ) ) ) ) )
 
 00000: PushVar(00000)
 00001: Apply
@@ -955,13 +955,13 @@ try({
 00015:   Return
 00016: PushString("List")
 00017: PushEffect("get")
-00018: PushString("Nil")
+00018: PushString("")
 00019: Swap(00002)
 00020: Apply
 00021: Swap(00002)
 00022: Apply
 00023: PushEffect("get")
-00024: PushString("Nil")
+00024: PushString("")
 00025: Swap(00002)
 00026: Apply
 00027: Swap(00002)
@@ -1010,7 +1010,7 @@ try({
 00070: Apply
 00071:   Return
 00072: PushFn(00065, 00000)
-00073: PushString("")
+00073: PushString("""")
 00074: Swap(00002)
 00075: Apply
 00076: PushFn(00067, 00001)
@@ -1025,7 +1025,7 @@ try({
 00085: Swap(00002)
 00086: Apply
 00087: PushFn(00061, 00000)
-00088: PushString("r")
+00088: PushString(""r"")
 00089: Swap(00002)
 00090: Apply
 00091: PushFn(00072, 00000)
@@ -1035,7 +1035,7 @@ try({
 00095: Apply
 00096:   Return
 00097: PushFn(00036, 00000)
-00098: PushString("")
+00098: PushString("""")
 00099: Swap(00002)
 00100: Apply
 00101: PushFn(00080, 00001)
@@ -1050,7 +1050,7 @@ try({
 00110: Swap(00002)
 00111: Apply
 00112: PushFn(00032, 00000)
-00113: PushString("r")
+00113: PushString(""r"")
 00114: Swap(00002)
 00115: Apply
 00116: PushFn(00097, 00000)
@@ -1087,7 +1087,7 @@ try({
       =>
         ( =>
             ( throw!
-              "Nil" )
+              () )
           ( ( ( =>
                   =>
                     =>
@@ -1097,13 +1097,13 @@ try({
                         0 )
                 =>
                   ( throw!
-                    "Nil" ) )
+                    () ) )
               throw! )
             =>
-              "Nil" ) ) )
+              Nil ) ) )
     throw! )
   =>
-    "Nil" )
+    Nil )
 
 00000: PushVar(00000)
 00001: Apply
@@ -1122,7 +1122,7 @@ try({
 00014: PushFn(00012, 00001)
 00015:   Return
 00016: PushEffect("throw")
-00017: PushString("Nil")
+00017: PushString("")
 00018: Swap(00002)
 00019: Apply
 00020:   Return
@@ -1143,7 +1143,7 @@ try({
 00035: PushFn(00033, 00001)
 00036:   Return
 00037: PushEffect("throw")
-00038: PushString("Nil")
+00038: PushString("")
 00039: Swap(00002)
 00040: Apply
 00041:   Return
@@ -1176,4 +1176,4 @@ try({
 00068: Swap(00002)
 00069: Apply
 
-Nil(Nil)
+Nil()
