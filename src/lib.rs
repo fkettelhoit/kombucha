@@ -252,10 +252,6 @@ const COMPOUND: &str = "Compound";
 const TEMPLATE: &str = "Template";
 
 fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
-    enum E {
-        UnboundVar(String),
-        EmptyBlock,
-    }
     struct Ctx<'c> {
         bindings: Vec<&'c str>,
         vars: Vec<&'c str>,
@@ -294,26 +290,26 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
             },
         }
     }
-    fn desugar_syntax<'c>(ast: Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
+    fn desug_reflect<'c>(ast: Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, String)> {
         let has_bindings = contains_bindings(&ast);
         match ast.1 {
             A::Call(call, args) if has_bindings => {
                 let mut desugared_args = vec![];
                 for arg in args {
-                    desugared_args.push(desugar_syntax(arg, ctx)?);
+                    desugared_args.push(desug_reflect(arg, ctx)?);
                 }
                 let mut reflector = Reflect::Compound;
                 let mut f = match call {
-                    Call::Infix(f) => desugar_value(Ast(ast.0, A::Var(f)), ctx)?,
+                    Call::Infix(f) => desug_val(Ast(ast.0, A::Var(f)), ctx)?,
                     Call::Prefix(f) => {
                         if let Ast(_, A::Binding(_)) = *f {
                             reflector = Reflect::Template
                         }
-                        desugar_value(*f, ctx)?
+                        desug_val(*f, ctx)?
                     }
                     Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
                         Some(v) => Expr::Var(v),
-                        None => return Err((ast.0, E::UnboundVar(keywords.join("-")))),
+                        None => return Err((ast.0, keywords.join("-"))),
                     },
                 };
                 if desugared_args.is_empty() {
@@ -330,16 +326,16 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
             }
             A::Var(_) | A::String(_) | A::Call(_, _) => Ok(app(
                 Expr::String(Reflect::Value as usize),
-                desugar_value(ast, ctx)?,
+                desug_val(ast, ctx)?,
             )),
             A::Binding(_) => Ok(app(
                 Expr::String(Reflect::Binding as usize),
-                desugar_value(ast, ctx)?,
+                desug_val(ast, ctx)?,
             )),
-            A::Block(_) => desugar_value(ast, ctx),
+            A::Block(_) => desug_val(ast, ctx),
         }
     }
-    fn desugar_value<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, E)> {
+    fn desug_val<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, String)> {
         match ast {
             A::Var(v) if v.ends_with("!") => {
                 Ok(Expr::Effect(resolve_str(v[..v.len() - 1].to_string(), ctx)))
@@ -365,24 +361,27 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
                     Box::new(Expr::Var(1)),
                     Box::new(Expr::Var(0)),
                 )))))),
-                None => Err((pos, E::UnboundVar(v.to_string()))),
+                None => Err((pos, v.to_string())),
             },
             A::String(s) => Ok(Expr::String(resolve_str(s.to_string(), ctx))),
             A::Binding(b) => {
                 ctx.bindings.push(&b[1..]);
                 Ok(Expr::String(resolve_str(format!("\"{}\"", &b[1..]), ctx)))
             }
-            A::Block(items) => {
+            A::Block(mut items) => {
                 let mut desugared = vec![];
+                if items.is_empty() {
+                    items.push(Ast(pos, A::String(NIL)));
+                }
                 for ast in items {
                     let bindings = ctx.bindings.len();
                     ctx.vars.extend(ctx.bindings.drain(..));
                     if bindings == 0 {
                         ctx.vars.push("")
                     }
-                    desugared.push((bindings, desugar_value(ast, ctx)?));
+                    desugared.push((bindings, desug_val(ast, ctx)?));
                 }
-                let (mut bindings, mut expr) = desugared.pop().ok_or((pos, E::EmptyBlock))?;
+                let (mut bindings, mut expr) = desugared.pop().unwrap();
                 expr = (0..max(1, bindings)).fold(expr, |x, _| Expr::Abs(Box::new(x)));
                 for (prev_bindings, x) in desugared.into_iter().rev() {
                     let (f, arg) = if bindings == 0 { (expr, x) } else { (x, expr) };
@@ -398,11 +397,11 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
             A::Call(call, args) => {
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
                 let mut f = match call {
-                    Call::Infix(f) => desugar_value(Ast(pos, A::Var(f)), ctx)?,
-                    Call::Prefix(f) => desugar_value(*f, ctx)?,
+                    Call::Infix(f) => desug_val(Ast(pos, A::Var(f)), ctx)?,
+                    Call::Prefix(f) => desug_val(*f, ctx)?,
                     Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
                         Some(v) => Expr::Var(v),
-                        None => return Err((pos, E::UnboundVar(keywords.join("-")))),
+                        None => return Err((pos, keywords.join("-"))),
                     },
                 };
                 if args.is_empty() {
@@ -412,9 +411,9 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
                 let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
                 for arg in args {
                     if is_macro && !is_builtin {
-                        f = Expr::App(Box::new(f), Box::new(desugar_syntax(arg, ctx)?));
+                        f = Expr::App(Box::new(f), Box::new(desug_reflect(arg, ctx)?));
                     } else {
-                        f = Expr::App(Box::new(f), Box::new(desugar_value(arg, ctx)?));
+                        f = Expr::App(Box::new(f), Box::new(desug_val(arg, ctx)?));
                     }
                 }
                 ctx.bindings.splice(0..0, bindings);
@@ -422,9 +421,8 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
             }
         }
     }
-    match desugar_value(Ast(0, A::Block(block)), &mut ctx) {
-        Err((i, E::UnboundVar(v))) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
-        Err((i, E::EmptyBlock)) => Err(format!("Empty block at {}", pos_at(i, code))),
+    match desug_val(Ast(0, A::Block(block)), &mut ctx) {
+        Err((i, v)) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
         Ok(Expr::Abs(body)) => Ok((*body, ctx.strs)),
         Ok(_) => unreachable!("Expected the main block to be desugared to an abstraction!"),
     }

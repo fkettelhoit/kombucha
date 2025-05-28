@@ -1064,18 +1064,18 @@ List(Foo, Bar)
 ---
 
 try({
-    try({ throw!() }, throw!, { Nil })
+    try({ throw!() }, throw!, {})
     throw!()
-}, throw!, { Nil })
+}, throw!, {})
 
 (try
   { (try
       { (throw!) }
       throw!
-      { Nil })
+      {  })
     (throw!) }
   throw!
-  { Nil })
+  {  })
 
 ( ( ( =>
         =>
@@ -1100,10 +1100,10 @@ try({
                     () ) )
               throw! )
             =>
-              Nil ) ) )
+              () ) ) )
     throw! )
   =>
-    Nil )
+    () )
 
 00000: PushVar(00000)
 00001: Apply
@@ -1147,7 +1147,7 @@ try({
 00039: Swap(00002)
 00040: Apply
 00041:   Return
-00042: PushString("Nil")
+00042: PushString("")
 00043:   Return
 00044: PushFn(00016, 00000)
 00045: PushFn(00035, 00000)
@@ -1163,7 +1163,7 @@ try({
 00055: Swap(00002)
 00056: Apply
 00057:   Return
-00058: PushString("Nil")
+00058: PushString("")
 00059:   Return
 00060: PushFn(00014, 00000)
 00061: PushFn(00044, 00000)
@@ -1176,4 +1176,4 @@ try({
 00068: Swap(00002)
 00069: Apply
 
-Nil()
+()()

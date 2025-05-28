@@ -1,4 +1,4 @@
-(('x, '_) => { x })(Foo, { Nil })
+(('x, '_) => { x })(Foo, {})
 
 ((=>
   (
@@ -6,7 +6,7 @@
     '_)
   { x })
   Foo
-  { Nil })
+  {  })
 
 ( ( ( ( =>
           =>
@@ -20,7 +20,7 @@
     ( Value
       Foo ) )
   =>
-    Nil )
+    () )
 
 00000: PushVar(00000)
 00001:   Return
@@ -30,7 +30,7 @@
 00005:   Return
 00006: PushFn(00004, 00001)
 00007:   Return
-00008: PushString("Nil")
+00008: PushString("")
 00009:   Return
 00010: PushFn(00002, 00000)
 00011: PushString("")
@@ -59,7 +59,7 @@ Value(Foo)
 
 ---
 
-(('x, 'y) => { x })('binding, { Nil })
+(('x, 'y) => { x })('binding, {})
 
 ((=>
   (
@@ -67,7 +67,7 @@ Value(Foo)
     'y)
   { x })
   'binding
-  { Nil })
+  {  })
 
 ( ( ( ( =>
           =>
@@ -81,7 +81,7 @@ Value(Foo)
     ( Binding
       "binding" ) )
   =>
-    Nil )
+    () )
 
 00000: PushVar(00000)
 00001:   Return
@@ -91,7 +91,7 @@ Value(Foo)
 00005:   Return
 00006: PushFn(00004, 00001)
 00007:   Return
-00008: PushString("Nil")
+00008: PushString("")
 00009:   Return
 00010: PushFn(00002, 00000)
 00011: PushString("")
@@ -120,7 +120,7 @@ Binding("binding")
 
 ---
 
-(('x, 'y) => { x })(Foo(Bar, Baz), { Nil })
+(('x, 'y) => { x })(Foo(Bar, Baz), {})
 
 ((=>
   (
@@ -130,7 +130,7 @@ Binding("binding")
   (Foo
     Bar
     Baz)
-  { Nil })
+  {  })
 
 ( ( ( ( =>
           =>
@@ -146,7 +146,7 @@ Binding("binding")
           Bar )
         Baz ) ) )
   =>
-    Nil )
+    () )
 
 00000: PushVar(00000)
 00001:   Return
@@ -156,7 +156,7 @@ Binding("binding")
 00005:   Return
 00006: PushFn(00004, 00001)
 00007:   Return
-00008: PushString("Nil")
+00008: PushString("")
 00009:   Return
 00010: PushFn(00002, 00000)
 00011: PushString("")
@@ -191,7 +191,7 @@ Value(Foo(Bar, Baz))
 
 ---
 
-(('x, 'y) => { x })(Foo(Bar, 'baz), { Nil })
+(('x, 'y) => { x })(Foo(Bar, 'baz), {})
 
 ((=>
   (
@@ -201,7 +201,7 @@ Value(Foo(Bar, Baz))
   (Foo
     Bar
     'baz)
-  { Nil })
+  {  })
 
 ( ( ( ( =>
           =>
@@ -219,7 +219,7 @@ Value(Foo(Bar, Baz))
         ( Binding
           "baz" ) ) ) )
   =>
-    Nil )
+    () )
 
 00000: PushVar(00000)
 00001:   Return
@@ -229,7 +229,7 @@ Value(Foo(Bar, Baz))
 00005:   Return
 00006: PushFn(00004, 00001)
 00007:   Return
-00008: PushString("Nil")
+00008: PushString("")
 00009:   Return
 00010: PushFn(00002, 00000)
 00011: PushString("")
@@ -270,7 +270,7 @@ Compound(Foo(Value(Bar), Binding("baz")))
 
 ---
 
-(('x, 'y) => { x })('foo(Bar, 'baz), { Nil })
+(('x, 'y) => { x })('foo(Bar, 'baz), {})
 
 ((=>
   (
@@ -280,7 +280,7 @@ Compound(Foo(Value(Bar), Binding("baz")))
   ('foo
     Bar
     'baz)
-  { Nil })
+  {  })
 
 ( ( ( ( =>
           =>
@@ -299,7 +299,7 @@ Compound(Foo(Value(Bar), Binding("baz")))
           "baz" ) ) ) )
   =>
     =>
-      Nil )
+      () )
 
 00000: PushVar(00000)
 00001:   Return
@@ -309,7 +309,7 @@ Compound(Foo(Value(Bar), Binding("baz")))
 00005:   Return
 00006: PushFn(00004, 00001)
 00007:   Return
-00008: PushString("Nil")
+00008: PushString("")
 00009:   Return
 00010: PushFn(00008, 00000)
 00011:   Return

@@ -513,23 +513,15 @@ List(C, B, A)
     pop(xs, ('xs, 'x) => {
         pop(ys, ('ys, 'y) => {
             'zipped = zip(xs, ys)
-            if (zipped, Nil, {
-                Nil
-            }, {
+            if (zipped, (), {}, {
                 zipped((x, y))
             })
-        }, {
-            Nil
-        })
+        }, {})
     }, {
-        pop(ys, ('ys, 'y) => {
-            Nil
-        }, {
+        pop(ys, ('ys, 'y) => {}, {
             if(xs, ys, {
                 xs
-            }, {
-                Nil
-            })
+            }, {})
         })
     })
 }})
@@ -569,25 +561,25 @@ List(
                           ys))
                       (if
                         zipped
-                        Nil
-                        { Nil }
+                        
+                        {  }
                         { (zipped
                             (
                               x
                               y)) }) })
-                  { Nil }) })
+                  {  }) })
             { (pop
                 ys
                 (=>
                   (
                     'ys
                     'y)
-                  { Nil })
+                  {  })
                 { (if
                     xs
                     ys
                     { xs }
-                    { Nil }) }) }) }) }))
+                    {  }) }) }) }) }))
 (List
   (zip
     (List
@@ -702,16 +694,16 @@ List(
                                                         1
                                                         0 )
                                               0 )
-                                            Nil )
+                                            () )
                                           =>
-                                            Nil )
+                                            () )
                                         =>
                                           ( 1
                                             ( ( ()
                                                 4 )
                                               2 ) ) ) ) ) )
                           =>
-                            Nil ) ) )
+                            () ) ) )
                 =>
                   ( ( ( =>
                           =>
@@ -729,7 +721,7 @@ List(
                             "y" ) )
                         =>
                           =>
-                            Nil ) )
+                            () ) )
                     =>
                       ( ( ( ( =>
                                 =>
@@ -745,7 +737,7 @@ List(
                           =>
                             4 )
                         =>
-                          Nil ) ) ) ) ) )
+                          () ) ) ) ) ) )
   =>
     ( ( ( ( ( ( List
                 ( ( 0
@@ -862,7 +854,7 @@ List(
 00070:   Return
 00071: PushFn(00069, 00001)
 00072:   Return
-00073: PushString("Nil")
+00073: PushString("")
 00074:   Return
 00075: PushVar(00001)
 00076: PushString("")
@@ -879,7 +871,7 @@ List(
 00087: PushVar(00000)
 00088: Swap(00002)
 00089: Apply
-00090: PushString("Nil")
+00090: PushString("")
 00091: Swap(00002)
 00092: Apply
 00093: PushFn(00073, 00000)
@@ -908,7 +900,7 @@ List(
 00116:   Return
 00117: PushFn(00100, 00006)
 00118:   Return
-00119: PushString("Nil")
+00119: PushString("")
 00120:   Return
 00121: PushFn(00044, 00000)
 00122: PushVar(00002)
@@ -951,7 +943,7 @@ List(
 00159:   Return
 00160: PushFn(00158, 00000)
 00161:   Return
-00162: PushString("Nil")
+00162: PushString("")
 00163:   Return
 00164: PushFn(00162, 00000)
 00165:   Return
@@ -971,7 +963,7 @@ List(
 00179:   Return
 00180: PushVar(00004)
 00181:   Return
-00182: PushString("Nil")
+00182: PushString("")
 00183:   Return
 00184: PushFn(00178, 00000)
 00185: PushVar(00003)
@@ -1188,7 +1180,7 @@ List(
 00396: Swap(00002)
 00397: Apply
 
-List(List((X, A), (Y, B), (Z, C)), Nil, Nil, Nil, Nil, Nil)
+List(List((X, A), (Y, B), (Z, C)), (), (), (), (), ())
 
 ---
 
@@ -3055,23 +3047,15 @@ List(True, False, True, False, True, False, True, False)
     pop(xs, ('xs, 'x) => {
         pop(ys, ('ys, 'y) => {
             'zipped = zip(xs, ys)
-            if (zipped, Nil, {
-                Nil
-            }, {
+            if (zipped, (), {}, {
                 zipped((x, y))
             })
-        }, {
-            Nil
-        })
+        }, {})
     }, {
-        pop(ys, ('ys, 'y) => {
-            Nil
-        }, {
+        pop(ys, ('ys, 'y) => {}, {
             if(xs, ys, {
                 xs
-            }, {
-                Nil
-            })
+            }, {})
         })
     })
 }})
@@ -3095,9 +3079,7 @@ List(True, False, True, False, True, False, True, False)
                 'unified = map(apply(unify), zip(pattern, value))
                 rev(List, flatten(List, unified))
             }, {
-                if(pattern == value, True, {
-                    Nil
-                }, {
+                if(pattern == value, True, {}, {
                     no-match!((pattern, value))
                 })
             })
@@ -3109,7 +3091,7 @@ List(True, False, True, False, True, False, True, False)
 '-> = (('pattern, 'body, 'value) => {
     try( {
         'unified = unify(pattern, value)
-        if(unified, Nil, {
+        if(unified, (), {
             body()
         }, {
             apply(body, unified)
@@ -3247,25 +3229,25 @@ try({
                           ys))
                       (if
                         zipped
-                        Nil
-                        { Nil }
+                        
+                        {  }
                         { (zipped
                             (
                               x
                               y)) }) })
-                  { Nil }) })
+                  {  }) })
             { (pop
                 ys
                 (=>
                   (
                     'ys
                     'y)
-                  { Nil })
+                  {  })
                 { (if
                     xs
                     ys
                     { xs }
-                    { Nil }) }) }) }) }))
+                    {  }) }) }) }) }))
 (=
   '==
   (~>
@@ -3341,7 +3323,7 @@ try({
                             pattern
                             value)
                           True
-                          { Nil }
+                          {  }
                           { (no-match!
                               (
                                 pattern
@@ -3363,7 +3345,7 @@ try({
               value))
           (if
             unified
-            Nil
+            
             { (body) }
             { (apply
                 body
@@ -3688,16 +3670,16 @@ try({
                                                                             1
                                                                             0 )
                                                                   0 )
-                                                                Nil )
+                                                                () )
                                                               =>
-                                                                Nil )
+                                                                () )
                                                             =>
                                                               ( 1
                                                                 ( ( ()
                                                                     4 )
                                                                   2 ) ) ) ) ) )
                                               =>
-                                                Nil ) ) )
+                                                () ) ) )
                                     =>
                                       ( ( ( =>
                                               =>
@@ -3715,7 +3697,7 @@ try({
                                                 "y" ) )
                                             =>
                                               =>
-                                                Nil ) )
+                                                () ) )
                                         =>
                                           ( ( ( ( =>
                                                     =>
@@ -3731,7 +3713,7 @@ try({
                                               =>
                                                 4 )
                                             =>
-                                              Nil ) ) ) ) ) )
+                                              () ) ) ) ) ) )
                       =>
                         ( ( ( =>
                                 =>
@@ -3919,7 +3901,7 @@ try({
                                                                       4 ) )
                                                                   True )
                                                                 =>
-                                                                  Nil )
+                                                                  () )
                                                               =>
                                                                 ( no-match!
                                                                   ( ( ()
@@ -3973,7 +3955,7 @@ try({
                                                                           1
                                                                           0 )
                                                                 0 )
-                                                              Nil )
+                                                              () )
                                                             =>
                                                               ( 4
                                                                 () ) )
@@ -4517,7 +4499,7 @@ try({
 00440:   Return
 00441: PushFn(00439, 00001)
 00442:   Return
-00443: PushString("Nil")
+00443: PushString("")
 00444:   Return
 00445: PushVar(00001)
 00446: PushString("")
@@ -4534,7 +4516,7 @@ try({
 00457: PushVar(00000)
 00458: Swap(00002)
 00459: Apply
-00460: PushString("Nil")
+00460: PushString("")
 00461: Swap(00002)
 00462: Apply
 00463: PushFn(00443, 00000)
@@ -4563,7 +4545,7 @@ try({
 00486:   Return
 00487: PushFn(00470, 00006)
 00488:   Return
-00489: PushString("Nil")
+00489: PushString("")
 00490:   Return
 00491: PushFn(00414, 00000)
 00492: PushVar(00002)
@@ -4606,7 +4588,7 @@ try({
 00529:   Return
 00530: PushFn(00528, 00000)
 00531:   Return
-00532: PushString("Nil")
+00532: PushString("")
 00533:   Return
 00534: PushFn(00532, 00000)
 00535:   Return
@@ -4626,7 +4608,7 @@ try({
 00549:   Return
 00550: PushVar(00004)
 00551:   Return
-00552: PushString("Nil")
+00552: PushString("")
 00553:   Return
 00554: PushFn(00548, 00000)
 00555: PushVar(00003)
@@ -5028,7 +5010,7 @@ try({
 00951:   Return
 00952: PushFn(00950, 00001)
 00953:   Return
-00954: PushString("Nil")
+00954: PushString("")
 00955:   Return
 00956: PushEffect("no-match")
 00957: PushString("")
@@ -5204,7 +5186,7 @@ try({
 01127: PushVar(00000)
 01128: Swap(00002)
 01129: Apply
-01130: PushString("Nil")
+01130: PushString("")
 01131: Swap(00002)
 01132: Apply
 01133: PushFn(01113, 00004)
@@ -5702,23 +5684,15 @@ List(Success, NoMatch((Foo, Bar)), Foo, Bar, Success, Foo, Bar)
     pop(xs, ('xs, 'x) => {
         pop(ys, ('ys, 'y) => {
             'zipped = zip(xs, ys)
-            if (zipped, Nil, {
-                Nil
-            }, {
+            if (zipped, (), {}, {
                 zipped((x, y))
             })
-        }, {
-            Nil
-        })
+        }, {})
     }, {
-        pop(ys, ('ys, 'y) => {
-            Nil
-        }, {
+        pop(ys, ('ys, 'y) => {}, {
             if(xs, ys, {
                 xs
-            }, {
-                Nil
-            })
+            }, {})
         })
     })
 }})
@@ -5751,13 +5725,9 @@ List(Success, NoMatch((Foo, Bar)), Foo, Bar, Success, Foo, Bar)
         if(var1, var2, {
             if(val1 == val2, False, {
                 no-match!(((var2, val2), (var1, val1)))
-            }, {
-                Nil
-            })
-        }, {
-            Nil
-        })
-    }, Nil, acc)
+            }, {})
+        }, {})
+    }, (), acc)
     acc(binding)
 }, Bindings)
 'unify = ('unify ~> { ('pattern, 'value) => {
@@ -5769,9 +5739,7 @@ List(Success, NoMatch((Foo, Bar)), Foo, Bar, Success, Foo, Bar)
                 'unified = flatten(Bindings, map(apply(unify), zip(pattern, value)))
                 join(unified)
             }, {
-                if(pattern == value, True, {
-                    Nil
-                }, {
+                if(pattern == value, True, {}, {
                     no-match!((pattern, value))
                 })
             })
@@ -5784,7 +5752,7 @@ List(Success, NoMatch((Foo, Bar)), Foo, Bar, Success, Foo, Bar)
     try( {
         'unified = unify(pattern, value)
         'args = map(last, unified)
-        if(unified, Nil, {
+        if(unified, (), {
             body()
         }, {
             apply(body, args)
@@ -5907,25 +5875,25 @@ try({
                           ys))
                       (if
                         zipped
-                        Nil
-                        { Nil }
+                        
+                        {  }
                         { (zipped
                             (
                               x
                               y)) }) })
-                  { Nil }) })
+                  {  }) })
             { (pop
                 ys
                 (=>
                   (
                     'ys
                     'y)
-                  { Nil })
+                  {  })
                 { (if
                     xs
                     ys
                     { xs }
-                    { Nil }) }) }) }) }))
+                    {  }) }) }) }) }))
 (=
   '==
   (~>
@@ -6046,9 +6014,9 @@ try({
                           (
                             var1
                             val1))) }
-                    { Nil }) }
-                { Nil }) })
-          Nil
+                    {  }) }
+                {  }) })
+          
           acc)
         (acc
           binding) })
@@ -6094,7 +6062,7 @@ try({
                             pattern
                             value)
                           True
-                          { Nil }
+                          {  }
                           { (no-match!
                               (
                                 pattern
@@ -6121,7 +6089,7 @@ try({
               unified))
           (if
             unified
-            Nil
+            
             { (body) }
             { (apply
                 body
@@ -6422,16 +6390,16 @@ try({
                                                                         1
                                                                         0 )
                                                               0 )
-                                                            Nil )
+                                                            () )
                                                           =>
-                                                            Nil )
+                                                            () )
                                                         =>
                                                           ( 1
                                                             ( ( ()
                                                                 4 )
                                                               2 ) ) ) ) ) )
                                           =>
-                                            Nil ) ) )
+                                            () ) ) )
                                 =>
                                   ( ( ( =>
                                           =>
@@ -6449,7 +6417,7 @@ try({
                                             "y" ) )
                                         =>
                                           =>
-                                            Nil ) )
+                                            () ) )
                                     =>
                                       ( ( ( ( =>
                                                 =>
@@ -6465,7 +6433,7 @@ try({
                                           =>
                                             4 )
                                         =>
-                                          Nil ) ) ) ) ) )
+                                          () ) ) ) ) ) )
                   =>
                     ( ( ( =>
                             =>
@@ -6754,10 +6722,10 @@ try({
                                                                                                     7 )
                                                                                                   6 ) ) ) )
                                                                                         =>
-                                                                                          Nil ) )
+                                                                                          () ) )
                                                                                   =>
-                                                                                    Nil ) ) ) ) )
-                                                                Nil )
+                                                                                    () ) ) ) ) )
+                                                                () )
                                                               3 ) ) ) ) ) )
                                           Bindings ) )
                                       =>
@@ -6858,7 +6826,7 @@ try({
                                                                                   4 ) )
                                                                               True )
                                                                             =>
-                                                                              Nil )
+                                                                              () )
                                                                           =>
                                                                             ( no-match!
                                                                               ( ( ()
@@ -6922,7 +6890,7 @@ try({
                                                                                           1
                                                                                           0 )
                                                                                 1 )
-                                                                              Nil )
+                                                                              () )
                                                                             =>
                                                                               ( 5
                                                                                 () ) )
@@ -7423,7 +7391,7 @@ try({
 00377:   Return
 00378: PushFn(00376, 00001)
 00379:   Return
-00380: PushString("Nil")
+00380: PushString("")
 00381:   Return
 00382: PushVar(00001)
 00383: PushString("")
@@ -7440,7 +7408,7 @@ try({
 00394: PushVar(00000)
 00395: Swap(00002)
 00396: Apply
-00397: PushString("Nil")
+00397: PushString("")
 00398: Swap(00002)
 00399: Apply
 00400: PushFn(00380, 00000)
@@ -7469,7 +7437,7 @@ try({
 00423:   Return
 00424: PushFn(00407, 00006)
 00425:   Return
-00426: PushString("Nil")
+00426: PushString("")
 00427:   Return
 00428: PushFn(00351, 00000)
 00429: PushVar(00002)
@@ -7512,7 +7480,7 @@ try({
 00466:   Return
 00467: PushFn(00465, 00000)
 00468:   Return
-00469: PushString("Nil")
+00469: PushString("")
 00470:   Return
 00471: PushFn(00469, 00000)
 00472:   Return
@@ -7532,7 +7500,7 @@ try({
 00486:   Return
 00487: PushVar(00004)
 00488:   Return
-00489: PushString("Nil")
+00489: PushString("")
 00490:   Return
 00491: PushFn(00485, 00000)
 00492: PushVar(00003)
@@ -8095,7 +8063,7 @@ try({
 01049: Swap(00002)
 01050: Apply
 01051:   Return
-01052: PushString("Nil")
+01052: PushString("")
 01053:   Return
 01054: PushFn(01027, 00000)
 01055: PushVar(00012)
@@ -8117,7 +8085,7 @@ try({
 01071: Swap(00002)
 01072: Apply
 01073:   Return
-01074: PushString("Nil")
+01074: PushString("")
 01075:   Return
 01076: PushFn(01013, 00000)
 01077: PushVar(00005)
@@ -8180,7 +8148,7 @@ try({
 01134: Apply
 01135: Swap(00002)
 01136: Apply
-01137: PushString("Nil")
+01137: PushString("")
 01138: Swap(00002)
 01139: Apply
 01140: PushVar(00003)
@@ -8352,7 +8320,7 @@ try({
 01306:   Return
 01307: PushFn(01305, 00001)
 01308:   Return
-01309: PushString("Nil")
+01309: PushString("")
 01310:   Return
 01311: PushEffect("no-match")
 01312: PushString("")
@@ -8537,7 +8505,7 @@ try({
 01491: PushVar(00001)
 01492: Swap(00002)
 01493: Apply
-01494: PushString("Nil")
+01494: PushString("")
 01495: Swap(00002)
 01496: Apply
 01497: PushFn(01477, 00005)
@@ -9172,23 +9140,15 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
     pop(xs, ('xs, 'x) => {
         pop(ys, ('ys, 'y) => {
             'zipped = zip(xs, ys)
-            if (zipped, Nil, {
-                Nil
-            }, {
+            if (zipped, (), {}, {
                 zipped((x, y))
             })
-        }, {
-            Nil
-        })
+        }, {})
     }, {
-        pop(ys, ('ys, 'y) => {
-            Nil
-        }, {
+        pop(ys, ('ys, 'y) => {}, {
             if(xs, ys, {
                 xs
-            }, {
-                Nil
-            })
+            }, {})
         })
     })
 }})
@@ -9221,13 +9181,9 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
         if(var1, var2, {
             if(val1 == val2, False, {
                 no-match!(((var2, val2), (var1, val1)))
-            }, {
-                Nil
-            })
-        }, {
-            Nil
-        })
-    }, Nil, acc)
+            }, {})
+        }, {})
+    }, (), acc)
     acc(binding)
 }, Bindings)
 'unify = ('unify ~> { ('pattern, 'value) => {
@@ -9237,16 +9193,14 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
         }, {
             if(type, Compound, {
                 'zipped = zip(pattern, value)
-                if(zipped, Nil, {
+                if(zipped, (), {
                     no-match!((pattern, value))
                 }, {
                     'unified = flatten(Bindings, map(apply(unify), zipped))
                     join(unified)
                 })
             }, {
-                if(pattern == value, True, {
-                    Nil
-                }, {
+                if(pattern == value, True, {}, {
                     no-match!((pattern, value))
                 })
             })
@@ -9259,7 +9213,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
     try( {
         'unified = unify(pattern, value)
         'args = map(last, unified)
-        if(unified, Nil, {
+        if(unified, (), {
             body()
         }, {
             apply(body, args)
@@ -9270,16 +9224,14 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 })
 'match-with = (('value, 'clauses) => {
     'result = fold(('result, 'clause) => {
-        if(result, Nil, {
+        if(result, (), {
             try({
                 Match(clause(value))
-            }, no-match!, ('r, 'arg) => {
-                Nil
-            })
+            }, no-match!, ('r, 'arg) => {})
         }, {
             result
         })
-    }, Nil, rev(List, clauses))
+    }, (), rev(List, clauses))
     pop(result, ('_, 'result) => {
         result
     }, {
@@ -9403,25 +9355,25 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                           ys))
                       (if
                         zipped
-                        Nil
-                        { Nil }
+                        
+                        {  }
                         { (zipped
                             (
                               x
                               y)) }) })
-                  { Nil }) })
+                  {  }) })
             { (pop
                 ys
                 (=>
                   (
                     'ys
                     'y)
-                  { Nil })
+                  {  })
                 { (if
                     xs
                     ys
                     { xs }
-                    { Nil }) }) }) }) }))
+                    {  }) }) }) }) }))
 (=
   '==
   (~>
@@ -9542,9 +9494,9 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                           (
                             var1
                             val1))) }
-                    { Nil }) }
-                { Nil }) })
-          Nil
+                    {  }) }
+                {  }) })
+          
           acc)
         (acc
           binding) })
@@ -9580,7 +9532,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                             value))
                         (if
                           zipped
-                          Nil
+                          
                           { (no-match!
                               (
                                 pattern
@@ -9600,7 +9552,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                             pattern
                             value)
                           True
-                          { Nil }
+                          {  }
                           { (no-match!
                               (
                                 pattern
@@ -9627,7 +9579,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
               unified))
           (if
             unified
-            Nil
+            
             { (body) }
             { (apply
                 body
@@ -9654,7 +9606,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
               'clause)
             { (if
                 result
-                Nil
+                
                 { (try
                     { (Match
                         (clause
@@ -9664,9 +9616,9 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                       (
                         'r
                         'arg)
-                      { Nil })) }
+                      {  })) }
                 { result }) })
-          Nil
+          
           (rev
             List
             clauses)))
@@ -9961,16 +9913,16 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                                                         1
                                                                         0 )
                                                               0 )
-                                                            Nil )
+                                                            () )
                                                           =>
-                                                            Nil )
+                                                            () )
                                                         =>
                                                           ( 1
                                                             ( ( ()
                                                                 4 )
                                                               2 ) ) ) ) ) )
                                           =>
-                                            Nil ) ) )
+                                            () ) ) )
                                 =>
                                   ( ( ( =>
                                           =>
@@ -9988,7 +9940,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                             "y" ) )
                                         =>
                                           =>
-                                            Nil ) )
+                                            () ) )
                                     =>
                                       ( ( ( ( =>
                                                 =>
@@ -10004,7 +9956,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                           =>
                                             4 )
                                         =>
-                                          Nil ) ) ) ) ) )
+                                          () ) ) ) ) ) )
                   =>
                     ( ( ( =>
                             =>
@@ -10293,10 +10245,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                                                                                     7 )
                                                                                                   6 ) ) ) )
                                                                                         =>
-                                                                                          Nil ) )
+                                                                                          () ) )
                                                                                   =>
-                                                                                    Nil ) ) ) ) )
-                                                                Nil )
+                                                                                    () ) ) ) ) )
+                                                                () )
                                                               3 ) ) ) ) ) )
                                           Bindings ) )
                                       =>
@@ -10385,7 +10337,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                                                                                 1
                                                                                                 0 )
                                                                                       0 )
-                                                                                    Nil )
+                                                                                    () )
                                                                                   =>
                                                                                     ( no-match!
                                                                                       ( ( ()
@@ -10422,7 +10374,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                                                                   4 ) )
                                                                               True )
                                                                             =>
-                                                                              Nil )
+                                                                              () )
                                                                           =>
                                                                             ( no-match!
                                                                               ( ( ()
@@ -10486,7 +10438,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                                                                           1
                                                                                           0 )
                                                                                 1 )
-                                                                              Nil )
+                                                                              () )
                                                                             =>
                                                                               ( 5
                                                                                 () ) )
@@ -10545,7 +10497,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                                                                             1
                                                                                             0 )
                                                                                   1 )
-                                                                                Nil )
+                                                                                () )
                                                                               =>
                                                                                 ( ( ( =>
                                                                                         =>
@@ -10567,10 +10519,10 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
                                                                                         "arg" ) )
                                                                                     =>
                                                                                       =>
-                                                                                        Nil ) ) )
+                                                                                        () ) ) )
                                                                             =>
                                                                               2 ) ) )
-                                                                  Nil )
+                                                                  () )
                                                                 ( ( 12
                                                                     List )
                                                                   0 ) ) )
@@ -11073,7 +11025,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 00377:   Return
 00378: PushFn(00376, 00001)
 00379:   Return
-00380: PushString("Nil")
+00380: PushString("")
 00381:   Return
 00382: PushVar(00001)
 00383: PushString("")
@@ -11090,7 +11042,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 00394: PushVar(00000)
 00395: Swap(00002)
 00396: Apply
-00397: PushString("Nil")
+00397: PushString("")
 00398: Swap(00002)
 00399: Apply
 00400: PushFn(00380, 00000)
@@ -11119,7 +11071,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 00423:   Return
 00424: PushFn(00407, 00006)
 00425:   Return
-00426: PushString("Nil")
+00426: PushString("")
 00427:   Return
 00428: PushFn(00351, 00000)
 00429: PushVar(00002)
@@ -11162,7 +11114,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 00466:   Return
 00467: PushFn(00465, 00000)
 00468:   Return
-00469: PushString("Nil")
+00469: PushString("")
 00470:   Return
 00471: PushFn(00469, 00000)
 00472:   Return
@@ -11182,7 +11134,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 00486:   Return
 00487: PushVar(00004)
 00488:   Return
-00489: PushString("Nil")
+00489: PushString("")
 00490:   Return
 00491: PushFn(00485, 00000)
 00492: PushVar(00003)
@@ -11745,7 +11697,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01049: Swap(00002)
 01050: Apply
 01051:   Return
-01052: PushString("Nil")
+01052: PushString("")
 01053:   Return
 01054: PushFn(01027, 00000)
 01055: PushVar(00012)
@@ -11767,7 +11719,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01071: Swap(00002)
 01072: Apply
 01073:   Return
-01074: PushString("Nil")
+01074: PushString("")
 01075:   Return
 01076: PushFn(01013, 00000)
 01077: PushVar(00005)
@@ -11830,7 +11782,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01134: Apply
 01135: Swap(00002)
 01136: Apply
-01137: PushString("Nil")
+01137: PushString("")
 01138: Swap(00002)
 01139: Apply
 01140: PushVar(00003)
@@ -12020,7 +11972,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01324: PushVar(00000)
 01325: Swap(00002)
 01326: Apply
-01327: PushString("Nil")
+01327: PushString("")
 01328: Swap(00002)
 01329: Apply
 01330: PushFn(01272, 00006)
@@ -12061,7 +12013,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01365:   Return
 01366: PushFn(01364, 00001)
 01367:   Return
-01368: PushString("Nil")
+01368: PushString("")
 01369:   Return
 01370: PushEffect("no-match")
 01371: PushString("")
@@ -12246,7 +12198,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01550: PushVar(00001)
 01551: Swap(00002)
 01552: Apply
-01553: PushString("Nil")
+01553: PushString("")
 01554: Swap(00002)
 01555: Apply
 01556: PushFn(01536, 00005)
@@ -12396,7 +12348,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01700:   Return
 01701: PushFn(01699, 00000)
 01702:   Return
-01703: PushString("Nil")
+01703: PushString("")
 01704:   Return
 01705: PushFn(01703, 00000)
 01706:   Return
@@ -12429,7 +12381,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01733: PushVar(00001)
 01734: Swap(00002)
 01735: Apply
-01736: PushString("Nil")
+01736: PushString("")
 01737: Swap(00002)
 01738: Apply
 01739: PushFn(01707, 00004)
@@ -12509,7 +12461,7 @@ List(Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch((("x", Foo), ("x", Bar))))
 01813: Apply
 01814: Swap(00002)
 01815: Apply
-01816: PushString("Nil")
+01816: PushString("")
 01817: Swap(00002)
 01818: Apply
 01819: PushVar(00012)
