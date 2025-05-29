@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     env::args,
     fs::{File, read_to_string},
     io::Write,
@@ -19,9 +20,9 @@ enum Expr {
     App(Box<Expr>, Vec<Expr>),
 }
 
-fn convert_value(v: &V, strs: &Vec<String>) -> Expr {
-    fn convert_str(s: usize, strs: &Vec<String>) -> Expr {
-        match strs[s].as_str() {
+fn convert_value(v: &V, strs: &Vec<Cow<'static, str>>) -> Expr {
+    fn convert_str(s: usize, strs: &Vec<Cow<'static, str>>) -> Expr {
+        match strs[s].as_ref() {
             "I" => Expr::I,
             "K" => Expr::K,
             "S" => Expr::S,

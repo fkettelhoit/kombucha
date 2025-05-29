@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     cmp::max,
     iter::{Peekable, once},
     mem,
@@ -522,7 +523,7 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
 
 #[derive(Debug, Clone, Default)]
 pub struct Vm {
-    strings: Vec<String>,
+    strings: Vec<Cow<'static, str>>,
     bytecode: Vec<Op>,
     ip: usize,
     vars: Vec<V>,
@@ -549,9 +550,9 @@ struct Handler {
 }
 
 impl Vm {
-    fn new(strings: Vec<String>, bytecode: Vec<Op>, start: usize) -> Self {
+    fn new(strings: Vec<impl Into<Cow<'static, str>>>, bytecode: Vec<Op>, start: usize) -> Self {
         Vm {
-            strings,
+            strings: strings.into_iter().map(|s| s.into()).collect(),
             bytecode,
             ip: start,
             ..Default::default()
@@ -585,7 +586,7 @@ pub enum V {
     Resumable(usize, usize, Coroutine),
 }
 
-pub fn pretty(v: &V, strs: &Vec<String>) -> String {
+pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
     match v {
         V::String(s) if strs[*s] == NIL => "()".to_string(),
         V::String(s) => strs[*s].to_string(),
@@ -619,7 +620,7 @@ pub fn pretty(v: &V, strs: &Vec<String>) -> String {
 
 #[derive(Debug)]
 pub enum VmState {
-    Done(V, Vec<String>),
+    Done(V, Vec<Cow<'static, str>>),
     Resumable(Resumable, V),
 }
 
@@ -627,16 +628,17 @@ pub enum VmState {
 pub struct Resumable(Vm, usize);
 
 impl Resumable {
-    pub fn strings(&self) -> &Vec<String> {
+    pub fn strings(&self) -> &Vec<Cow<'static, str>> {
         &self.0.strings
     }
 
     pub fn get_effect_name(&self) -> Option<&str> {
         let Resumable(vm, eff) = self;
-        vm.strings.get(*eff).map(|s| s.as_str())
+        vm.strings.get(*eff).map(|s| s.as_ref())
     }
 
-    pub fn intern_string(&mut self, s: String) -> V {
+    pub fn intern_string(&mut self, s: impl Into<Cow<'static, str>>) -> V {
+        let s = s.into();
         let Resumable(vm, _) = self;
         let s = vm.strings.iter().position(|x| *x == s).unwrap_or_else(|| {
             vm.strings.push(s);
