@@ -52,7 +52,7 @@ Foo()
 (Foo)
 
 ( Foo
-  () )
+  [] )
 
 00000: PushString("Foo")
 00001: PushString("")
@@ -63,14 +63,14 @@ Foo()
 
 ---
 
-Foo((), Bar)
+Foo([], Bar)
 
 (Foo
-  
+  (  )
   Bar)
 
 ( ( Foo
-    () )
+    [] )
   Bar )
 
 00000: PushString("Foo")
@@ -81,4 +81,57 @@ Foo((), Bar)
 00005: Swap(00002)
 00006: Apply
 
-Foo((), Bar)
+Foo([], Bar)
+
+---
+
+[A, B, C]
+
+( A
+  B
+  C )
+
+( ( ( []
+      C )
+    B )
+  A )
+
+00000: PushString("")
+00001: PushString("C")
+00002: Swap(00002)
+00003: Apply
+00004: PushString("B")
+00005: Swap(00002)
+00006: Apply
+00007: PushString("A")
+00008: Swap(00002)
+00009: Apply
+
+[A, B, C]
+
+---
+
+[](C)(B)(A)
+
+((((  )
+  C)
+  B)
+  A)
+
+( ( ( []
+      C )
+    B )
+  A )
+
+00000: PushString("")
+00001: PushString("C")
+00002: Swap(00002)
+00003: Apply
+00004: PushString("B")
+00005: Swap(00002)
+00006: Apply
+00007: PushString("A")
+00008: Swap(00002)
+00009: Apply
+
+[A, B, C]

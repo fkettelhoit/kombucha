@@ -12,7 +12,7 @@ print!(Foo)
 00003: Apply
 
 "Foo"
-()
+[]
 
 ---
 
@@ -58,7 +58,7 @@ print!(Foo), print!(Bar), print!(FooBar)
 "Foo"
 "Bar"
 "FooBar"
-()
+[]
 
 ---
 
@@ -477,7 +477,7 @@ try({
       =>
         ( Foo
           ( eff!
-            () ) ) )
+            [] ) ) )
     eff! )
   ( ( =>
         =>
@@ -759,9 +759,9 @@ Foo(try({
         =>
           ( ( Baz
               ( effect!
-                () ) )
+                [] ) )
             ( effect!
-              () ) ) )
+              [] ) ) )
       effect! )
     ( ( =>
           =>
@@ -851,7 +851,7 @@ Foo(try({
 00071: Swap(00002)
 00072: Apply
 
-effect!(())
+effect!([])
 
 ---
 
@@ -899,9 +899,9 @@ try({
       =>
         ( ( List
             ( get!
-              () ) )
+              [] ) )
           ( get!
-            () ) ) )
+            [] ) ) )
     get! )
   ( ( =>
         =>
@@ -1064,18 +1064,26 @@ List(Foo, Bar)
 ---
 
 try({
-    try({ throw!() }, throw!, {})
+    try({ throw!() }, throw!, '_ => { '_ => {}})
     throw!()
-}, throw!, {})
+}, throw!, '_ => { '_ => {} })
 
 (try
   { (try
       { (throw!) }
       throw!
-      {  })
+      (=>
+        '_
+        { (=>
+            '_
+            {  }) }))
     (throw!) }
   throw!
-  {  })
+  (=>
+    '_
+    { (=>
+        '_
+        {  }) }))
 
 ( ( ( =>
         =>
@@ -1087,7 +1095,7 @@ try({
       =>
         ( =>
             ( throw!
-              () )
+              [] )
           ( ( ( =>
                   =>
                     =>
@@ -1097,13 +1105,31 @@ try({
                         0 )
                 =>
                   ( throw!
-                    () ) )
+                    [] ) )
               throw! )
-            =>
-              () ) ) )
+            ( ( =>
+                  =>
+                    0
+                "_" )
+              =>
+                ( ( =>
+                      =>
+                        0
+                    "_" )
+                  =>
+                    [] ) ) ) ) )
     throw! )
-  =>
-    () )
+  ( ( =>
+        =>
+          0
+      "_" )
+    =>
+      ( ( =>
+            =>
+              0
+          "_" )
+        =>
+          [] ) ) )
 
 00000: PushVar(00000)
 00001: Apply
@@ -1147,33 +1173,77 @@ try({
 00039: Swap(00002)
 00040: Apply
 00041:   Return
-00042: PushString("")
+00042: PushVar(00000)
 00043:   Return
-00044: PushFn(00016, 00000)
-00045: PushFn(00035, 00000)
-00046: PushFn(00037, 00000)
-00047: Swap(00002)
-00048: Apply
-00049: PushEffect("throw")
-00050: Swap(00002)
-00051: Apply
-00052: PushFn(00042, 00000)
-00053: Swap(00002)
-00054: Apply
-00055: Swap(00002)
-00056: Apply
-00057:   Return
-00058: PushString("")
+00044: PushFn(00042, 00000)
+00045:   Return
+00046: PushVar(00000)
+00047:   Return
+00048: PushFn(00046, 00000)
+00049:   Return
+00050: PushString("")
+00051:   Return
+00052: PushFn(00048, 00000)
+00053: PushString(""_"")
+00054: Swap(00002)
+00055: Apply
+00056: PushFn(00050, 00000)
+00057: Swap(00002)
+00058: Apply
 00059:   Return
-00060: PushFn(00014, 00000)
-00061: PushFn(00044, 00000)
-00062: Swap(00002)
-00063: Apply
-00064: PushEffect("throw")
-00065: Swap(00002)
-00066: Apply
-00067: PushFn(00058, 00000)
-00068: Swap(00002)
-00069: Apply
+00060: PushFn(00016, 00000)
+00061: PushFn(00035, 00000)
+00062: PushFn(00037, 00000)
+00063: Swap(00002)
+00064: Apply
+00065: PushEffect("throw")
+00066: Swap(00002)
+00067: Apply
+00068: PushFn(00044, 00000)
+00069: PushString(""_"")
+00070: Swap(00002)
+00071: Apply
+00072: PushFn(00052, 00000)
+00073: Swap(00002)
+00074: Apply
+00075: Swap(00002)
+00076: Apply
+00077: Swap(00002)
+00078: Apply
+00079:   Return
+00080: PushVar(00000)
+00081:   Return
+00082: PushFn(00080, 00000)
+00083:   Return
+00084: PushVar(00000)
+00085:   Return
+00086: PushFn(00084, 00000)
+00087:   Return
+00088: PushString("")
+00089:   Return
+00090: PushFn(00086, 00000)
+00091: PushString(""_"")
+00092: Swap(00002)
+00093: Apply
+00094: PushFn(00088, 00000)
+00095: Swap(00002)
+00096: Apply
+00097:   Return
+00098: PushFn(00014, 00000)
+00099: PushFn(00060, 00000)
+00100: Swap(00002)
+00101: Apply
+00102: PushEffect("throw")
+00103: Swap(00002)
+00104: Apply
+00105: PushFn(00082, 00000)
+00106: PushString(""_"")
+00107: Swap(00002)
+00108: Apply
+00109: PushFn(00090, 00000)
+00110: Swap(00002)
+00111: Apply
+00112: Swap(00002)
+00113: Apply
 
-()()
+[]

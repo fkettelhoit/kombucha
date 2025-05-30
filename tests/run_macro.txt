@@ -1,9 +1,8 @@
-(('x, '_) => { x })(Foo, {})
+(['x, '_] => { x })(Foo, {})
 
 ((=>
-  (
-    'x
-    '_)
+  ( 'x
+    '_ )
   { x })
   Foo
   {  })
@@ -11,16 +10,16 @@
 ( ( ( ( =>
           =>
             0
-        ( ( ()
-            "x" )
-          "_" ) )
+        ( ( []
+            "_" )
+          "x" ) )
       =>
         =>
           1 )
     ( Value
       Foo ) )
   =>
-    () )
+    [] )
 
 00000: PushVar(00000)
 00001:   Return
@@ -34,10 +33,10 @@
 00009:   Return
 00010: PushFn(00002, 00000)
 00011: PushString("")
-00012: PushString(""x"")
+00012: PushString(""_"")
 00013: Swap(00002)
 00014: Apply
-00015: PushString(""_"")
+00015: PushString(""x"")
 00016: Swap(00002)
 00017: Apply
 00018: Swap(00002)
@@ -59,12 +58,11 @@ Value(Foo)
 
 ---
 
-(('x, 'y) => { x })('binding, {})
+(['x, '_] => { x })('binding, {})
 
 ((=>
-  (
-    'x
-    'y)
+  ( 'x
+    '_ )
   { x })
   'binding
   {  })
@@ -72,16 +70,16 @@ Value(Foo)
 ( ( ( ( =>
           =>
             0
-        ( ( ()
-            "x" )
-          "y" ) )
+        ( ( []
+            "_" )
+          "x" ) )
       =>
         =>
           1 )
     ( Binding
       "binding" ) )
   =>
-    () )
+    [] )
 
 00000: PushVar(00000)
 00001:   Return
@@ -95,10 +93,10 @@ Value(Foo)
 00009:   Return
 00010: PushFn(00002, 00000)
 00011: PushString("")
-00012: PushString(""x"")
+00012: PushString(""_"")
 00013: Swap(00002)
 00014: Apply
-00015: PushString(""y"")
+00015: PushString(""x"")
 00016: Swap(00002)
 00017: Apply
 00018: Swap(00002)
@@ -120,12 +118,11 @@ Binding("binding")
 
 ---
 
-(('x, 'y) => { x })(Foo(Bar, Baz), {})
+(['x, '_] => { x })(Foo(Bar, Baz), {})
 
 ((=>
-  (
-    'x
-    'y)
+  ( 'x
+    '_ )
   { x })
   (Foo
     Bar
@@ -135,9 +132,9 @@ Binding("binding")
 ( ( ( ( =>
           =>
             0
-        ( ( ()
-            "x" )
-          "y" ) )
+        ( ( []
+            "_" )
+          "x" ) )
       =>
         =>
           1 )
@@ -146,7 +143,7 @@ Binding("binding")
           Bar )
         Baz ) ) )
   =>
-    () )
+    [] )
 
 00000: PushVar(00000)
 00001:   Return
@@ -160,10 +157,10 @@ Binding("binding")
 00009:   Return
 00010: PushFn(00002, 00000)
 00011: PushString("")
-00012: PushString(""x"")
+00012: PushString(""_"")
 00013: Swap(00002)
 00014: Apply
-00015: PushString(""y"")
+00015: PushString(""x"")
 00016: Swap(00002)
 00017: Apply
 00018: Swap(00002)
@@ -191,12 +188,11 @@ Value(Foo(Bar, Baz))
 
 ---
 
-(('x, 'y) => { x })(Foo(Bar, 'baz), {})
+(['x, '_] => { x })(Foo(Bar, 'baz), {})
 
 ((=>
-  (
-    'x
-    'y)
+  ( 'x
+    '_ )
   { x })
   (Foo
     Bar
@@ -206,9 +202,9 @@ Value(Foo(Bar, Baz))
 ( ( ( ( =>
           =>
             0
-        ( ( ()
-            "x" )
-          "y" ) )
+        ( ( []
+            "_" )
+          "x" ) )
       =>
         =>
           1 )
@@ -219,7 +215,7 @@ Value(Foo(Bar, Baz))
         ( Binding
           "baz" ) ) ) )
   =>
-    () )
+    [] )
 
 00000: PushVar(00000)
 00001:   Return
@@ -233,10 +229,10 @@ Value(Foo(Bar, Baz))
 00009:   Return
 00010: PushFn(00002, 00000)
 00011: PushString("")
-00012: PushString(""x"")
+00012: PushString(""_"")
 00013: Swap(00002)
 00014: Apply
-00015: PushString(""y"")
+00015: PushString(""x"")
 00016: Swap(00002)
 00017: Apply
 00018: Swap(00002)
@@ -270,12 +266,11 @@ Compound(Foo(Value(Bar), Binding("baz")))
 
 ---
 
-(('x, 'y) => { x })('foo(Bar, 'baz), {})
+(['x, '_] => { x })('foo(Bar, 'baz), {})
 
 ((=>
-  (
-    'x
-    'y)
+  ( 'x
+    '_ )
   { x })
   ('foo
     Bar
@@ -285,9 +280,9 @@ Compound(Foo(Value(Bar), Binding("baz")))
 ( ( ( ( =>
           =>
             0
-        ( ( ()
-            "x" )
-          "y" ) )
+        ( ( []
+            "_" )
+          "x" ) )
       =>
         =>
           1 )
@@ -299,7 +294,7 @@ Compound(Foo(Value(Bar), Binding("baz")))
           "baz" ) ) ) )
   =>
     =>
-      () )
+      [] )
 
 00000: PushVar(00000)
 00001:   Return
@@ -315,10 +310,10 @@ Compound(Foo(Value(Bar), Binding("baz")))
 00011:   Return
 00012: PushFn(00002, 00000)
 00013: PushString("")
-00014: PushString(""x"")
+00014: PushString(""_"")
 00015: Swap(00002)
 00016: Apply
-00017: PushString(""y"")
+00017: PushString(""x"")
 00018: Swap(00002)
 00019: Apply
 00020: Swap(00002)

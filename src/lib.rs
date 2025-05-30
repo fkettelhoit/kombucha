@@ -15,6 +15,8 @@ enum Tok {
     Binding,
     LParen,
     RParen,
+    LBracket,
+    RBracket,
     LBrace,
     RBrace,
     Separator,
@@ -27,6 +29,8 @@ fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
         let tok = match c {
             '(' => Some(Tok::LParen),
             ')' => Some(Tok::RParen),
+            '[' => Some(Tok::LBracket),
+            ']' => Some(Tok::RBracket),
             '{' => Some(Tok::LBrace),
             '}' => Some(Tok::RBrace),
             ',' | '\n' => Some(Tok::Separator),
@@ -60,6 +64,7 @@ enum A<'code> {
     String(&'code str),
     Binding(&'code str),
     Block(Vec<Ast<'code>>),
+    List(Vec<Ast<'code>>),
     Call(Call<'code>, Vec<Ast<'code>>),
 }
 
@@ -84,8 +89,6 @@ fn pos_at(i: usize, code: &str) -> String {
     }
     format!("line {line}, col {col}")
 }
-
-const NIL: &str = "";
 
 fn parse(code: &str) -> Result<Prg<'_>, String> {
     struct E<'c>(usize, Option<(usize, &'c str)>, _E<'c>);
@@ -152,16 +155,17 @@ fn parse(code: &str) -> Result<Prg<'_>, String> {
                 Tok::Symbol => Ok(Ast(i, A::Var(s))),
                 Tok::String => Ok(Ast(i, A::String(s))),
                 Tok::Binding => Ok(Ast(i, A::Binding(s))),
-                Tok::LParen => match _exprs(toks, i, Some(Tok::RParen))? {
-                    elems if elems.is_empty() => Ok(Ast(i, A::String(NIL))),
-                    elems if elems.len() == 1 => Ok(elems.into_iter().next().unwrap()),
-                    elems => {
-                        let empty_prefix_call = Call::Prefix(Box::new(Ast(i, A::String(NIL))));
-                        Ok(Ast(i, A::Call(empty_prefix_call, elems)))
-                    }
+                Tok::LParen => match _expr(toks) {
+                    Err(E(i, tok, _E::Value)) => Err(E(i, tok, _E::RParen)),
+                    Err(e) => Err(e),
+                    Ok(expr) => match toks.next() {
+                        Some((Tok::RParen, _, _)) => Ok(expr),
+                        tok => Err(E(i, tok.map(|(_, i, s)| (i, s)), _E::RParen)),
+                    },
                 },
+                Tok::LBracket => Ok(Ast(i, A::List(_exprs(toks, i, Some(Tok::RBracket))?))),
                 Tok::LBrace => Ok(Ast(i, A::Block(_exprs(toks, i, Some(Tok::RBrace))?))),
-                Tok::RParen | Tok::RBrace | Tok::Separator | Tok::Keyword => {
+                Tok::RParen | Tok::RBracket | Tok::RBrace | Tok::Separator | Tok::Keyword => {
                     Err(E(i, Some((i, s)), _E::Value))
                 }
             },
@@ -245,12 +249,15 @@ enum Reflect {
     Binding = 2,
     Compound = 3,
     Template = 4,
+    Tuple = 5,
 }
 
+const NIL: &str = "";
 const VALUE: &str = "Value";
 const BINDING: &str = "Binding";
 const COMPOUND: &str = "Compound";
 const TEMPLATE: &str = "Template";
+const TUPLE: &str = "Tuple";
 
 fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
     struct Ctx<'c> {
@@ -261,13 +268,14 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
     let mut ctx = Ctx {
         bindings: vec![],
         vars: vec![],
-        strs: vec![String::new(); 5],
+        strs: vec![String::new(); 6],
     };
     ctx.strs[Reflect::Nil as usize] = NIL.to_string();
     ctx.strs[Reflect::Value as usize] = VALUE.to_string();
     ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
     ctx.strs[Reflect::Compound as usize] = COMPOUND.to_string();
     ctx.strs[Reflect::Template as usize] = TEMPLATE.to_string();
+    ctx.strs[Reflect::Tuple as usize] = TUPLE.to_string();
 
     fn resolve_var(v: &str, ctx: &Ctx) -> Option<usize> {
         ctx.vars.iter().rev().position(|x| *x == v)
@@ -282,6 +290,10 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
         match ast {
             A::Binding(_) => true,
             A::Var(_) | A::String(_) | A::Block(_) => false,
+            A::List(items) => {
+                let is_macro = items.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
+                !is_macro && items.iter().any(|arg| contains_bindings(arg))
+            }
             A::Call(call, args) => match call {
                 Call::Prefix(f) if contains_bindings(f) => true,
                 _ => {
@@ -294,6 +306,17 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
     fn desug_reflect<'c>(ast: Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, String)> {
         let has_bindings = contains_bindings(&ast);
         match ast.1 {
+            A::List(items) if has_bindings => {
+                let mut desugared_items = vec![];
+                for item in items {
+                    desugared_items.push(desug_reflect(item, ctx)?);
+                }
+                let mut f = Expr::String(Reflect::Nil as usize);
+                for item in desugared_items {
+                    f = app(f, item)
+                }
+                Ok(app(Expr::String(Reflect::Tuple as usize), f))
+            }
             A::Call(call, args) if has_bindings => {
                 let mut desugared_args = vec![];
                 for arg in args {
@@ -325,7 +348,7 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
                 }
                 Ok(app(Expr::String(reflector as usize), f))
             }
-            A::Var(_) | A::String(_) | A::Call(_, _) => Ok(app(
+            A::Var(_) | A::String(_) | A::List(_) | A::Call(_, _) => Ok(app(
                 Expr::String(Reflect::Value as usize),
                 desug_val(ast, ctx)?,
             )),
@@ -394,6 +417,17 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
                 ctx.vars.truncate(ctx.vars.len() - max(1, bindings));
                 ctx.bindings.clear();
                 Ok(expr)
+            }
+            A::List(items) => {
+                let mut tuple = Expr::String(Reflect::Nil as usize);
+                let mut desugared = vec![];
+                for item in items {
+                    desugared.push(desug_val(item, ctx)?);
+                }
+                for item in desugared.into_iter().rev() {
+                    tuple = app(tuple, item)
+                }
+                Ok(tuple)
             }
             A::Call(call, args) => {
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
@@ -588,13 +622,17 @@ pub enum V {
 
 pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
     match v {
-        V::String(s) if strs[*s] == NIL => "()".to_string(),
+        V::String(s) if strs[*s] == NIL => "[]".to_string(),
         V::String(s) => strs[*s].to_string(),
         V::Effect(eff) => format!("{}!", strs[*eff]),
         V::Fn(c, v, frame) => format!("{c}(captured:{v},frame:{frame})"),
         V::Closure(c, vs) => {
             let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("{c} [{}]", closed.join(", "))
+        }
+        V::Record(s, vs) if strs[*s] == NIL => {
+            let items = vs.iter().rev().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+            format!("[{}]", items.join(", "))
         }
         V::Record(s, vs) => {
             if vs.len() == 1 {
@@ -1017,6 +1055,17 @@ mod tests {
                     }
                     buf.push_str(" }")
                 }
+                A::List(items) => {
+                    buf.push_str("( ");
+                    for (i, item) in items.iter().enumerate() {
+                        if i != 0 {
+                            buf.push('\n');
+                            buf.push_str(&indent.repeat(lvl + 1));
+                        }
+                        pretty(&item, lvl + 1, buf);
+                    }
+                    buf.push_str(" )")
+                }
                 A::Call(call, args) => {
                     buf.push('(');
                     match call {
@@ -1046,7 +1095,7 @@ mod tests {
             let indent = "  ";
             match expr {
                 Expr::Var(v) => buf.push_str(&v.to_string()),
-                Expr::String(s) if strs[*s] == NIL => buf.push_str("()"),
+                Expr::String(s) if strs[*s] == NIL => buf.push_str("[]"),
                 Expr::String(s) => buf.push_str(&strs[*s]),
                 Expr::Effect(eff) => buf.push_str(&format!("{}!", strs[*eff])),
                 Expr::Abs(expr) => {

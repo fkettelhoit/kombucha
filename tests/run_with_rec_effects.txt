@@ -249,11 +249,11 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
       =>
         ( ( ( List
               ( toggle!
-                () ) )
+                [] ) )
             ( toggle!
-              () ) )
+              [] ) )
           ( toggle!
-            () ) ) ) )
+            [] ) ) ) )
 
 00000: PushVar(00000)
 00001: PushVar(00001)
