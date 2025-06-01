@@ -694,13 +694,14 @@ impl<T: Clone, const SIZE: usize> Stack<T, SIZE> {
 
 const VAR_STACK_SIZE: usize = 512;
 const TEMP_STACK_SIZE: usize = 256;
+const CALL_STACK_SIZE: usize = 256;
 
 #[derive(Debug, Clone)]
 pub struct Vm {
     ip: usize,
     vars: Stack<V, VAR_STACK_SIZE>,
     temps: Stack<V, TEMP_STACK_SIZE>,
-    frames: Vec<(usize, usize)>,
+    frames: Stack<(usize, usize), CALL_STACK_SIZE>,
     handlers: Vec<Handler>,
 }
 
@@ -758,7 +759,7 @@ impl Bytecode {
             ip: self.start,
             vars: Stack::new(),
             temps: Stack::new(),
-            frames: vec![],
+            frames: Stack::new(),
             handlers: vec![],
         };
         vm.run(self)
@@ -784,7 +785,7 @@ impl Vm {
                 Op::LoadVar(v) => temps.push(vars.get(v).ok_or(i)?.clone()),
                 Op::LoadString(s) => temps.push(V::String(s)),
                 Op::LoadEffect(eff) => temps.push(V::Effect(eff)),
-                Op::LoadFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
+                Op::LoadFn(code, captured) => temps.push(V::Fn(code, captured, frames.sp)),
                 Op::ApplyFnToArg | Op::ApplyArgToFn => {
                     let (mut arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
                         (Op::ApplyFnToArg, b, a) => (b, a),
@@ -801,7 +802,7 @@ impl Vm {
                                     let (v, t, f, h) = handler.state;
                                     let res_vars = vars.pop_after(v);
                                     let res_temps = temps.pop_after(t);
-                                    let res_frames = frames.drain(f..).collect::<Vec<_>>();
+                                    let res_frames = frames.pop_after(f);
                                     let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
                                     handlers.pop();
                                     let vm = Vm {
@@ -828,23 +829,18 @@ impl Vm {
                                 }
                             }
                         }
-                        (V::Resumable(v, vm), arg) => {
-                            let offset = vars.sp as i64 - v as i64;
-                            frames.push((vars.sp, ip));
+                        (V::Resumable(_v, vm), arg) => {
+                            frames.push((vm.vars.sp + 1, ip));
                             vars.extend(vm.vars);
                             temps.extend(vm.temps);
-                            frames.extend(
-                                vm.frames
-                                    .into_iter()
-                                    .map(|(v, ret)| ((v as i64 + offset) as usize, ret)),
-                            );
+                            frames.extend(vm.frames);
                             handlers.extend(vm.handlers);
                             temps.push(arg);
                             ip = vm.ip;
                         }
                         (V::Recursive(c, captured), arg) => {
                             temps.push(arg);
-                            frames.push((vars.sp, ip - 1));
+                            frames.push((captured.len() + 1, ip - 1));
                             for v in captured.iter() {
                                 vars.push(v.clone());
                             }
@@ -853,7 +849,7 @@ impl Vm {
                         }
                         (V::Closure(c, captured), arg) => {
                             // TODO: if the next op is an Op::Return, we might want to do TCO
-                            frames.push((vars.sp, ip));
+                            frames.push((captured.len() + 1, ip));
                             for v in captured.iter() {
                                 vars.push(v.clone());
                             }
@@ -861,7 +857,7 @@ impl Vm {
                             ip = c;
                         }
                         (V::Fn(c, _, _), arg) => {
-                            frames.push((vars.sp, ip));
+                            frames.push((1, ip));
                             vars.push(arg);
                             ip = c;
                         }
@@ -873,16 +869,16 @@ impl Vm {
                     }
                 }
                 Op::Return => {
-                    let (frame, ret) = frames.pop().ok_or(i)?;
+                    let (captured, ret) = frames.pop().ok_or(i)?;
                     match temps.pop().expect("temps underflow in RETURN") {
-                        V::Fn(c, v, f) if f == frames.len() + 1 => {
+                        V::Fn(c, v, f) if f == frames.sp + 1 => {
                             temps.push(V::Closure(c, Rc::new(vars.get_n(v))));
-                            vars.pop_after(frame);
+                            vars.pop_after(vars.sp - captured);
                             ip = ret
                         }
                         v => {
                             temps.push(v);
-                            vars.pop_after(frame);
+                            vars.pop_after(vars.sp - captured);
                             ip = ret
                         }
                     }
@@ -917,7 +913,7 @@ impl Vm {
                     }
                     match eff {
                         V::Effect(effect) => {
-                            let state = (vars.sp, temps.sp, frames.len(), handlers.len() + 1);
+                            let state = (vars.sp, temps.sp, frames.sp, handlers.len() + 1);
                             let ret = ip + 2; // skip apply + unwind
                             handlers.push(Handler {
                                 effect,
