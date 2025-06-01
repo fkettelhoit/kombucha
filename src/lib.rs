@@ -506,78 +506,68 @@ enum Op {
     LoadVar(usize),
     LoadString(usize),
     LoadEffect(usize),
-    LoadFn(usize, usize), // can move captured vars into Return op?
+    LoadFn(usize, usize),
     ApplyFnToArg,
     ApplyArgToFn,
-    Return, // can specify captured vars?
+    Return,
     Cmp,
     Unpack,
     Try,
     Unwind,
 }
 
-fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
+fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
     match expr {
-        Expr::Var(v) => {
-            ops.push(Op::LoadVar(v));
-            v
-        }
-        Expr::String(s) => {
-            ops.push(Op::LoadString(s));
-            0
-        }
-        Expr::Effect(e) => {
-            ops.push(Op::LoadEffect(e));
-            0
-        }
+        Expr::Var(v) => ops.push(Op::LoadVar(v)),
+        Expr::String(s) => ops.push(Op::LoadString(s)),
+        Expr::Effect(e) => ops.push(Op::LoadEffect(e)),
         Expr::Abs(body) => {
             let mut f = vec![];
-            let captured = compile_expr(*body, &mut f, fns);
+            compile_expr(*body, &mut f, fns);
             f.push(Op::Return);
+            let captured = f.iter().fold(0, |captured, op| match *op {
+                Op::LoadVar(v) if v > captured => v,
+                Op::LoadFn(_, c) if c > captured => c - 1,
+                _ => captured,
+            });
             ops.push(Op::LoadFn(fns.len(), captured));
             fns.extend(f);
-            if captured == 0 { 0 } else { captured - 1 }
         }
         Expr::App(f, arg) => {
-            let f = compile_expr(*f, ops, fns);
-            let arg = compile_expr(*arg, ops, fns);
+            compile_expr(*f, ops, fns);
+            compile_expr(*arg, ops, fns);
             ops.push(Op::ApplyFnToArg);
-            max(f, arg)
         }
         Expr::Rec(body) => {
-            let f = compile_expr(*body, ops, fns);
+            compile_expr(*body, ops, fns);
             ops.push(Op::LoadFn(0, 0));
             ops.push(Op::ApplyArgToFn);
-            f
         }
         Expr::If(a, b, if_t, if_f) => {
-            let a = compile_expr(*a, ops, fns);
-            let b = compile_expr(*b, ops, fns);
-            let if_t = compile_expr(*if_t, ops, fns);
-            let if_f = compile_expr(*if_f, ops, fns);
+            compile_expr(*a, ops, fns);
+            compile_expr(*b, ops, fns);
+            compile_expr(*if_t, ops, fns);
+            compile_expr(*if_f, ops, fns);
             ops.push(Op::Cmp);
             ops.push(Op::ApplyFnToArg);
-            a.max(b).max(if_t).max(if_f)
         }
         Expr::Pop(val, if_t, if_f) => {
-            let val = compile_expr(*val, ops, fns);
-            let if_t = compile_expr(*if_t, ops, fns);
-            let if_f = compile_expr(*if_f, ops, fns);
+            compile_expr(*val, ops, fns);
+            compile_expr(*if_t, ops, fns);
+            compile_expr(*if_f, ops, fns);
             ops.push(Op::Unpack);
             ops.push(Op::ApplyArgToFn);
             ops.push(Op::ApplyArgToFn);
-            val.max(if_t).max(if_f)
         }
         Expr::Try(val, eff, handler) => {
-            let val = compile_expr(*val, ops, fns);
-            let eff = compile_expr(*eff, ops, fns);
-            let handler = compile_expr(*handler, ops, fns);
+            compile_expr(*val, ops, fns);
+            compile_expr(*eff, ops, fns);
+            compile_expr(*handler, ops, fns);
             ops.push(Op::Try);
             ops.push(Op::ApplyArgToFn);
             ops.push(Op::Unwind);
             ops.push(Op::ApplyArgToFn);
             ops.push(Op::ApplyArgToFn);
-            val.max(eff).max(handler)
         }
     }
 }
