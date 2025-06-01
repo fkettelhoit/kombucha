@@ -8,13 +8,21 @@ Foo(Bar, Baz)
     Bar )
   Baz )
 
-00000: PushString("Foo")
-00001: PushString("Bar")
-00002: Swap(00002)
-00003: Apply
-00004: PushString("Baz")
-00005: Swap(00002)
-00006: Apply
+00000: LoadFn(00002, 00001)
+00001:   Return
+00002: LoadVar(00001)
+00003: LoadFn(00000, 00000)
+00004: LoadVar(00001)
+00005: ApplyFnToArg
+00006: ApplyFnToArg
+00007: LoadVar(00000)
+00008: ApplyFnToArg
+00009:   Return
+00010: PushString("Foo")
+00011: PushString("Bar")
+00012: ApplyFnToArg
+00013: PushString("Baz")
+00014: ApplyFnToArg
 
 Foo(Bar, Baz)
 
@@ -32,16 +40,23 @@ Foo(Bar, Baz(Qux))
   ( Baz
     Qux ) )
 
-00000: PushString("Foo")
-00001: PushString("Bar")
-00002: Swap(00002)
-00003: Apply
-00004: PushString("Baz")
-00005: PushString("Qux")
-00006: Swap(00002)
-00007: Apply
-00008: Swap(00002)
-00009: Apply
+00000: LoadFn(00002, 00001)
+00001:   Return
+00002: LoadVar(00001)
+00003: LoadFn(00000, 00000)
+00004: LoadVar(00001)
+00005: ApplyFnToArg
+00006: ApplyFnToArg
+00007: LoadVar(00000)
+00008: ApplyFnToArg
+00009:   Return
+00010: PushString("Foo")
+00011: PushString("Bar")
+00012: ApplyFnToArg
+00013: PushString("Baz")
+00014: PushString("Qux")
+00015: ApplyFnToArg
+00016: ApplyFnToArg
 
 Foo(Bar, Baz(Qux))
 
@@ -54,10 +69,19 @@ Foo()
 ( Foo
   [] )
 
-00000: PushString("Foo")
-00001: PushString("")
-00002: Swap(00002)
-00003: Apply
+00000: LoadFn(00002, 00001)
+00001:   Return
+00002: LoadVar(00001)
+00003: LoadFn(00000, 00000)
+00004: LoadVar(00001)
+00005: ApplyFnToArg
+00006: ApplyFnToArg
+00007: LoadVar(00000)
+00008: ApplyFnToArg
+00009:   Return
+00010: PushString("Foo")
+00011: PushString("")
+00012: ApplyFnToArg
 
 Foo()
 
@@ -73,13 +97,21 @@ Foo([], Bar)
     [] )
   Bar )
 
-00000: PushString("Foo")
-00001: PushString("")
-00002: Swap(00002)
-00003: Apply
-00004: PushString("Bar")
-00005: Swap(00002)
-00006: Apply
+00000: LoadFn(00002, 00001)
+00001:   Return
+00002: LoadVar(00001)
+00003: LoadFn(00000, 00000)
+00004: LoadVar(00001)
+00005: ApplyFnToArg
+00006: ApplyFnToArg
+00007: LoadVar(00000)
+00008: ApplyFnToArg
+00009:   Return
+00010: PushString("Foo")
+00011: PushString("")
+00012: ApplyFnToArg
+00013: PushString("Bar")
+00014: ApplyFnToArg
 
 Foo([], Bar)
 
@@ -96,16 +128,23 @@ Foo([], Bar)
     B )
   A )
 
-00000: PushString("")
-00001: PushString("C")
-00002: Swap(00002)
-00003: Apply
-00004: PushString("B")
-00005: Swap(00002)
-00006: Apply
-00007: PushString("A")
-00008: Swap(00002)
-00009: Apply
+00000: LoadFn(00002, 00001)
+00001:   Return
+00002: LoadVar(00001)
+00003: LoadFn(00000, 00000)
+00004: LoadVar(00001)
+00005: ApplyFnToArg
+00006: ApplyFnToArg
+00007: LoadVar(00000)
+00008: ApplyFnToArg
+00009:   Return
+00010: PushString("")
+00011: PushString("C")
+00012: ApplyFnToArg
+00013: PushString("B")
+00014: ApplyFnToArg
+00015: PushString("A")
+00016: ApplyFnToArg
 
 [A, B, C]
 
@@ -123,15 +162,22 @@ Foo([], Bar)
     B )
   A )
 
-00000: PushString("")
-00001: PushString("C")
-00002: Swap(00002)
-00003: Apply
-00004: PushString("B")
-00005: Swap(00002)
-00006: Apply
-00007: PushString("A")
-00008: Swap(00002)
-00009: Apply
+00000: LoadFn(00002, 00001)
+00001:   Return
+00002: LoadVar(00001)
+00003: LoadFn(00000, 00000)
+00004: LoadVar(00001)
+00005: ApplyFnToArg
+00006: ApplyFnToArg
+00007: LoadVar(00000)
+00008: ApplyFnToArg
+00009:   Return
+00010: PushString("")
+00011: PushString("C")
+00012: ApplyFnToArg
+00013: PushString("B")
+00014: ApplyFnToArg
+00015: PushString("A")
+00016: ApplyFnToArg
 
 [A, B, C]

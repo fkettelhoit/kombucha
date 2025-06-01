@@ -463,98 +463,6 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Op {
-    PushVar(usize),
-    PushString(usize),
-    PushEffect(usize),
-    PushFn(usize, usize),
-    Swap(usize),
-    Rec,
-    Apply,
-    Return,
-    Unwind,
-    Pop,
-    Try,
-    If,
-}
-
-fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
-    match expr {
-        Expr::Var(v) => {
-            ops.push(Op::PushVar(v));
-            v
-        }
-        Expr::String(s) => {
-            ops.push(Op::PushString(s));
-            0
-        }
-        Expr::Effect(e) => {
-            ops.push(Op::PushEffect(e));
-            0
-        }
-        Expr::Abs(body) => {
-            let mut f = vec![];
-            let captured = compile_expr(*body, &mut f, fns);
-            f.push(Op::Return);
-            ops.push(Op::PushFn(fns.len(), captured));
-            fns.extend(f);
-            if captured == 0 { 0 } else { captured - 1 }
-        }
-        Expr::Rec(body) => {
-            let f = compile_expr(*body, ops, fns);
-            ops.push(Op::Rec);
-            f
-        }
-        Expr::App(f, arg) => {
-            let f = compile_expr(*f, ops, fns);
-            let arg = compile_expr(*arg, ops, fns);
-            ops.push(Op::Swap(2));
-            ops.push(Op::Apply);
-            max(f, arg)
-        }
-        Expr::Pop(v, t, f) => {
-            let v = compile_expr(*v, ops, fns);
-            let t = compile_expr(*t, ops, fns);
-            let f = compile_expr(*f, ops, fns);
-            ops.push(Op::Swap(3));
-            ops.push(Op::Pop);
-            ops.push(Op::Apply);
-            ops.push(Op::Apply);
-            v.max(t).max(f)
-        }
-        Expr::Try(v, e, h) => {
-            let v = compile_expr(*v, ops, fns);
-            let e = compile_expr(*e, ops, fns);
-
-            let mut f = vec![];
-            let captured = compile_expr(*h, &mut f, fns);
-            f.push(Op::Apply);
-            f.push(Op::Apply);
-            f.push(Op::Return);
-            ops.push(Op::PushFn(fns.len(), captured));
-            fns.extend(f);
-            let h = if captured == 0 { 0 } else { captured - 1 };
-
-            ops.push(Op::Swap(3));
-            ops.push(Op::Try);
-            ops.push(Op::Apply);
-            ops.push(Op::Unwind);
-            v.max(e).max(h)
-        }
-        Expr::If(a, b, t, f) => {
-            let a = compile_expr(*a, ops, fns);
-            let b = compile_expr(*b, ops, fns);
-            let t = compile_expr(*t, ops, fns);
-            let f = compile_expr(*f, ops, fns);
-            ops.push(Op::Swap(4));
-            ops.push(Op::If);
-            ops.push(Op::Apply);
-            a.max(b).max(t).max(f)
-        }
-    }
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct Vm {
     strings: Vec<Cow<'static, str>>,
@@ -577,9 +485,8 @@ pub struct Coroutine {
 #[derive(Debug, Clone)]
 struct Handler {
     effect: usize,
-    code: usize,
+    handler: V,
     state: (usize, usize, usize, usize),
-    captured: Rc<Vec<V>>,
     ret: usize,
 }
 
@@ -594,9 +501,105 @@ impl Vm {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum Op {
+    LoadVar(usize),
+    LoadString(usize),
+    LoadEffect(usize),
+    LoadFn(usize, usize), // can move captured vars into Return op?
+    ApplyFnToArg,
+    ApplyArgToFn,
+    Return, // can specify captured vars?
+    Cmp,
+    Unpack,
+    Try,
+    Unwind,
+}
+
+fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) -> usize {
+    match expr {
+        Expr::Var(v) => {
+            ops.push(Op::LoadVar(v));
+            v
+        }
+        Expr::String(s) => {
+            ops.push(Op::LoadString(s));
+            0
+        }
+        Expr::Effect(e) => {
+            ops.push(Op::LoadEffect(e));
+            0
+        }
+        Expr::Abs(body) => {
+            let mut f = vec![];
+            let captured = compile_expr(*body, &mut f, fns);
+            f.push(Op::Return);
+            ops.push(Op::LoadFn(fns.len(), captured));
+            fns.extend(f);
+            if captured == 0 { 0 } else { captured - 1 }
+        }
+        Expr::App(f, arg) => {
+            let f = compile_expr(*f, ops, fns);
+            let arg = compile_expr(*arg, ops, fns);
+            ops.push(Op::ApplyFnToArg);
+            max(f, arg)
+        }
+        Expr::Rec(body) => {
+            let f = compile_expr(*body, ops, fns);
+            ops.push(Op::LoadFn(0, 0));
+            ops.push(Op::ApplyArgToFn);
+            f
+        }
+        Expr::If(a, b, if_t, if_f) => {
+            let a = compile_expr(*a, ops, fns);
+            let b = compile_expr(*b, ops, fns);
+            let if_t = compile_expr(*if_t, ops, fns);
+            let if_f = compile_expr(*if_f, ops, fns);
+            ops.push(Op::Cmp);
+            ops.push(Op::ApplyFnToArg);
+            a.max(b).max(if_t).max(if_f)
+        }
+        Expr::Pop(val, if_t, if_f) => {
+            let val = compile_expr(*val, ops, fns);
+            let if_t = compile_expr(*if_t, ops, fns);
+            let if_f = compile_expr(*if_f, ops, fns);
+            ops.push(Op::Unpack);
+            ops.push(Op::ApplyArgToFn);
+            ops.push(Op::ApplyArgToFn);
+            val.max(if_t).max(if_f)
+        }
+        Expr::Try(val, eff, handler) => {
+            let val = compile_expr(*val, ops, fns);
+            let eff = compile_expr(*eff, ops, fns);
+            let handler = compile_expr(*handler, ops, fns);
+            ops.push(Op::Try);
+            ops.push(Op::ApplyArgToFn);
+            ops.push(Op::Unwind);
+            ops.push(Op::ApplyArgToFn);
+            ops.push(Op::ApplyArgToFn);
+            val.max(eff).max(handler)
+        }
+    }
+}
+
 fn compile_prg(expr: Expr, strings: Vec<String>) -> Vm {
     let mut main = vec![];
-    let mut bytecode = vec![];
+
+    // fix = f => x => f(fix(f))(x)
+    let mut bytecode = vec![
+        // 0: f => ...
+        Op::LoadFn(2, 1),
+        Op::Return,
+        // 2: ... x => f(fix(f))(x)
+        Op::LoadVar(1),   // f
+        Op::LoadFn(0, 0), // f, fix
+        Op::LoadVar(1),   // f, fix, f
+        Op::ApplyFnToArg, // f, fix(f)
+        Op::ApplyFnToArg, // f(fix(f))
+        Op::LoadVar(0),   // f(fix(f)), x
+        Op::ApplyFnToArg, // f(fix(f))(x)
+        Op::Return,
+    ];
     compile_expr(expr, &mut main, &mut bytecode);
     let start = bytecode.len();
     bytecode.extend(main);
@@ -709,30 +712,18 @@ impl Vm {
             // }
             self.ip += 1;
             match op {
-                Op::PushVar(v) => {
+                Op::LoadVar(v) => {
                     let v: &V = &vars[vars.len() - 1 - v];
                     temps.push(v.clone());
                 }
-                Op::PushString(s) => temps.push(V::String(s)),
-                Op::PushEffect(eff) => temps.push(V::Effect(eff)),
-                Op::PushFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
-                Op::Swap(n) => {
-                    let items = temps.drain(temps.len() - n..).rev().collect::<Vec<_>>();
-                    temps.extend(items);
-                }
-                Op::Rec => match temps.pop().ok_or(i)? {
-                    V::Fn(c, v, _) => {
-                        // TODO: does the frame not matter here? is it always safe to create a closure?
-                        let captured = vars[vars.len() - v..].to_vec();
-                        temps.push(V::Recursive(c, Rc::new(captured)));
-                    }
-                    V::Closure(c, captured) => {
-                        temps.push(V::Recursive(c, captured));
-                    }
-                    v => temps.push(v),
-                },
-                Op::Apply => {
-                    let (f, mut arg) = (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?);
+                Op::LoadString(s) => temps.push(V::String(s)),
+                Op::LoadEffect(eff) => temps.push(V::Effect(eff)),
+                Op::LoadFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
+                Op::ApplyFnToArg | Op::ApplyArgToFn => {
+                    let (mut arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
+                        (Op::ApplyFnToArg, b, a) => (b, a),
+                        (_, b, a) => (a, b),
+                    };
                     if let V::Fn(c, v, _) = arg {
                         arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
                     }
@@ -747,8 +738,6 @@ impl Vm {
                                     let res_frames = frames.drain(f..).collect::<Vec<_>>();
                                     let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
                                     handlers.pop();
-                                    frames.push((vars.len(), handler.ret));
-                                    vars.extend(handler.captured.iter().cloned());
                                     let coroutine = Coroutine {
                                         vars: res_vars,
                                         temps: res_temps,
@@ -757,7 +746,8 @@ impl Vm {
                                     };
                                     temps.push(arg);
                                     temps.push(V::Resumable(self.ip, v, coroutine));
-                                    self.ip = handler.code;
+                                    temps.push(handler.handler);
+                                    self.ip = handler.ret;
                                 }
                                 None => return Ok(VmState::Resumable(Resumable(self, eff), arg)),
                             }
@@ -806,17 +796,17 @@ impl Vm {
                 Op::Return => {
                     let (frame, ret) = frames.pop().ok_or(i)?;
                     match (temps.last().cloned(), self.bytecode.get(ret)) {
-                        (Some(V::Fn(c, _, f)), Some(Op::Apply)) if f == frames.len() + 1 => {
-                            let _f = temps.pop();
-                            let mut arg = temps.pop().ok_or(i)?;
-                            if let V::Fn(c, v, _) = arg {
-                                let captured = Rc::new(vars[frame - v..frame].to_vec());
-                                arg = V::Closure(c, captured);
-                            }
-                            frames.push((frame, ret + 1));
-                            vars.push(arg);
-                            self.ip = c;
-                        }
+                        // (Some(V::Fn(c, _, f)), Some(Op::ApplyFnToArg)) if f == frames.len() + 1 => {
+                        //     let _f = temps.pop();
+                        //     let mut arg = temps.pop().ok_or(i)?;
+                        //     if let V::Fn(c, v, _) = arg {
+                        //         let captured = Rc::new(vars[frame - v..frame].to_vec());
+                        //         arg = V::Closure(c, captured);
+                        //     }
+                        //     frames.push((frame, ret + 1));
+                        //     vars.push(arg);
+                        //     self.ip = c;
+                        // }
                         (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
                             let _f = temps.pop();
                             temps.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
@@ -829,60 +819,59 @@ impl Vm {
                         }
                     }
                 }
-                Op::Pop => match temps.pop().ok_or(i)? {
-                    V::Recursive(c, captured) => {
-                        frames.push((vars.len(), self.ip - 1));
-                        vars.extend(captured.iter().cloned());
-                        vars.push(V::Recursive(c, captured));
-                        self.ip = c;
+                Op::Unpack => match (
+                    temps.pop().ok_or(i)?,
+                    temps.pop().ok_or(i)?,
+                    temps.pop().ok_or(i)?,
+                ) {
+                    (_, t, V::Record(f, mut xs)) => {
+                        let x = xs.pop().ok_or(i)?;
+                        temps.push(x.as_ref().clone());
+                        temps.push(if xs.is_empty() {
+                            V::String(f)
+                        } else {
+                            V::Record(f, xs)
+                        });
+                        temps.push(t);
                     }
-                    v => match (v, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
-                        (V::Record(f, mut xs), t, _) => {
-                            let x = xs.pop().ok_or(i)?;
-                            temps.push(x.as_ref().clone());
-                            temps.push(if xs.is_empty() {
-                                V::String(f)
-                            } else {
-                                V::Record(f, xs)
-                            });
-                            temps.push(t);
-                        }
-                        (_, _, f) => {
-                            temps.push(V::String(Reflect::Nil as usize));
-                            temps.push(f);
-                            self.ip += 1;
-                        }
-                    },
+                    (f, _, _) => {
+                        temps.push(V::String(Reflect::Nil as usize));
+                        temps.push(f);
+                        self.ip += 1;
+                    }
                 },
                 Op::Try => {
-                    let v = temps.pop().ok_or(i)?;
-                    let eff = temps.pop().ok_or(i)?;
                     let mut handler = temps.pop().ok_or(i)?;
+                    let eff = temps.pop().ok_or(i)?;
+                    let v = temps.pop().ok_or(i)?;
                     if let V::Fn(c, v, _) = handler {
                         handler = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
                     }
-                    match (eff, handler) {
-                        (V::Effect(effect), V::Closure(code, captured)) => {
+                    match eff {
+                        V::Effect(effect) => {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
-                            let ret = self.ip + 2; // return
+                            let ret = self.ip + 2; // skip apply + unwind
                             handlers.push(Handler {
                                 effect,
-                                code,
+                                handler,
                                 state,
-                                captured,
                                 ret,
                             });
                             temps.push(V::String(Reflect::Nil as usize));
                             temps.push(v);
                         }
-                        _ => temps.push(v),
+                        _ => {
+                            temps.push(v);
+                            self.ip += 4; // skip apply, unwind, apply, apply
+                        }
                     }
                 }
                 Op::Unwind => {
                     handlers.pop();
+                    self.ip += 2;
                 }
-                Op::If => {
-                    let (a, b, t, f) = (
+                Op::Cmp => {
+                    let (f, t, b, a) = (
                         temps.pop().ok_or(i)?,
                         temps.pop().ok_or(i)?,
                         temps.pop().ok_or(i)?,
@@ -892,8 +881,8 @@ impl Vm {
                         (V::String(a), V::String(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
-                    temps.push(V::String(Reflect::Nil as usize));
                     temps.push(branch);
+                    temps.push(V::String(Reflect::Nil as usize));
                 }
             }
             // if cfg!(test) {
@@ -1020,25 +1009,6 @@ mod tests {
         assert_eq!(eval_expr(expr, strings).unwrap(), "Bar");
     }
 
-    #[test]
-    fn eval_raw_pop_rec() {
-        // pop('r ~> { Cons(Foo, r) }, 'f => { 'x => { f } }, { Error })
-        let foo_app_rec = Expr::Rec(Box::new(abs(app(
-            app(Expr::String(0), Expr::String(1)),
-            Expr::Var(0),
-        ))));
-        let t = abs(abs(Expr::Var(1)));
-        let f = abs(Expr::String(2));
-        let pop_fn = abs(abs(abs(Expr::Pop(
-            Box::new(Expr::Var(2)),
-            Box::new(Expr::Var(1)),
-            Box::new(Expr::Var(0)),
-        ))));
-        let expr = app(app(app(pop_fn, foo_app_rec), t), f);
-        let strings = vec!["Cons", "Foo", "Error"];
-        assert_eq!(eval_expr(expr, strings).unwrap(), "Cons(Foo)");
-    }
-
     fn pretty_prg<'c>(prg: &Prg<'c>) -> String {
         fn pretty<'c>(ast: &Ast<'c>, lvl: usize, buf: &mut String) {
             let indent = "  ";
@@ -1155,11 +1125,11 @@ mod tests {
         for (i, op) in vm.bytecode.iter().enumerate() {
             match op {
                 Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),
-                Op::PushString(s) => match vm.strings.get(*s) {
+                Op::LoadString(s) => match vm.strings.get(*s) {
                     Some(s) => buf.push_str(&format!("{i:05}: PushString(\"{s}\")\n")),
                     None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
                 },
-                Op::PushEffect(s) => match vm.strings.get(*s) {
+                Op::LoadEffect(s) => match vm.strings.get(*s) {
                     Some(s) => buf.push_str(&format!("{i:05}: PushEffect(\"{s}\")\n")),
                     None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
                 },
