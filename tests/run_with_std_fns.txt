@@ -1,5 +1,5 @@
 'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    pop(xs, ['xs, 'x] => {
+    __unpack(xs, ['xs, 'x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
@@ -15,7 +15,7 @@ fold(['acc, 'x] => { acc(x) }, [], [A, B, C])
         ( 'f
           'acc
           'xs )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
@@ -242,7 +242,7 @@ fold(['acc, 'x] => { acc(x) }, [], [A, B, C])
 ---
 
 'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    pop(xs, ['xs, 'x] => {
+    __unpack(xs, ['xs, 'x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
@@ -261,7 +261,7 @@ rev([A, B, C])
         ( 'f
           'acc
           'xs )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
@@ -536,7 +536,7 @@ rev([A, B, C])
 ---
 
 'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    pop(xs, ['xs, 'x] => {
+    __unpack(xs, ['xs, 'x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
@@ -555,7 +555,7 @@ apply(['x, 'y, 'z] => { Triple(x, y, z) }, [A, B, C])
         ( 'f
           'acc
           'xs )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
@@ -890,7 +890,7 @@ Triple(A, B, C)
 ---
 
 'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    pop(xs, ['xs, 'x] => {
+    __unpack(xs, ['xs, 'x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
@@ -912,7 +912,7 @@ map('x => { Foo(x) }, [A, B, C])
         ( 'f
           'acc
           'xs )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
@@ -1317,7 +1317,7 @@ map('x => { Foo(x) }, [A, B, C])
 ---
 
 'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    pop(xs, ['xs, 'x] => {
+    __unpack(xs, ['xs, 'x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
@@ -1327,10 +1327,10 @@ map('x => { Foo(x) }, [A, B, C])
     fold(['xs, 'x] => { xs(x) }, [], xs)
 })
 'zip = ('zip ~> { ['acc, 'xs, 'ys] => {
-    pop(xs, ['xs, 'x] => {
-        pop(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
+    __unpack(xs, ['xs, 'x] => {
+        __unpack(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
     }, {
-        pop(ys, ['ys, 'y] => {}, { acc })
+        __unpack(ys, ['ys, 'y] => {}, { acc })
     })
 }})
 'zip = (['xs, 'ys] => { rev(zip([], xs, ys)) })
@@ -1350,7 +1350,7 @@ map('x => { Foo(x) }, [A, B, C])
         ( 'f
           'acc
           'xs )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
@@ -1382,12 +1382,12 @@ map('x => { Foo(x) }, [A, B, C])
         ( 'acc
           'xs
           'ys )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
                 'x )
-              { (pop
+              { (__unpack
                   ys
                   (=>
                     ( 'ys
@@ -1399,7 +1399,7 @@ map('x => { Foo(x) }, [A, B, C])
                         xs
                         ys) })
                   {  }) })
-            { (pop
+            { (__unpack
                 ys
                 (=>
                   ( 'ys
@@ -2089,14 +2089,14 @@ map('x => { Foo(x) }, [A, B, C])
 ---
 
 '== = ('== ~> { ['a, 'b] => {
-    pop(a, ['xs, 'x] => {
-        pop(b, ['ys, 'y] => {
-            if(x == y, True, { xs == ys }, { False })
+    __unpack(a, ['xs, 'x] => {
+        __unpack(b, ['ys, 'y] => {
+            __compare(x == y, True, { xs == ys }, { False })
         }, {
             False
         })
     }, {
-        if(a, b, { True }, { False })
+        __compare(a, b, { True }, { False })
     })
 }})
 [
@@ -2117,17 +2117,17 @@ map('x => { Foo(x) }, [A, B, C])
     { (=>
         ( 'a
           'b )
-        { (pop
+        { (__unpack
             a
             (=>
               ( 'xs
                 'x )
-              { (pop
+              { (__unpack
                   b
                   (=>
                     ( 'ys
                       'y )
-                    { (if
+                    { (__compare
                         (==
                           x
                           y)
@@ -2137,7 +2137,7 @@ map('x => { Foo(x) }, [A, B, C])
                             ys) }
                         { False }) })
                   { False }) })
-            { (if
+            { (__compare
                 a
                 b
                 { True }
@@ -2552,7 +2552,7 @@ map('x => { Foo(x) }, [A, B, C])
 ---
 
 'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    pop(xs, ['xs, 'x] => {
+    __unpack(xs, ['xs, 'x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
@@ -2576,7 +2576,7 @@ flatten([[A, B], [C, D]])
         ( 'f
           'acc
           'xs )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
@@ -2991,7 +2991,7 @@ flatten([[A, B], [C, D]])
 ---
 
 'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    pop(xs, ['xs, 'x] => {
+    __unpack(xs, ['xs, 'x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
@@ -3012,31 +3012,31 @@ flatten([[A, B], [C, D]])
     }, [], xs))
 })
 'zip = ('zip ~> { ['acc, 'xs, 'ys] => {
-    pop(xs, ['xs, 'x] => {
-        pop(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
+    __unpack(xs, ['xs, 'x] => {
+        __unpack(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
     }, {
-        pop(ys, ['ys, 'y] => {}, { acc })
+        __unpack(ys, ['ys, 'y] => {}, { acc })
     })
 }})
 'zip = (['xs, 'ys] => {
     rev(zip([], xs, ys))
 })
 '== = ('== ~> { ['a, 'b] => {
-    pop(a, ['xs, 'x] => {
-        pop(b, ['ys, 'y] => {
-            if(x == y, True, { xs == ys }, { False })
+    __unpack(a, ['xs, 'x] => {
+        __unpack(b, ['ys, 'y] => {
+            __compare(x == y, True, { xs == ys }, { False })
         }, {
             False
         })
     }, {
-        if(a, b, { True }, { False })
+        __compare(a, b, { True }, { False })
     })
 }})
 'first = ('xs => {
-    pop(xs, ['_, 'x] => { x }, { xs })
+    __unpack(xs, ['_, 'x] => { x }, { xs })
 })
 'second = ('xs => {
-    pop(xs, ['xs, '_] => { first(xs) }, { xs })
+    __unpack(xs, ['xs, '_] => { first(xs) }, { xs })
 })
 'join = fold(['acc, 'pair] => {
     'xvar = first(pair)
@@ -3044,8 +3044,8 @@ flatten([[A, B], [C, D]])
     fold(['_, 'pair] => {
         'yvar = first(pair)
         'yval = second(pair)
-        if(xvar, yvar, {
-            if(xval == yval, False, {
+        __compare(xvar, yvar, {
+            __compare(xval == yval, False, {
                 no-match!([[xvar, xval], [yvar, yval]])
             }, {})
         }, {})
@@ -3053,19 +3053,19 @@ flatten([[A, B], [C, D]])
     acc(pair)
 }, [])
 'unify = ('unify ~> { ['pattern, 'value] => {
-    pop(pattern, ['type, 'pattern] => {
-        if(type, Binding, {
+    __unpack(pattern, ['type, 'pattern] => {
+        __compare(type, Binding, {
             [[pattern, value]]
         }, {
-            if(type, Compound, {
+            __compare(type, Compound, {
                 'zipped = zip(pattern, value)
-                if(zipped, [], {
+                __compare(zipped, [], {
                     no-match!([pattern, value])
                 }, {
                     join(flatten(map(apply(unify), zip(pattern, value))))
                 })
             }, {
-                if(pattern == value, True, {}, {
+                __compare(pattern == value, True, {}, {
                     no-match!([pattern, value])
                 })
             })
@@ -3075,9 +3075,9 @@ flatten([[A, B], [C, D]])
     })
 }})
 '-> = (['pattern, 'body, 'value] => {
-    try( {
+    __handle( {
         'args = map(second, unify(pattern, value))
-        if(args, [], {
+        __compare(args, [], {
             body()
         }, {
             apply(body, args)
@@ -3086,7 +3086,7 @@ flatten([[A, B], [C, D]])
         no-match!(arg)
     })
 })
-try({
+__handle({
     [
         (Foo -> { Bar })(Foo)
         ('x -> { x })(Foo)
@@ -3109,7 +3109,7 @@ try({
         ( 'f
           'acc
           'xs )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
@@ -3188,12 +3188,12 @@ try({
         ( 'acc
           'xs
           'ys )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
                 'x )
-              { (pop
+              { (__unpack
                   ys
                   (=>
                     ( 'ys
@@ -3205,7 +3205,7 @@ try({
                         xs
                         ys) })
                   {  }) })
-            { (pop
+            { (__unpack
                 ys
                 (=>
                   ( 'ys
@@ -3229,17 +3229,17 @@ try({
     { (=>
         ( 'a
           'b )
-        { (pop
+        { (__unpack
             a
             (=>
               ( 'xs
                 'x )
-              { (pop
+              { (__unpack
                   b
                   (=>
                     ( 'ys
                       'y )
-                    { (if
+                    { (__compare
                         (==
                           x
                           y)
@@ -3249,7 +3249,7 @@ try({
                             ys) }
                         { False }) })
                   { False }) })
-            { (if
+            { (__compare
                 a
                 b
                 { True }
@@ -3258,7 +3258,7 @@ try({
   'first
   (=>
     'xs
-    { (pop
+    { (__unpack
         xs
         (=>
           ( '_
@@ -3269,7 +3269,7 @@ try({
   'second
   (=>
     'xs
-    { (pop
+    { (__unpack
         xs
         (=>
           ( 'xs
@@ -3303,10 +3303,10 @@ try({
                 'yval
                 (second
                   pair))
-              (if
+              (__compare
                 xvar
                 yvar
-                { (if
+                { (__compare
                     (==
                       xval
                       yval)
@@ -3330,17 +3330,17 @@ try({
     { (=>
         ( 'pattern
           'value )
-        { (pop
+        { (__unpack
             pattern
             (=>
               ( 'type
                 'pattern )
-              { (if
+              { (__compare
                   type
                   Binding
                   { ( ( pattern
                         value ) ) }
-                  { (if
+                  { (__compare
                       type
                       Compound
                       { (=
@@ -3348,7 +3348,7 @@ try({
                           (zip
                             pattern
                             value))
-                        (if
+                        (__compare
                           zipped
                           (  )
                           { (no-match!
@@ -3362,7 +3362,7 @@ try({
                                   (zip
                                     pattern
                                     value)))) }) }
-                      { (if
+                      { (__compare
                           (==
                             pattern
                             value)
@@ -3379,7 +3379,7 @@ try({
     ( 'pattern
       'body
       'value )
-    { (try
+    { (__handle
         { (=
             'args
             (map
@@ -3387,7 +3387,7 @@ try({
               (unify
                 pattern
                 value)))
-          (if
+          (__compare
             args
             (  )
             { (body) }
@@ -3400,7 +3400,7 @@ try({
             'arg )
           { (no-match!
               arg) })) }))
-(try
+(__handle
   { ( ((->
         Foo
         { Bar })
@@ -5903,7 +5903,7 @@ try({
 ---
 
 'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    pop(xs, ['xs, 'x] => {
+    __unpack(xs, ['xs, 'x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
@@ -5924,31 +5924,31 @@ try({
     }, [], xs))
 })
 'zip = ('zip ~> { ['acc, 'xs, 'ys] => {
-    pop(xs, ['xs, 'x] => {
-        pop(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
+    __unpack(xs, ['xs, 'x] => {
+        __unpack(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
     }, {
-        pop(ys, ['ys, 'y] => {}, { acc })
+        __unpack(ys, ['ys, 'y] => {}, { acc })
     })
 }})
 'zip = (['xs, 'ys] => {
     rev(zip([], xs, ys))
 })
 '== = ('== ~> { ['a, 'b] => {
-    pop(a, ['xs, 'x] => {
-        pop(b, ['ys, 'y] => {
-            if(x == y, True, { xs == ys }, { False })
+    __unpack(a, ['xs, 'x] => {
+        __unpack(b, ['ys, 'y] => {
+            __compare(x == y, True, { xs == ys }, { False })
         }, {
             False
         })
     }, {
-        if(a, b, { True }, { False })
+        __compare(a, b, { True }, { False })
     })
 }})
 'first = ('xs => {
-    pop(xs, ['_, 'x] => { x }, { xs })
+    __unpack(xs, ['_, 'x] => { x }, { xs })
 })
 'second = ('xs => {
-    pop(xs, ['xs, '_] => { first(xs) }, { xs })
+    __unpack(xs, ['xs, '_] => { first(xs) }, { xs })
 })
 'join = fold(['acc, 'pair] => {
     'xvar = first(pair)
@@ -5956,8 +5956,8 @@ try({
     fold(['_, 'pair] => {
         'yvar = first(pair)
         'yval = second(pair)
-        if(xvar, yvar, {
-            if(xval == yval, False, {
+        __compare(xvar, yvar, {
+            __compare(xval == yval, False, {
                 no-match!([[xvar, xval], [yvar, yval]])
             }, {})
         }, {})
@@ -5965,19 +5965,19 @@ try({
     acc(pair)
 }, [])
 'unify = ('unify ~> { ['pattern, 'value] => {
-    pop(pattern, ['type, 'pattern] => {
-        if(type, Binding, {
+    __unpack(pattern, ['type, 'pattern] => {
+        __compare(type, Binding, {
             [[pattern, value]]
         }, {
-            if(type, Compound, {
+            __compare(type, Compound, {
                 'zipped = zip(pattern, value)
-                if(zipped, [], {
+                __compare(zipped, [], {
                     no-match!([pattern, value])
                 }, {
                     join(flatten(map(apply(unify), zip(pattern, value))))
                 })
             }, {
-                if(pattern == value, True, {}, {
+                __compare(pattern == value, True, {}, {
                     no-match!([pattern, value])
                 })
             })
@@ -5987,9 +5987,9 @@ try({
     })
 }})
 '-> = (['pattern, 'body, 'value] => {
-    try( {
+    __handle( {
         'args = map(second, unify(pattern, value))
-        if(args, [], {
+        __compare(args, [], {
             body()
         }, {
             apply(body, args)
@@ -6000,15 +6000,15 @@ try({
 })
 'match-with = (['value, 'clauses] => {
     'result = fold(['result, 'clause] => {
-        if(result, [], {
-            try({
+        __compare(result, [], {
+            __handle({
                 Match(clause(value))
             }, no-match!, ['r, 'arg] => {})
         }, {
             result
         })
     }, [], clauses)
-    pop(result, ['_, 'result] => {
+    __unpack(result, ['_, 'result] => {
         result
     }, {
         no-match!(value)
@@ -6021,7 +6021,7 @@ try({
         Pair('x, 'y) -> { y }
         '_ -> { throw!(InvalidPair) }
     ]
-    try({
+    __handle({
         match: Foo with: [
             Pair('x, 'x) -> { Twice(x, x) }
             Pair('x, Foo) -> { SecondIsFoo }
@@ -6040,7 +6040,7 @@ try({
         ( 'f
           'acc
           'xs )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
@@ -6119,12 +6119,12 @@ try({
         ( 'acc
           'xs
           'ys )
-        { (pop
+        { (__unpack
             xs
             (=>
               ( 'xs
                 'x )
-              { (pop
+              { (__unpack
                   ys
                   (=>
                     ( 'ys
@@ -6136,7 +6136,7 @@ try({
                         xs
                         ys) })
                   {  }) })
-            { (pop
+            { (__unpack
                 ys
                 (=>
                   ( 'ys
@@ -6160,17 +6160,17 @@ try({
     { (=>
         ( 'a
           'b )
-        { (pop
+        { (__unpack
             a
             (=>
               ( 'xs
                 'x )
-              { (pop
+              { (__unpack
                   b
                   (=>
                     ( 'ys
                       'y )
-                    { (if
+                    { (__compare
                         (==
                           x
                           y)
@@ -6180,7 +6180,7 @@ try({
                             ys) }
                         { False }) })
                   { False }) })
-            { (if
+            { (__compare
                 a
                 b
                 { True }
@@ -6189,7 +6189,7 @@ try({
   'first
   (=>
     'xs
-    { (pop
+    { (__unpack
         xs
         (=>
           ( '_
@@ -6200,7 +6200,7 @@ try({
   'second
   (=>
     'xs
-    { (pop
+    { (__unpack
         xs
         (=>
           ( 'xs
@@ -6234,10 +6234,10 @@ try({
                 'yval
                 (second
                   pair))
-              (if
+              (__compare
                 xvar
                 yvar
-                { (if
+                { (__compare
                     (==
                       xval
                       yval)
@@ -6261,17 +6261,17 @@ try({
     { (=>
         ( 'pattern
           'value )
-        { (pop
+        { (__unpack
             pattern
             (=>
               ( 'type
                 'pattern )
-              { (if
+              { (__compare
                   type
                   Binding
                   { ( ( pattern
                         value ) ) }
-                  { (if
+                  { (__compare
                       type
                       Compound
                       { (=
@@ -6279,7 +6279,7 @@ try({
                           (zip
                             pattern
                             value))
-                        (if
+                        (__compare
                           zipped
                           (  )
                           { (no-match!
@@ -6293,7 +6293,7 @@ try({
                                   (zip
                                     pattern
                                     value)))) }) }
-                      { (if
+                      { (__compare
                           (==
                             pattern
                             value)
@@ -6310,7 +6310,7 @@ try({
     ( 'pattern
       'body
       'value )
-    { (try
+    { (__handle
         { (=
             'args
             (map
@@ -6318,7 +6318,7 @@ try({
               (unify
                 pattern
                 value)))
-          (if
+          (__compare
             args
             (  )
             { (body) }
@@ -6342,10 +6342,10 @@ try({
           (=>
             ( 'result
               'clause )
-            { (if
+            { (__compare
                 result
                 (  )
-                { (try
+                { (__handle
                     { (Match
                         (clause
                           value)) }
@@ -6357,7 +6357,7 @@ try({
                 { result }) })
           (  )
           clauses))
-      (pop
+      (__unpack
         result
         (=>
           ( '_
@@ -6390,7 +6390,7 @@ try({
         '_
         { (throw!
             InvalidPair) }) ))
-  (try
+  (__handle
     { (match-with
         Foo
         ( (->

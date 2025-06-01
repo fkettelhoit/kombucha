@@ -1,5 +1,5 @@
 ('acc => {
-    try({
+    __handle({
         effect!(Foo)
     }, effect!, 'r => { 'x => {
         r(acc(x))
@@ -8,7 +8,7 @@
 
 ((=>
   'acc
-  { (try
+  { (__handle
       { (effect!
           Foo) }
       effect!
@@ -129,10 +129,10 @@ List(Foo)
 
 'with-toggle = ('loop ~> {
     'val => { 'r => {
-        try({
+        __handle({
             r(val)
         }, toggle!, 'r => { ' => {
-            if(val, True, {
+            __compare(val, True, {
               loop(False, r)
             }, {
               loop(True, r)
@@ -150,7 +150,7 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
         'val
         { (=>
             'r
-            { (try
+            { (__handle
                 { (r
                     val) }
                 toggle!
@@ -158,7 +158,7 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
                   'r
                   { (=>
                       '
-                      { (if
+                      { (__compare
                           val
                           True
                           { (loop

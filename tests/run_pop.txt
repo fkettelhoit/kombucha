@@ -1,6 +1,6 @@
-pop(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })
+__unpack(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })
 
-(pop
+(__unpack
   (Foo
     Bar
     Baz)
@@ -94,9 +94,9 @@ Baz
 
 ---
 
-pop(Foo, 'f => { 'x => { x } }, { Error })
+__unpack(Foo, 'f => { 'x => { x } }, { Error })
 
-(pop
+(__unpack
   Foo
   (=>
     'f
@@ -182,9 +182,9 @@ Error
 
 ---
 
-pop(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
+__unpack(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
 
-(pop
+(__unpack
   (Foo
     Bar
     Baz)
@@ -278,9 +278,9 @@ Foo(Bar)
 
 ---
 
-pop(Foo(Bar), 'f => { 'x => { f } }, { Error })
+__unpack(Foo(Bar), 'f => { 'x => { f } }, { Error })
 
-(pop
+(__unpack
   (Foo
     Bar)
   (=>

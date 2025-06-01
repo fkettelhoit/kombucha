@@ -182,7 +182,7 @@ Foo(Bar)
 
 ---
 
-'f = ('f ~> { 'xs => { pop(xs, 'xs => { '_ => { f(xs) } }, { xs }) } }), f(Foo(Bar, Baz))
+'f = ('f ~> { 'xs => { __unpack(xs, 'xs => { '_ => { f(xs) } }, { xs }) } }), f(Foo(Bar, Baz))
 
 (=
   'f
@@ -190,7 +190,7 @@ Foo(Bar)
     'f
     { (=>
         'xs
-        { (pop
+        { (__unpack
             xs
             (=>
               'xs

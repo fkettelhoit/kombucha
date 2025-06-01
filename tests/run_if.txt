@@ -1,6 +1,6 @@
-if(Foo, Bar, { True }, { False })
+__compare(Foo, Bar, { True }, { False })
 
-(if
+(__compare
   Foo
   Bar
   { True }
@@ -63,13 +63,13 @@ False
 
 ---
 
-'f = ('x => { if(x, Bar, { True }, { False }) }), f(Bar)
+'f = ('x => { __compare(x, Bar, { True }, { False }) }), f(Bar)
 
 (=
   'f
   (=>
     'x
-    { (if
+    { (__compare
         x
         Bar
         { True }
@@ -176,13 +176,13 @@ True
 
 ---
 
-'f = ('x => { if(x, Foo, { True }, { False }) }), Pair(f(Foo), f(Bar))
+'f = ('x => { __compare(x, Foo, { True }, { False }) }), Pair(f(Foo), f(Bar))
 
 (=
   'f
   (=>
     'x
-    { (if
+    { (__compare
         x
         Foo
         { True }

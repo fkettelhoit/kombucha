@@ -230,9 +230,9 @@ enum Expr {
     Abs(Box<Expr>),
     Rec(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
-    Pop(Box<Expr>, Box<Expr>, Box<Expr>),
-    Try(Box<Expr>, Box<Expr>, Box<Expr>),
-    If(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
+    Unpack(Box<Expr>, Box<Expr>, Box<Expr>),
+    Handle(Box<Expr>, Box<Expr>, Box<Expr>),
+    Cmp(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
 }
 
 fn abs(body: Expr) -> Expr {
@@ -369,22 +369,22 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
                 None if v == "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
                 None if v == "=>" => Ok(abs(abs(Expr::Var(0)))),
                 None if v == "~>" => Ok(abs(abs(Expr::Rec(Box::new(Expr::Var(0)))))),
-                None if v == "pop" => Ok(abs(abs(abs(Expr::Pop(
-                    Box::new(Expr::Var(2)),
-                    Box::new(Expr::Var(1)),
-                    Box::new(Expr::Var(0)),
-                ))))),
-                None if v == "try" => Ok(abs(abs(abs(Expr::Try(
-                    Box::new(Expr::Var(2)),
-                    Box::new(Expr::Var(1)),
-                    Box::new(Expr::Var(0)),
-                ))))),
-                None if v == "if" => Ok(abs(abs(abs(abs(Expr::If(
+                None if v == "__compare" => Ok(abs(abs(abs(abs(Expr::Cmp(
                     Box::new(Expr::Var(3)),
                     Box::new(Expr::Var(2)),
                     Box::new(Expr::Var(1)),
                     Box::new(Expr::Var(0)),
                 )))))),
+                None if v == "__unpack" => Ok(abs(abs(abs(Expr::Unpack(
+                    Box::new(Expr::Var(2)),
+                    Box::new(Expr::Var(1)),
+                    Box::new(Expr::Var(0)),
+                ))))),
+                None if v == "__handle" => Ok(abs(abs(abs(Expr::Handle(
+                    Box::new(Expr::Var(2)),
+                    Box::new(Expr::Var(1)),
+                    Box::new(Expr::Var(0)),
+                ))))),
                 None => Err((pos, v.to_string())),
             },
             A::String(s) => Ok(Expr::String(resolve_str(s.to_string(), ctx))),
@@ -522,7 +522,7 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             ops.push(Op::LoadFn(0, 0));
             ops.push(Op::ApplyArgToFn);
         }
-        Expr::If(a, b, if_t, if_f) => {
+        Expr::Cmp(a, b, if_t, if_f) => {
             compile_expr(*a, ops, fns);
             compile_expr(*b, ops, fns);
             compile_expr(*if_t, ops, fns);
@@ -530,7 +530,7 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             ops.push(Op::Cmp);
             ops.push(Op::ApplyFnToArg);
         }
-        Expr::Pop(val, if_t, if_f) => {
+        Expr::Unpack(val, if_t, if_f) => {
             compile_expr(*val, ops, fns);
             compile_expr(*if_t, ops, fns);
             compile_expr(*if_f, ops, fns);
@@ -538,7 +538,7 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             ops.push(Op::ApplyArgToFn);
             ops.push(Op::ApplyArgToFn);
         }
-        Expr::Try(val, eff, handler) => {
+        Expr::Handle(val, eff, handler) => {
             compile_expr(*val, ops, fns);
             compile_expr(*eff, ops, fns);
             compile_expr(*handler, ops, fns);
@@ -973,7 +973,7 @@ mod tests {
         // if(Foo, Foo, { True }, { False })
         let t = abs(Expr::String(1));
         let f = abs(Expr::String(2));
-        let if_fn = abs(abs(abs(abs(Expr::If(
+        let if_fn = abs(abs(abs(abs(Expr::Cmp(
             Box::new(Expr::Var(3)),
             Box::new(Expr::Var(2)),
             Box::new(Expr::Var(1)),
@@ -990,7 +990,7 @@ mod tests {
         let foo_bar = app(Expr::String(0), Expr::String(1));
         let t = abs(abs(Expr::Var(0)));
         let f = abs(Expr::String(2));
-        let pop_fn = abs(abs(abs(Expr::Pop(
+        let pop_fn = abs(abs(abs(Expr::Unpack(
             Box::new(Expr::Var(2)),
             Box::new(Expr::Var(1)),
             Box::new(Expr::Var(0)),
@@ -1077,7 +1077,7 @@ mod tests {
                     pretty(arg, strs, lvl + 1, buf);
                     buf.push_str(" )");
                 }
-                Expr::Pop(v, t, f) => {
+                Expr::Unpack(v, t, f) => {
                     buf.push_str("( pop");
                     for expr in [v, t, f] {
                         buf.push('\n');
@@ -1086,7 +1086,7 @@ mod tests {
                     }
                     buf.push_str(" )");
                 }
-                Expr::Try(v, e, h) => {
+                Expr::Handle(v, e, h) => {
                     buf.push_str("( try");
                     for expr in [v, e, h] {
                         buf.push('\n');
@@ -1095,7 +1095,7 @@ mod tests {
                     }
                     buf.push_str(" )");
                 }
-                Expr::If(a, b, t, f) => {
+                Expr::Cmp(a, b, t, f) => {
                     buf.push_str("( if");
                     for expr in [a, b, t, f] {
                         buf.push('\n');

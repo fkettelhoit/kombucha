@@ -77,7 +77,7 @@ print!(Foo), print!(Bar), print!(FooBar)
 ---
 
 'foo = ('x => { 'y => { pair!(Args(x, y)) } })
-try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
+__handle({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
 
 (=
   'foo
@@ -89,7 +89,7 @@ try({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
             (Args
               x
               y)) }) }))
-(try
+(__handle
   { (foo
       Bar
       Baz) }
@@ -252,9 +252,9 @@ Pair(Args(Bar, Baz))
 
 ---
 
-try({ Foo }, unused!, 'r => { ' => { Error }})
+__handle({ Foo }, unused!, 'r => { ' => { Error }})
 
-(try
+(__handle
   { Foo }
   unused!
   (=>
@@ -342,9 +342,9 @@ Foo
 
 ---
 
-try({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
+__handle({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
 
-(try
+(__handle
   { (effect!
       Foo) }
   effect!
@@ -444,13 +444,13 @@ Foo(Bar)
 
 ---
 
-try({
+__handle({
     Foo(eff!())
 }, eff!, 'r => { ' => {
     Pair(r(Bar), r(Baz))
 } })
 
-(try
+(__handle
   { (Foo
       (eff!)) }
   eff!
@@ -561,12 +561,12 @@ Pair(Foo(Bar), Foo(Baz))
 
 ---
 
-'foo = Foo, try({ List(elems!(foo)) }, elems!, 'r => { 'x => { Twice(r(x, x), r(Baz)) } })
+'foo = Foo, __handle({ List(elems!(foo)) }, elems!, 'r => { 'x => { Twice(r(x, x), r(Baz)) } })
 
 (=
   'foo
   Foo)
-(try
+(__handle
   { (List
       (elems!
         foo)) }
@@ -706,7 +706,7 @@ Twice(List(Foo, Foo), List(Baz))
 
 ---
 
-Foo(try({
+Foo(__handle({
   Baz(effect!(), effect!())
 }, effect!, 'r => {
   ' => {
@@ -715,7 +715,7 @@ Foo(try({
 }))
 
 (Foo
-  (try
+  (__handle
     { (Baz
         (effect!)
         (effect!)) }
@@ -828,11 +828,11 @@ effect!([])
 
 ---
 
-try({
+__handle({
   List(get!(), get!())
 }, get!, 'r => {
   ' => {
-    try({
+    __handle({
       r(Foo)
     }, get!, 'r => {
       ' => {
@@ -842,7 +842,7 @@ try({
   }
 })
 
-(try
+(__handle
   { (List
       (get!)
       (get!)) }
@@ -851,7 +851,7 @@ try({
     'r
     { (=>
         '
-        { (try
+        { (__handle
             { (r
                 Foo) }
             get!
@@ -1020,13 +1020,13 @@ List(Foo, Bar)
 
 ---
 
-try({
-    try({ throw!() }, throw!, '_ => { '_ => {}})
+__handle({
+    __handle({ throw!() }, throw!, '_ => { '_ => {}})
     throw!()
 }, throw!, '_ => { '_ => {} })
 
-(try
-  { (try
+(__handle
+  { (__handle
       { (throw!) }
       throw!
       (=>
