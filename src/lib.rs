@@ -75,9 +75,6 @@ enum Call<'code> {
     Keyword(Vec<&'code str>),
 }
 
-#[derive(Debug, Clone)]
-struct Prg<'code>(Vec<Ast<'code>>, &'code str);
-
 fn pos_at(i: usize, code: &str) -> String {
     let (mut line, mut col) = (1, 1);
     for c in code.chars().take(i) {
@@ -90,7 +87,7 @@ fn pos_at(i: usize, code: &str) -> String {
     format!("line {line}, col {col}")
 }
 
-fn parse(code: &str) -> Result<Prg<'_>, String> {
+fn parse(code: &str) -> Result<Vec<Ast<'_>>, String> {
     struct E<'c>(usize, Option<(usize, &'c str)>, _E<'c>);
     enum _E<'c> {
         RParen,
@@ -201,7 +198,7 @@ fn parse(code: &str) -> Result<Prg<'_>, String> {
     }
     let mut toks = scan(code).into_iter().peekable();
     match _exprs(&mut toks, 0, None) {
-        Ok(exprs) => Ok(Prg(exprs, code)),
+        Ok(exprs) => Ok(exprs),
         Err(E(i, actual, expected)) => {
             let p = pos_at(i, code);
             let expected = match expected {
@@ -259,7 +256,7 @@ const COMPOUND: &str = "Compound";
 const TEMPLATE: &str = "Template";
 const TUPLE: &str = "Tuple";
 
-fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
+fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), String> {
     struct Ctx<'c> {
         bindings: Vec<&'c str>,
         vars: Vec<&'c str>,
@@ -576,8 +573,9 @@ fn compile_prg(expr: Expr, strings: Vec<String>) -> Bytecode {
 }
 
 pub fn compile(code: &str) -> Result<Bytecode, String> {
-    let parsed = parse(code)?;
-    let (expr, strings) = desugar(parsed)?;
+    let code = include_str!("prelude.vo").to_string() + "\n" + code;
+    let parsed = parse(&code)?;
+    let (expr, strings) = desugar(parsed, &code)?;
     Ok(compile_prg(expr, strings.clone()))
 }
 
@@ -1000,7 +998,7 @@ mod tests {
         assert_eq!(eval_expr(expr, strings).unwrap(), "Bar");
     }
 
-    fn pretty_prg<'c>(prg: &Prg<'c>) -> String {
+    fn pretty_prg<'c>(prg: &[Ast<'_>]) -> String {
         fn pretty<'c>(ast: &Ast<'c>, lvl: usize, buf: &mut String) {
             let indent = "  ";
             match &ast.1 {
@@ -1044,7 +1042,7 @@ mod tests {
             }
         }
         let mut buf = String::new();
-        for item in prg.0.iter() {
+        for item in prg.iter() {
             pretty(item, 0, &mut buf);
             buf.push('\n');
         }
@@ -1175,7 +1173,7 @@ mod tests {
             Err(e) => results.push(e),
             Ok(parsed) => {
                 results.push(pretty_prg(&parsed));
-                match desugar(parsed.clone()) {
+                match desugar(parsed.clone(), code) {
                     Err(e) => results.push(e),
                     Ok((expr, strs)) => {
                         results.push(pretty_expr(&expr, &strs));
@@ -1385,5 +1383,21 @@ mod tests {
     #[test]
     fn test_run_with_std_fns() -> Result<(), String> {
         test(PathBuf::from("tests/run_with_std_fns.txt"))
+    }
+
+    #[test]
+    fn test_prelude() -> Result<(), String> {
+        let code = "
+match: Pair(Foo, Foo) with: [
+    Pair('x, Bar) -> { Bar }
+    Pair('x, 'x) -> { Twice(x) }
+]
+";
+        let bytecode = compile(code).unwrap();
+        match bytecode.run().unwrap() {
+            VmState::Done(v, strings) => assert_eq!(pretty(&v, &strings), "Twice(Foo)"),
+            VmState::Resumable(_, _) => panic!("Found a resumable!"),
+        }
+        Ok(())
     }
 }

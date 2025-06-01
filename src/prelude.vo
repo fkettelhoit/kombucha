@@ -1,0 +1,115 @@
+'fold = ('fold ~> { ['f, 'acc, 'xs] => {
+    __unpack(xs, ['xs, 'x] => {
+        fold(f, f(acc, x), xs)
+    }, {
+        acc
+    })
+}})
+'apply = (['f, 'xs] => {
+    fold(['f, 'x] => { f(x) }, f, xs)
+})
+'reverse = ('xs => {
+    fold(['xs, 'x] => { xs(x) }, [], xs)
+})
+'map = (['f, 'xs] => {
+    fold(['xs, 'x] => { xs(f(x)) }, [], reverse(xs))
+})
+'flatten = ('xs => {
+    reverse(fold(['acc, 'x] => {
+        fold(['acc, 'x] => { acc(x) }, acc, x)
+    }, [], xs))
+})
+'zip = ('zip ~> { ['acc, 'xs, 'ys] => {
+    __unpack(xs, ['xs, 'x] => {
+        __unpack(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
+    }, {
+        __unpack(ys, ['ys, 'y] => {}, { acc })
+    })
+}})
+'zip = (['xs, 'ys] => {
+    reverse(zip([], xs, ys))
+})
+'match-with = (['value, 'clauses] => {
+    'result = fold(['result, 'clause] => {
+        __compare(result, [], {
+            __handle({
+                Match(clause(value))
+            }, no-match!, ['r, 'arg] => {})
+        }, {
+            result
+        })
+    }, [], clauses)
+    __unpack(result, ['_, 'result] => {
+        result
+    }, {
+        no-match!(value)
+    })
+})
+'try-catch-as = (['body, 'effect, 'handler] => {
+    __handle(body, effect, handler)
+})
+'-> = (['pattern, 'body, 'value] => {
+    '== = ('== ~> { ['a, 'b] => {
+        __unpack(a, ['xs, 'x] => {
+            __unpack(b, ['ys, 'y] => {
+                __compare(x == y, True, { xs == ys }, { False })
+            }, {
+                False
+            })
+        }, {
+            __compare(a, b, { True }, { False })
+        })
+    }})
+    'first = ('xs => {
+        __unpack(xs, ['_, 'x] => { x }, { xs })
+    })
+    'second = ('xs => {
+        __unpack(xs, ['xs, '_] => { first(xs) }, { xs })
+    })
+    'join = fold(['acc, 'pair] => {
+        'xvar = first(pair)
+        'xval = second(pair)
+        fold(['_, 'pair] => {
+            'yvar = first(pair)
+            'yval = second(pair)
+            __compare(xvar, yvar, {
+                __compare(xval == yval, False, {
+                    no-match!([[xvar, xval], [yvar, yval]])
+                }, {})
+            }, {})
+        }, [], acc)
+        acc(pair)
+    }, [])
+    'unify = ('unify ~> { ['pattern, 'value] => {
+        __unpack(pattern, ['type, 'pattern] => {
+            __compare(type, Binding, {
+                [[pattern, value]]
+            }, {
+                __compare(type, Compound, {
+                    'zipped = zip(pattern, value)
+                    __compare(zipped, [], {
+                        no-match!([pattern, value])
+                    }, {
+                        join(flatten(map(apply(unify), zip(pattern, value))))
+                    })
+                }, {
+                    __compare(pattern == value, True, {}, {
+                        no-match!([pattern, value])
+                    })
+                })
+            })
+        }, {
+            invalid!(pattern)
+        })
+    }})
+    __handle({
+        'args = map(second, unify(pattern, value))
+        __compare(args, [], {
+            body()
+        }, {
+            apply(body, args)
+        })
+    }, no-match!, ['_, 'arg] => {
+        no-match!(arg)
+    })
+})
