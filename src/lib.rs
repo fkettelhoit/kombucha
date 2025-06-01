@@ -1,4 +1,5 @@
 use std::{
+    array,
     borrow::Cow,
     cmp::max,
     iter::{Peekable, once},
@@ -589,7 +590,7 @@ pub enum V {
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
     Recursive(usize, Rc<Vec<V>>),
-    Resumable(usize, Vm),
+    Resumable(usize, Box<Vm>),
 }
 
 pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
@@ -628,11 +629,77 @@ pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
+pub struct Stack<T: Clone, const SIZE: usize> {
+    stack: [Option<T>; SIZE],
+    sp: usize,
+}
+
+impl<T: Clone, const SIZE: usize> Stack<T, SIZE> {
+    fn new() -> Self {
+        Self {
+            stack: array::from_fn(|_| None),
+            sp: 0,
+        }
+    }
+    fn get(&self, i: usize) -> Option<&T> {
+        if i >= self.sp {
+            panic!("Stack underflow in get")
+        }
+        self.stack[self.sp - 1 - i].as_ref()
+    }
+    fn get_n(&self, i: usize) -> Vec<T> {
+        if i > self.sp {
+            panic!("Stack underflow in get_n")
+        }
+        self.stack[self.sp - i..self.sp]
+            .iter()
+            .map(|v| v.clone().unwrap())
+            .collect()
+    }
+    fn pop(&mut self) -> Option<T> {
+        if self.sp == 0 {
+            return None;
+        }
+        self.sp -= 1;
+        self.stack[self.sp].take()
+    }
+    fn pop_after(&mut self, sp: usize) -> Stack<T, SIZE> {
+        if sp > self.sp {
+            panic!("sp > self.sp");
+        }
+        let mut popped = Stack::new();
+        for i in 0..self.sp - sp {
+            popped.stack[i] = self.stack[sp + i].take();
+        }
+        popped.sp = self.sp - sp;
+        self.sp = sp;
+        popped
+    }
+    fn push(&mut self, v: T) {
+        if self.sp < SIZE {
+            self.stack[self.sp] = Some(v);
+            self.sp += 1;
+        } else {
+            panic!("Stack overflow!");
+        }
+    }
+    fn extend(&mut self, mut other: Stack<T, SIZE>) {
+        for i in 0..other.sp {
+            self.stack[self.sp + i] = other.stack[i].take()
+        }
+        self.sp += other.sp
+    }
+}
+
+const VAR_STACK_SIZE: usize = 512;
+const TEMP_STACK_SIZE: usize = 256;
+
+#[derive(Debug, Clone)]
 pub struct Vm {
     ip: usize,
-    vars: Vec<V>,
-    temps: Vec<V>,
+    vars: Stack<V, VAR_STACK_SIZE>,
+    temps: Stack<V, TEMP_STACK_SIZE>,
     frames: Vec<(usize, usize)>,
     handlers: Vec<Handler>,
 }
@@ -687,8 +754,13 @@ impl Bytecode {
     }
 
     pub fn run(self) -> Result<VmState, usize> {
-        let mut vm = Vm::default();
-        vm.ip = self.start;
+        let vm = Vm {
+            ip: self.start,
+            vars: Stack::new(),
+            temps: Stack::new(),
+            frames: vec![],
+            handlers: vec![],
+        };
         vm.run(self)
     }
 }
@@ -709,10 +781,7 @@ impl Vm {
             // }
             ip += 1;
             match op {
-                Op::LoadVar(v) => {
-                    let v: &V = &vars[vars.len() - 1 - v];
-                    temps.push(v.clone());
-                }
+                Op::LoadVar(v) => temps.push(vars.get(v).ok_or(i)?.clone()),
                 Op::LoadString(s) => temps.push(V::String(s)),
                 Op::LoadEffect(eff) => temps.push(V::Effect(eff)),
                 Op::LoadFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
@@ -722,7 +791,7 @@ impl Vm {
                         (_, b, a) => (a, b),
                     };
                     if let V::Fn(c, v, _) = arg {
-                        arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
+                        arg = V::Closure(c, Rc::new(vars.get_n(v)));
                     }
                     match (f, arg) {
                         (V::Effect(eff), arg) => {
@@ -730,8 +799,8 @@ impl Vm {
                             match handler.cloned() {
                                 Some(handler) => {
                                     let (v, t, f, h) = handler.state;
-                                    let res_vars = vars.drain(v..).collect::<Vec<_>>();
-                                    let res_temps = temps.drain(t..).collect::<Vec<_>>();
+                                    let res_vars = vars.pop_after(v);
+                                    let res_temps = temps.pop_after(t);
                                     let res_frames = frames.drain(f..).collect::<Vec<_>>();
                                     let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
                                     handlers.pop();
@@ -743,7 +812,7 @@ impl Vm {
                                         handlers: res_handlers,
                                     };
                                     temps.push(arg);
-                                    temps.push(V::Resumable(v, vm));
+                                    temps.push(V::Resumable(v, Box::new(vm)));
                                     temps.push(handler.handler);
                                     ip = handler.ret;
                                 }
@@ -760,8 +829,8 @@ impl Vm {
                             }
                         }
                         (V::Resumable(v, vm), arg) => {
-                            let offset = vars.len() as i64 - v as i64;
-                            frames.push((vars.len(), ip));
+                            let offset = vars.sp as i64 - v as i64;
+                            frames.push((vars.sp, ip));
                             vars.extend(vm.vars);
                             temps.extend(vm.temps);
                             frames.extend(
@@ -775,20 +844,24 @@ impl Vm {
                         }
                         (V::Recursive(c, captured), arg) => {
                             temps.push(arg);
-                            frames.push((vars.len(), ip - 1));
-                            vars.extend(captured.iter().cloned());
+                            frames.push((vars.sp, ip - 1));
+                            for v in captured.iter() {
+                                vars.push(v.clone());
+                            }
                             vars.push(V::Recursive(c, captured));
                             ip = c;
                         }
                         (V::Closure(c, captured), arg) => {
                             // TODO: if the next op is an Op::Return, we might want to do TCO
-                            frames.push((vars.len(), ip));
-                            vars.extend(captured.iter().cloned());
+                            frames.push((vars.sp, ip));
+                            for v in captured.iter() {
+                                vars.push(v.clone());
+                            }
                             vars.push(arg);
                             ip = c;
                         }
                         (V::Fn(c, _, _), arg) => {
-                            frames.push((vars.len(), ip));
+                            frames.push((vars.sp, ip));
                             vars.push(arg);
                             ip = c;
                         }
@@ -801,26 +874,15 @@ impl Vm {
                 }
                 Op::Return => {
                     let (frame, ret) = frames.pop().ok_or(i)?;
-                    match (temps.last().cloned(), code.ops.get(ret)) {
-                        // (Some(V::Fn(c, _, f)), Some(Op::ApplyFnToArg)) if f == frames.len() + 1 => {
-                        //     let _f = temps.pop();
-                        //     let mut arg = temps.pop().ok_or(i)?;
-                        //     if let V::Fn(c, v, _) = arg {
-                        //         let captured = Rc::new(vars[frame - v..frame].to_vec());
-                        //         arg = V::Closure(c, captured);
-                        //     }
-                        //     frames.push((frame, ret + 1));
-                        //     vars.push(arg);
-                        //     ip = c;
-                        // }
-                        (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
-                            let _f = temps.pop();
-                            temps.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
-                            vars.truncate(frame);
+                    match temps.pop().expect("temps underflow in RETURN") {
+                        V::Fn(c, v, f) if f == frames.len() + 1 => {
+                            temps.push(V::Closure(c, Rc::new(vars.get_n(v))));
+                            vars.pop_after(frame);
                             ip = ret
                         }
-                        _ => {
-                            vars.truncate(frame);
+                        v => {
+                            temps.push(v);
+                            vars.pop_after(frame);
                             ip = ret
                         }
                     }
@@ -851,11 +913,11 @@ impl Vm {
                     let eff = temps.pop().ok_or(i)?;
                     let v = temps.pop().ok_or(i)?;
                     if let V::Fn(c, v, _) = handler {
-                        handler = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
+                        handler = V::Closure(c, Rc::new(vars.get_n(v)));
                     }
                     match eff {
                         V::Effect(effect) => {
-                            let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
+                            let state = (vars.sp, temps.sp, frames.len(), handlers.len() + 1);
                             let ret = ip + 2; // skip apply + unwind
                             handlers.push(Handler {
                                 effect,
