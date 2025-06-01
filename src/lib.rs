@@ -464,39 +464,18 @@ fn desugar(Prg(block, code): Prg<'_>) -> Result<(Expr, Vec<String>), String> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Vm {
+pub struct Bytecode {
     strings: Vec<Cow<'static, str>>,
-    bytecode: Vec<Op>,
-    ip: usize,
-    vars: Vec<V>,
-    temps: Vec<V>,
-    frames: Vec<(usize, usize)>,
-    handlers: Vec<Handler>,
+    ops: Vec<Op>,
+    start: usize,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Coroutine {
-    vars: Vec<V>,
-    temps: Vec<V>,
-    frames: Vec<(usize, usize)>,
-    handlers: Vec<Handler>,
-}
-
-#[derive(Debug, Clone)]
-struct Handler {
-    effect: usize,
-    handler: V,
-    state: (usize, usize, usize, usize),
-    ret: usize,
-}
-
-impl Vm {
+impl Bytecode {
     fn new(strings: Vec<impl Into<Cow<'static, str>>>, bytecode: Vec<Op>, start: usize) -> Self {
-        Vm {
+        Bytecode {
             strings: strings.into_iter().map(|s| s.into()).collect(),
-            bytecode,
-            ip: start,
-            ..Default::default()
+            ops: bytecode,
+            start,
         }
     }
 }
@@ -572,7 +551,7 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
     }
 }
 
-fn compile_prg(expr: Expr, strings: Vec<String>) -> Vm {
+fn compile_prg(expr: Expr, strings: Vec<String>) -> Bytecode {
     let mut main = vec![];
 
     // fix = f => x => f(fix(f))(x)
@@ -593,10 +572,10 @@ fn compile_prg(expr: Expr, strings: Vec<String>) -> Vm {
     compile_expr(expr, &mut main, &mut bytecode);
     let start = bytecode.len();
     bytecode.extend(main);
-    Vm::new(strings, bytecode, start)
+    Bytecode::new(strings, bytecode, start)
 }
 
-pub fn compile(code: &str) -> Result<Vm, String> {
+pub fn compile(code: &str) -> Result<Bytecode, String> {
     let parsed = parse(code)?;
     let (expr, strings) = desugar(parsed)?;
     Ok(compile_prg(expr, strings.clone()))
@@ -610,7 +589,7 @@ pub enum V {
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
     Recursive(usize, Rc<Vec<V>>),
-    Resumable(usize, usize, Coroutine),
+    Resumable(usize, Vm),
 }
 
 pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
@@ -643,10 +622,27 @@ pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
             let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("~>{c} [{}]", closed.join(", "))
         }
-        V::Resumable(c, v, _) => {
-            format!("resumable {c}, ({v})")
+        V::Resumable(_, _) => {
+            format!("resumable")
         }
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Vm {
+    ip: usize,
+    vars: Vec<V>,
+    temps: Vec<V>,
+    frames: Vec<(usize, usize)>,
+    handlers: Vec<Handler>,
+}
+
+#[derive(Debug, Clone)]
+struct Handler {
+    effect: usize,
+    handler: V,
+    state: (usize, usize, usize, usize),
+    ret: usize,
 }
 
 #[derive(Debug)]
@@ -656,7 +652,7 @@ pub enum VmState {
 }
 
 #[derive(Debug)]
-pub struct Resumable(Vm, usize);
+pub struct Resumable(Bytecode, Vm, usize);
 
 impl Resumable {
     pub fn strings(&self) -> &Vec<Cow<'static, str>> {
@@ -664,43 +660,54 @@ impl Resumable {
     }
 
     pub fn get_effect_name(&self) -> Option<&str> {
-        let Resumable(vm, eff) = self;
-        vm.strings.get(*eff).map(|s| s.as_ref())
+        let Resumable(code, _, eff) = self;
+        code.strings.get(*eff).map(|s| s.as_ref())
     }
 
     pub fn intern_string(&mut self, s: impl Into<Cow<'static, str>>) -> V {
         let s = s.into();
-        let Resumable(vm, _) = self;
-        let s = vm.strings.iter().position(|x| *x == s).unwrap_or_else(|| {
-            vm.strings.push(s);
-            vm.strings.len() - 1
+        let Resumable(bc, _, _) = self;
+        let s = bc.strings.iter().position(|x| *x == s).unwrap_or_else(|| {
+            bc.strings.push(s);
+            bc.strings.len() - 1
         });
         V::String(s)
     }
 
     pub fn run(self, arg: V) -> Result<VmState, usize> {
-        let Resumable(mut vm, _) = self;
+        let Resumable(bc, mut vm, _) = self;
         vm.temps.push(arg);
-        vm.run()
+        vm.run(bc)
     }
 }
 
-impl Vm {
+impl Bytecode {
     pub fn nil() -> V {
         V::String(Reflect::Nil as usize)
     }
 
-    pub fn run(mut self) -> Result<VmState, usize> {
-        let vars = &mut self.vars;
-        let temps = &mut self.temps;
-        let frames = &mut self.frames;
-        let handlers = &mut self.handlers;
-        while let Some(op) = self.bytecode.get(self.ip).copied() {
-            let i = self.ip;
+    pub fn run(self) -> Result<VmState, usize> {
+        let mut vm = Vm::default();
+        vm.ip = self.start;
+        vm.run(self)
+    }
+}
+
+impl Vm {
+    fn run(self, code: Bytecode) -> Result<VmState, usize> {
+        let Vm {
+            mut ip,
+            mut vars,
+            mut temps,
+            mut frames,
+            mut handlers,
+        } = self;
+        while let Some(op) = code.ops.get(ip).copied() {
+            let i = ip;
             // if cfg!(test) {
             //     println!("==> {i}: {op:?}");
             // }
-            self.ip += 1;
+            ip += 1;
             match op {
                 Op::LoadVar(v) => {
                     let v: &V = &vars[vars.len() - 1 - v];
@@ -728,53 +735,62 @@ impl Vm {
                                     let res_frames = frames.drain(f..).collect::<Vec<_>>();
                                     let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
                                     handlers.pop();
-                                    let coroutine = Coroutine {
+                                    let vm = Vm {
+                                        ip,
                                         vars: res_vars,
                                         temps: res_temps,
                                         frames: res_frames,
                                         handlers: res_handlers,
                                     };
                                     temps.push(arg);
-                                    temps.push(V::Resumable(self.ip, v, coroutine));
+                                    temps.push(V::Resumable(v, vm));
                                     temps.push(handler.handler);
-                                    self.ip = handler.ret;
+                                    ip = handler.ret;
                                 }
-                                None => return Ok(VmState::Resumable(Resumable(self, eff), arg)),
+                                None => {
+                                    let vm = Vm {
+                                        ip,
+                                        vars,
+                                        temps,
+                                        frames,
+                                        handlers,
+                                    };
+                                    return Ok(VmState::Resumable(Resumable(code, vm, eff), arg));
+                                }
                             }
                         }
-                        (V::Resumable(c, v, coroutine), arg) => {
+                        (V::Resumable(v, vm), arg) => {
                             let offset = vars.len() as i64 - v as i64;
-                            frames.push((vars.len(), self.ip));
-                            vars.extend(coroutine.vars);
-                            temps.extend(coroutine.temps);
+                            frames.push((vars.len(), ip));
+                            vars.extend(vm.vars);
+                            temps.extend(vm.temps);
                             frames.extend(
-                                coroutine
-                                    .frames
+                                vm.frames
                                     .into_iter()
                                     .map(|(v, ret)| ((v as i64 + offset) as usize, ret)),
                             );
-                            handlers.extend(coroutine.handlers);
+                            handlers.extend(vm.handlers);
                             temps.push(arg);
-                            self.ip = c;
+                            ip = vm.ip;
                         }
                         (V::Recursive(c, captured), arg) => {
                             temps.push(arg);
-                            frames.push((vars.len(), self.ip - 1));
+                            frames.push((vars.len(), ip - 1));
                             vars.extend(captured.iter().cloned());
                             vars.push(V::Recursive(c, captured));
-                            self.ip = c;
+                            ip = c;
                         }
                         (V::Closure(c, captured), arg) => {
                             // TODO: if the next op is an Op::Return, we might want to do TCO
-                            frames.push((vars.len(), self.ip));
+                            frames.push((vars.len(), ip));
                             vars.extend(captured.iter().cloned());
                             vars.push(arg);
-                            self.ip = c;
+                            ip = c;
                         }
                         (V::Fn(c, _, _), arg) => {
-                            frames.push((vars.len(), self.ip));
+                            frames.push((vars.len(), ip));
                             vars.push(arg);
-                            self.ip = c;
+                            ip = c;
                         }
                         (V::String(s), arg) => temps.push(V::Record(s, vec![Rc::new(arg)])),
                         (V::Record(s, mut items), arg) => {
@@ -785,7 +801,7 @@ impl Vm {
                 }
                 Op::Return => {
                     let (frame, ret) = frames.pop().ok_or(i)?;
-                    match (temps.last().cloned(), self.bytecode.get(ret)) {
+                    match (temps.last().cloned(), code.ops.get(ret)) {
                         // (Some(V::Fn(c, _, f)), Some(Op::ApplyFnToArg)) if f == frames.len() + 1 => {
                         //     let _f = temps.pop();
                         //     let mut arg = temps.pop().ok_or(i)?;
@@ -795,17 +811,17 @@ impl Vm {
                         //     }
                         //     frames.push((frame, ret + 1));
                         //     vars.push(arg);
-                        //     self.ip = c;
+                        //     ip = c;
                         // }
                         (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
                             let _f = temps.pop();
                             temps.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
                             vars.truncate(frame);
-                            self.ip = ret
+                            ip = ret
                         }
                         _ => {
                             vars.truncate(frame);
-                            self.ip = ret
+                            ip = ret
                         }
                     }
                 }
@@ -827,7 +843,7 @@ impl Vm {
                     (f, _, _) => {
                         temps.push(V::String(Reflect::Nil as usize));
                         temps.push(f);
-                        self.ip += 1;
+                        ip += 1;
                     }
                 },
                 Op::Try => {
@@ -840,7 +856,7 @@ impl Vm {
                     match eff {
                         V::Effect(effect) => {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
-                            let ret = self.ip + 2; // skip apply + unwind
+                            let ret = ip + 2; // skip apply + unwind
                             handlers.push(Handler {
                                 effect,
                                 handler,
@@ -852,13 +868,13 @@ impl Vm {
                         }
                         _ => {
                             temps.push(v);
-                            self.ip += 4; // skip apply, unwind, apply, apply
+                            ip += 4; // skip apply, unwind, apply, apply
                         }
                     }
                 }
                 Op::Unwind => {
                     handlers.pop();
-                    self.ip += 2;
+                    ip += 2;
                 }
                 Op::Cmp => {
                     let (f, t, b, a) = (
@@ -884,10 +900,7 @@ impl Vm {
             //     }
             // }
         }
-        Ok(VmState::Done(
-            self.temps.pop().ok_or(self.ip)?,
-            self.strings,
-        ))
+        Ok(VmState::Done(temps.pop().ok_or(ip)?, code.strings))
     }
 }
 
@@ -1110,9 +1123,9 @@ mod tests {
         buf
     }
 
-    fn pretty_bytecode(vm: &Vm) -> String {
+    fn pretty_bytecode(vm: &Bytecode) -> String {
         let mut buf = String::new();
-        for (i, op) in vm.bytecode.iter().enumerate() {
+        for (i, op) in vm.ops.iter().enumerate() {
             match op {
                 Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),
                 Op::LoadString(s) => match vm.strings.get(*s) {
@@ -1167,7 +1180,7 @@ mod tests {
             .collect())
     }
 
-    fn test_without_run(code: &str) -> (Vec<String>, Vec<Vm>) {
+    fn test_without_run(code: &str) -> (Vec<String>, Vec<Bytecode>) {
         let mut results = vec![];
         let mut compiled = vec![];
         match parse(code) {
@@ -1354,7 +1367,7 @@ mod tests {
                             match vm.get_effect_name().unwrap() {
                                 eff if eff == "print" => {
                                     printed.push(format!("\"{arg}\"\n"));
-                                    result = vm.run(Vm::nil());
+                                    result = vm.run(Bytecode::nil());
                                 }
                                 name => break actual.push(format!("{name}!({arg})")),
                             }
