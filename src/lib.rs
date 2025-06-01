@@ -588,7 +588,6 @@ pub enum V {
     Effect(usize),
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
-    Recursive(usize, Rc<Vec<V>>),
     Resumable(usize, Vm),
 }
 
@@ -617,10 +616,6 @@ pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
             }
             let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("{}({})", strs[*s].to_string(), items.join(", "))
-        }
-        V::Recursive(c, vs) => {
-            let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-            format!("~>{c} [{}]", closed.join(", "))
         }
         V::Resumable(_, _) => {
             format!("resumable")
@@ -772,13 +767,6 @@ impl Vm {
                             handlers.extend(vm.handlers);
                             temps.push(arg);
                             ip = vm.ip;
-                        }
-                        (V::Recursive(c, captured), arg) => {
-                            temps.push(arg);
-                            frames.push((vars.len(), ip - 1));
-                            vars.extend(captured.iter().cloned());
-                            vars.push(V::Recursive(c, captured));
-                            ip = c;
                         }
                         (V::Closure(c, captured), arg) => {
                             // TODO: if the next op is an Op::Return, we might want to do TCO
