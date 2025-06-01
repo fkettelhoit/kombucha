@@ -588,7 +588,7 @@ pub enum V {
     Effect(usize),
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
-    Resumable(usize, Vm),
+    Resumable(usize, Box<Vm>),
 }
 
 pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
@@ -738,7 +738,7 @@ impl Vm {
                                         handlers: res_handlers,
                                     };
                                     temps.push(arg);
-                                    temps.push(V::Resumable(v, vm));
+                                    temps.push(V::Resumable(v, Box::new(vm)));
                                     temps.push(handler.handler);
                                     ip = handler.ret;
                                 }
