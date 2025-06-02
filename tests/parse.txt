@@ -163,3 +163,14 @@ if: x == Foo do: Pair(x, x) else: Error
     x
     x)
   Error)
+
+---
+
+// Foo
+Foo(Bar)// this is a comment // comment
+Baz(Qux)//
+
+(Foo
+  Bar)
+(Baz
+  Qux)

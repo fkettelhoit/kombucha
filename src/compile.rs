@@ -25,7 +25,8 @@ enum Tok {
 fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
     let mut toks = vec![];
     let mut i = 0;
-    for (j, c) in code.char_indices().chain(once((code.len(), ' '))) {
+    let mut chars = code.char_indices().chain(once((code.len(), ' ')));
+    while let Some((j, c)) = chars.next() {
         let tok = match c {
             '(' => Some(Tok::LParen),
             ')' => Some(Tok::RParen),
@@ -36,7 +37,8 @@ fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
             ',' | '\n' => Some(Tok::Separator),
             _ => None,
         };
-        if tok.is_some() || c.is_ascii_whitespace() {
+        let is_comment = c == '/' && code.get(j + 1..j + 2) == Some("/");
+        if tok.is_some() || c.is_ascii_whitespace() || is_comment {
             if let (Some(n), Some(l)) = (code[i..j].chars().next(), code[i..j].chars().last()) {
                 let tok = match (n, l) {
                     (n, _) if n.is_ascii_uppercase() => Tok::String,
@@ -50,6 +52,10 @@ fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
         }
         if let Some(tok) = tok {
             toks.push((tok, j, &code[j..j + 1]));
+        } else if is_comment {
+            toks.push((Tok::Separator, j, &code[j..j + 1]));
+            let (j, _) = chars.find(|(_, c)| *c == '\n').unwrap_or_default();
+            i = j + 1;
         }
     }
     toks
