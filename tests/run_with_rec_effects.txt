@@ -52,10 +52,10 @@
                     0 ) ) ) ) ) )
   List )
 
-00000: LoadFn(00002, 00001)
+00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn(00000, 00000)
+00003: LoadFn { code: 00000, fvars: 00000 }
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -64,7 +64,7 @@
 00009:   Return
 00010: LoadVar(00000)
 00011:   Return
-00012: LoadFn(00010, 00000)
+00012: LoadFn { code: 00010, fvars: 00000 }
 00013:   Return
 00014: LoadVar(00002)
 00015: LoadVar(00001)
@@ -75,9 +75,9 @@
 00020: ApplyArgToFn
 00021: ApplyArgToFn
 00022:   Return
-00023: LoadFn(00014, 00002)
+00023: LoadFn { code: 00014, fvars: 00002 }
 00024:   Return
-00025: LoadFn(00023, 00001)
+00025: LoadFn { code: 00023, fvars: 00001 }
 00026:   Return
 00027: PushEffect("effect")
 00028: PushString("Foo")
@@ -85,11 +85,11 @@
 00030:   Return
 00031: LoadVar(00000)
 00032:   Return
-00033: LoadFn(00031, 00000)
+00033: LoadFn { code: 00031, fvars: 00000 }
 00034:   Return
 00035: LoadVar(00000)
 00036:   Return
-00037: LoadFn(00035, 00000)
+00037: LoadFn { code: 00035, fvars: 00000 }
 00038:   Return
 00039: LoadVar(00001)
 00040: LoadVar(00002)
@@ -97,28 +97,28 @@
 00042: ApplyFnToArg
 00043: ApplyFnToArg
 00044:   Return
-00045: LoadFn(00037, 00000)
+00045: LoadFn { code: 00037, fvars: 00000 }
 00046: PushString(""x"")
 00047: ApplyFnToArg
-00048: LoadFn(00039, 00002)
+00048: LoadFn { code: 00039, fvars: 00002 }
 00049: ApplyFnToArg
 00050:   Return
-00051: LoadFn(00025, 00000)
-00052: LoadFn(00027, 00000)
+00051: LoadFn { code: 00025, fvars: 00000 }
+00052: LoadFn { code: 00027, fvars: 00000 }
 00053: ApplyFnToArg
 00054: PushEffect("effect")
 00055: ApplyFnToArg
-00056: LoadFn(00033, 00000)
+00056: LoadFn { code: 00033, fvars: 00000 }
 00057: PushString(""r"")
 00058: ApplyFnToArg
-00059: LoadFn(00045, 00001)
+00059: LoadFn { code: 00045, fvars: 00001 }
 00060: ApplyFnToArg
 00061: ApplyFnToArg
 00062:   Return
-00063: LoadFn(00012, 00000)
+00063: LoadFn { code: 00012, fvars: 00000 }
 00064: PushString(""acc"")
 00065: ApplyFnToArg
-00066: LoadFn(00051, 00000)
+00066: LoadFn { code: 00051, fvars: 00000 }
 00067: ApplyFnToArg
 00068: PushString("List")
 00069: ApplyFnToArg
@@ -249,10 +249,10 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
           ( toggle!
             [] ) ) ) )
 
-00000: LoadFn(00002, 00001)
+00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn(00000, 00000)
+00003: LoadFn { code: 00000, fvars: 00000 }
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -263,23 +263,23 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00011: LoadVar(00001)
 00012: ApplyFnToArg
 00013:   Return
-00014: LoadFn(00010, 00001)
+00014: LoadFn { code: 00010, fvars: 00001 }
 00015:   Return
-00016: LoadFn(00014, 00000)
+00016: LoadFn { code: 00014, fvars: 00000 }
 00017:   Return
 00018: LoadVar(00000)
-00019: LoadFn(00000, 00000)
+00019: LoadFn { code: 00000, fvars: 00000 }
 00020: ApplyArgToFn
 00021:   Return
-00022: LoadFn(00018, 00000)
+00022: LoadFn { code: 00018, fvars: 00000 }
 00023:   Return
 00024: LoadVar(00000)
 00025:   Return
-00026: LoadFn(00024, 00000)
+00026: LoadFn { code: 00024, fvars: 00000 }
 00027:   Return
 00028: LoadVar(00000)
 00029:   Return
-00030: LoadFn(00028, 00000)
+00030: LoadFn { code: 00028, fvars: 00000 }
 00031:   Return
 00032: LoadVar(00002)
 00033: LoadVar(00001)
@@ -290,9 +290,9 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00038: ApplyArgToFn
 00039: ApplyArgToFn
 00040:   Return
-00041: LoadFn(00032, 00002)
+00041: LoadFn { code: 00032, fvars: 00002 }
 00042:   Return
-00043: LoadFn(00041, 00001)
+00043: LoadFn { code: 00041, fvars: 00001 }
 00044:   Return
 00045: LoadVar(00001)
 00046: LoadVar(00002)
@@ -300,11 +300,11 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00048:   Return
 00049: LoadVar(00000)
 00050:   Return
-00051: LoadFn(00049, 00000)
+00051: LoadFn { code: 00049, fvars: 00000 }
 00052:   Return
 00053: LoadVar(00000)
 00054:   Return
-00055: LoadFn(00053, 00000)
+00055: LoadFn { code: 00053, fvars: 00000 }
 00056:   Return
 00057: LoadVar(00003)
 00058: LoadVar(00002)
@@ -313,11 +313,11 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00061: Cmp
 00062: ApplyFnToArg
 00063:   Return
-00064: LoadFn(00057, 00003)
+00064: LoadFn { code: 00057, fvars: 00003 }
 00065:   Return
-00066: LoadFn(00064, 00002)
+00066: LoadFn { code: 00064, fvars: 00002 }
 00067:   Return
-00068: LoadFn(00066, 00001)
+00068: LoadFn { code: 00066, fvars: 00001 }
 00069:   Return
 00070: LoadVar(00005)
 00071: PushString("False")
@@ -331,44 +331,44 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00079: LoadVar(00002)
 00080: ApplyFnToArg
 00081:   Return
-00082: LoadFn(00068, 00000)
+00082: LoadFn { code: 00068, fvars: 00000 }
 00083: LoadVar(00003)
 00084: ApplyFnToArg
 00085: PushString("True")
 00086: ApplyFnToArg
-00087: LoadFn(00070, 00005)
+00087: LoadFn { code: 00070, fvars: 00005 }
 00088: ApplyFnToArg
-00089: LoadFn(00076, 00005)
+00089: LoadFn { code: 00076, fvars: 00005 }
 00090: ApplyFnToArg
 00091:   Return
-00092: LoadFn(00055, 00000)
+00092: LoadFn { code: 00055, fvars: 00000 }
 00093: PushString("""")
 00094: ApplyFnToArg
-00095: LoadFn(00082, 00004)
+00095: LoadFn { code: 00082, fvars: 00004 }
 00096: ApplyFnToArg
 00097:   Return
-00098: LoadFn(00043, 00000)
-00099: LoadFn(00045, 00002)
+00098: LoadFn { code: 00043, fvars: 00000 }
+00099: LoadFn { code: 00045, fvars: 00002 }
 00100: ApplyFnToArg
 00101: PushEffect("toggle")
 00102: ApplyFnToArg
-00103: LoadFn(00051, 00000)
+00103: LoadFn { code: 00051, fvars: 00000 }
 00104: PushString(""r"")
 00105: ApplyFnToArg
-00106: LoadFn(00092, 00003)
+00106: LoadFn { code: 00092, fvars: 00003 }
 00107: ApplyFnToArg
 00108: ApplyFnToArg
 00109:   Return
-00110: LoadFn(00030, 00000)
+00110: LoadFn { code: 00030, fvars: 00000 }
 00111: PushString(""r"")
 00112: ApplyFnToArg
-00113: LoadFn(00098, 00002)
+00113: LoadFn { code: 00098, fvars: 00002 }
 00114: ApplyFnToArg
 00115:   Return
-00116: LoadFn(00026, 00000)
+00116: LoadFn { code: 00026, fvars: 00000 }
 00117: PushString(""val"")
 00118: ApplyFnToArg
-00119: LoadFn(00110, 00001)
+00119: LoadFn { code: 00110, fvars: 00001 }
 00120: ApplyFnToArg
 00121:   Return
 00122: PushString("List")
@@ -390,19 +390,19 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00138: PushString("False")
 00139: ApplyFnToArg
 00140: ApplyFnToArg
-00141: LoadFn(00122, 00000)
+00141: LoadFn { code: 00122, fvars: 00000 }
 00142: ApplyFnToArg
 00143:   Return
-00144: LoadFn(00016, 00000)
+00144: LoadFn { code: 00016, fvars: 00000 }
 00145: PushString(""with-toggle"")
 00146: ApplyFnToArg
-00147: LoadFn(00022, 00000)
+00147: LoadFn { code: 00022, fvars: 00000 }
 00148: PushString(""loop"")
 00149: ApplyFnToArg
-00150: LoadFn(00116, 00000)
+00150: LoadFn { code: 00116, fvars: 00000 }
 00151: ApplyFnToArg
 00152: ApplyFnToArg
-00153: LoadFn(00136, 00000)
+00153: LoadFn { code: 00136, fvars: 00000 }
 00154: ApplyFnToArg
 
 List(True, False, True)

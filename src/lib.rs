@@ -482,7 +482,7 @@ enum Op {
     LoadVar(usize),
     LoadString(usize),
     LoadEffect(usize),
-    LoadFn(usize, usize),
+    LoadFn { code: usize, fvars: usize },
     ApplyFnToArg,
     ApplyArgToFn,
     Return,
@@ -501,12 +501,15 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             let mut f = vec![];
             compile_expr(*body, &mut f, fns);
             f.push(Op::Return);
-            let captured = f.iter().fold(0, |captured, op| match *op {
+            let fvars = f.iter().fold(0, |captured, op| match *op {
                 Op::LoadVar(v) if v > captured => v,
-                Op::LoadFn(_, c) if c > captured => c - 1,
+                Op::LoadFn { fvars, .. } if fvars > captured => fvars - 1,
                 _ => captured,
             });
-            ops.push(Op::LoadFn(fns.len(), captured));
+            ops.push(Op::LoadFn {
+                code: fns.len(),
+                fvars,
+            });
             fns.extend(f);
         }
         Expr::App(f, arg) => {
@@ -516,7 +519,10 @@ fn compile_expr(expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
         }
         Expr::Rec(body) => {
             compile_expr(*body, ops, fns);
-            ops.push(Op::LoadFn(0, 0));
+            ops.push(Op::LoadFn {
+                code: 0, // the built-in fixed-point combinator
+                fvars: 0,
+            });
             ops.push(Op::ApplyArgToFn);
         }
         Expr::Cmp(a, b, if_t, if_f) => {
@@ -554,16 +560,16 @@ fn compile_prg(expr: Expr, strings: Vec<String>) -> Bytecode {
     // fix = f => x => f(fix(f))(x)
     let mut bytecode = vec![
         // 0: f => ...
-        Op::LoadFn(2, 1),
+        Op::LoadFn { code: 2, fvars: 1 },
         Op::Return,
         // 2: ... x => f(fix(f))(x)
-        Op::LoadVar(1),   // f
-        Op::LoadFn(0, 0), // f, fix
-        Op::LoadVar(1),   // f, fix, f
-        Op::ApplyFnToArg, // f, fix(f)
-        Op::ApplyFnToArg, // f(fix(f))
-        Op::LoadVar(0),   // f(fix(f)), x
-        Op::ApplyFnToArg, // f(fix(f))(x)
+        Op::LoadVar(1),                   // f
+        Op::LoadFn { code: 0, fvars: 0 }, // f, fix
+        Op::LoadVar(1),                   // f, fix, f
+        Op::ApplyFnToArg,                 // f, fix(f)
+        Op::ApplyFnToArg,                 // f(fix(f))
+        Op::LoadVar(0),                   // f(fix(f)), x
+        Op::ApplyFnToArg,                 // f(fix(f))(x)
         Op::Return,
     ];
     compile_expr(expr, &mut main, &mut bytecode);
@@ -708,7 +714,7 @@ impl Vm {
                 }
                 Op::LoadString(s) => temps.push(V::String(s)),
                 Op::LoadEffect(eff) => temps.push(V::Effect(eff)),
-                Op::LoadFn(code, captured) => temps.push(V::Fn(code, captured, frames.len())),
+                Op::LoadFn { code, fvars } => temps.push(V::Fn(code, fvars, frames.len())),
                 Op::ApplyFnToArg | Op::ApplyArgToFn => {
                     let (mut arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
                         (Op::ApplyFnToArg, b, a) => (b, a),

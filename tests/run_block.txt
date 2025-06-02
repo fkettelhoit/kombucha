@@ -30,10 +30,10 @@
             1 )
           0 ) ) )
 
-00000: LoadFn(00002, 00001)
+00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn(00000, 00000)
+00003: LoadFn { code: 00000, fvars: 00000 }
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -44,17 +44,17 @@
 00011: LoadVar(00001)
 00012: ApplyFnToArg
 00013:   Return
-00014: LoadFn(00010, 00001)
+00014: LoadFn { code: 00010, fvars: 00001 }
 00015:   Return
-00016: LoadFn(00014, 00000)
+00016: LoadFn { code: 00014, fvars: 00000 }
 00017:   Return
 00018: LoadVar(00000)
 00019: LoadVar(00001)
 00020: ApplyFnToArg
 00021:   Return
-00022: LoadFn(00018, 00001)
+00022: LoadFn { code: 00018, fvars: 00001 }
 00023:   Return
-00024: LoadFn(00022, 00000)
+00024: LoadFn { code: 00022, fvars: 00000 }
 00025:   Return
 00026: PushString("Pair")
 00027: LoadVar(00001)
@@ -62,20 +62,20 @@
 00029: LoadVar(00000)
 00030: ApplyFnToArg
 00031:   Return
-00032: LoadFn(00024, 00000)
+00032: LoadFn { code: 00024, fvars: 00000 }
 00033: PushString(""y"")
 00034: ApplyFnToArg
 00035: PushString("Bar")
 00036: ApplyFnToArg
-00037: LoadFn(00026, 00001)
+00037: LoadFn { code: 00026, fvars: 00001 }
 00038: ApplyFnToArg
 00039:   Return
-00040: LoadFn(00016, 00000)
+00040: LoadFn { code: 00016, fvars: 00000 }
 00041: PushString(""x"")
 00042: ApplyFnToArg
 00043: PushString("Foo")
 00044: ApplyFnToArg
-00045: LoadFn(00032, 00000)
+00045: LoadFn { code: 00032, fvars: 00000 }
 00046: ApplyFnToArg
 
 Pair(Foo, Bar)
@@ -110,10 +110,10 @@ Pair(Foo, Bar)
     ( 0
       Bar ) )
 
-00000: LoadFn(00002, 00001)
+00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn(00000, 00000)
+00003: LoadFn { code: 00000, fvars: 00000 }
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -124,13 +124,13 @@ Pair(Foo, Bar)
 00011: LoadVar(00001)
 00012: ApplyFnToArg
 00013:   Return
-00014: LoadFn(00010, 00001)
+00014: LoadFn { code: 00010, fvars: 00001 }
 00015:   Return
-00016: LoadFn(00014, 00000)
+00016: LoadFn { code: 00014, fvars: 00000 }
 00017:   Return
 00018: LoadVar(00000)
 00019:   Return
-00020: LoadFn(00018, 00000)
+00020: LoadFn { code: 00018, fvars: 00000 }
 00021:   Return
 00022: PushString("Foo")
 00023: LoadVar(00000)
@@ -140,16 +140,16 @@ Pair(Foo, Bar)
 00027: PushString("Bar")
 00028: ApplyFnToArg
 00029:   Return
-00030: LoadFn(00016, 00000)
+00030: LoadFn { code: 00016, fvars: 00000 }
 00031: PushString(""f"")
 00032: ApplyFnToArg
-00033: LoadFn(00020, 00000)
+00033: LoadFn { code: 00020, fvars: 00000 }
 00034: PushString(""x"")
 00035: ApplyFnToArg
-00036: LoadFn(00022, 00000)
+00036: LoadFn { code: 00022, fvars: 00000 }
 00037: ApplyFnToArg
 00038: ApplyFnToArg
-00039: LoadFn(00026, 00000)
+00039: LoadFn { code: 00026, fvars: 00000 }
 00040: ApplyFnToArg
 
 Foo(Bar)
