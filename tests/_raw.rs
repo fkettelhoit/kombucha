@@ -106,10 +106,10 @@ fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
     let bytecode = compile_expr(expr, strings.into_iter().map(|s| s.to_string()).collect());
     match bytecode.run() {
         Ok(VmState::Done(v, strs)) => Ok(pretty(&v, &strs)),
-        Ok(VmState::Resumable(arg, vm)) => Err(format!(
+        Ok(VmState::Resumable(vm)) => Err(format!(
             "{}!({})",
-            vm.get_effect_name().unwrap(),
-            pretty(&arg, vm.strings())
+            vm.effect().unwrap(),
+            pretty(vm.arg(), vm.strings())
         )),
         Err(e) => Err(format!("Error at op {e}")),
     }

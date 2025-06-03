@@ -1,0 +1,122 @@
+'foo = ('_ => { Foo })
+'items = [foo(), foo()]
+reload!("log!([Bar, Bar])")
+log!(items)
+
+(=
+  'foo
+  (=>
+    '_
+    { Foo }))
+(=
+  'items
+  ( (foo)
+    (foo) ))
+(reload!
+  "log!([Bar, Bar])")
+(log!
+  items)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "foo" )
+    ( ( =>
+          =>
+            0
+        "_" )
+      =>
+        Foo ) )
+  =>
+    ( ( ( =>
+            =>
+              =>
+                ( 0
+                  1 )
+          "items" )
+        ( ( []
+            ( 0
+              [] ) )
+          ( 0
+            [] ) ) )
+      =>
+        ( =>
+            ( log!
+              1 )
+          ( reload!
+            "log!([Bar, Bar])" ) ) ) )
+
+00000: LoadClosure { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00001)
+00003: LoadFn(00000)
+00004: LoadVar(00001)
+00005: ApplyFnToArg
+00006: ApplyFnToArg
+00007: LoadVar(00000)
+00008: ApplyFnToArg
+00009:   Return
+00010: LoadVar(00000)
+00011: LoadVar(00001)
+00012: ApplyFnToArg
+00013:   Return
+00014: LoadClosure { code: 00010, fvars: 00001 }
+00015:   Return
+00016: LoadFn(00014)
+00017:   Return
+00018: LoadVar(00000)
+00019:   Return
+00020: LoadFn(00018)
+00021:   Return
+00022: PushString("Foo")
+00023:   Return
+00024: LoadVar(00000)
+00025: LoadVar(00001)
+00026: ApplyFnToArg
+00027:   Return
+00028: LoadClosure { code: 00024, fvars: 00001 }
+00029:   Return
+00030: LoadFn(00028)
+00031:   Return
+00032: PushEffect("log")
+00033: LoadVar(00001)
+00034: ApplyFnToArg
+00035:   Return
+00036: LoadClosure { code: 00032, fvars: 00001 }
+00037: PushEffect("reload")
+00038: PushString(""log!([Bar, Bar])"")
+00039: ApplyFnToArg
+00040: ApplyFnToArg
+00041:   Return
+00042: LoadFn(00030)
+00043: PushString(""items"")
+00044: ApplyFnToArg
+00045: PushString("")
+00046: LoadVar(00000)
+00047: PushString("")
+00048: ApplyFnToArg
+00049: ApplyFnToArg
+00050: LoadVar(00000)
+00051: PushString("")
+00052: ApplyFnToArg
+00053: ApplyFnToArg
+00054: ApplyFnToArg
+00055: LoadFn(00036)
+00056: ApplyFnToArg
+00057:   Return
+00058: LoadFn(00016)
+00059: PushString(""foo"")
+00060: ApplyFnToArg
+00061: LoadFn(00020)
+00062: PushString(""_"")
+00063: ApplyFnToArg
+00064: LoadFn(00022)
+00065: ApplyFnToArg
+00066: ApplyFnToArg
+00067: LoadFn(00042)
+00068: ApplyFnToArg
+
+"[Bar, Bar]"
+[]

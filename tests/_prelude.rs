@@ -14,7 +14,7 @@ match: Pair(Foo, Foo) with: [
     let bytecode = compile(code).unwrap();
     match bytecode.run().unwrap() {
         VmState::Done(v, strings) => assert_eq!(pretty(&v, &strings), "Twice(Foo)"),
-        VmState::Resumable(_, _) => panic!("Found a resumable!"),
+        VmState::Resumable(_) => panic!("Found a resumable!"),
     }
     Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::bytecode::{Bytecode, NIL, Op, Reflect};
-use std::{borrow::Cow, rc::Rc};
+use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
 impl Bytecode {
     pub fn nil() -> V {
@@ -9,11 +9,11 @@ impl Bytecode {
     pub fn run(self) -> Result<VmState, usize> {
         let mut vm = Vm::default();
         vm.ip = self.start;
-        vm.run(self)
+        vm.run(self, HashMap::new())
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum V {
     Fn(usize),
     String(usize),
@@ -26,17 +26,21 @@ pub enum V {
 #[derive(Debug)]
 pub enum VmState {
     Done(V, Vec<Cow<'static, str>>),
-    Resumable(V, Resumable),
+    Resumable(Resumable),
 }
+
+type EffectsCache = HashMap<usize, HashMap<V, V>>;
 
 #[derive(Debug)]
 pub struct Resumable {
+    cache: EffectsCache,
     code: Bytecode,
     vm: Vm,
     effect: usize,
+    arg: V,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct Vm {
     ip: usize,
     vars: Vec<V>,
@@ -45,7 +49,7 @@ pub struct Vm {
     handlers: Vec<Handler>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct Handler {
     effect: usize,
     handler: V,
@@ -54,7 +58,7 @@ struct Handler {
 }
 
 impl Vm {
-    fn run(self, code: Bytecode) -> Result<VmState, usize> {
+    fn run(self, code: Bytecode, cache: EffectsCache) -> Result<VmState, usize> {
         let Vm {
             mut ip,
             mut vars,
@@ -105,19 +109,25 @@ impl Vm {
                                     temps.push(handler.handler);
                                     ip = handler.ret;
                                 }
-                                None => {
-                                    let vm = Vm {
-                                        ip,
-                                        vars,
-                                        temps,
-                                        frames,
-                                        handlers,
-                                    };
-                                    return Ok(VmState::Resumable(
-                                        arg,
-                                        Resumable { code, vm, effect },
-                                    ));
-                                }
+                                None => match cache.get(&effect).map(|c| c.get(&arg)) {
+                                    Some(Some(v)) => temps.push(v.clone()),
+                                    _ => {
+                                        let vm = Vm {
+                                            ip,
+                                            vars,
+                                            temps,
+                                            frames,
+                                            handlers,
+                                        };
+                                        return Ok(VmState::Resumable(Resumable {
+                                            cache,
+                                            code,
+                                            vm,
+                                            effect,
+                                            arg,
+                                        }));
+                                    }
+                                },
                             }
                         }
                         (V::Resumable(v, vm), arg) => {
@@ -231,8 +241,12 @@ impl Resumable {
         &self.code.strings
     }
 
-    pub fn get_effect_name(&self) -> Option<&str> {
+    pub fn effect(&self) -> Option<&str> {
         self.code.strings.get(self.effect).map(|s| s.as_ref())
+    }
+
+    pub fn arg(&self) -> &V {
+        &self.arg
     }
 
     pub fn intern_string(&mut self, s: impl Into<Cow<'static, str>>) -> V {
@@ -246,8 +260,24 @@ impl Resumable {
     }
 
     pub fn run(mut self, arg: V) -> Result<VmState, usize> {
+        self.vm.temps.push(arg.clone());
+        self.cache
+            .entry(self.effect)
+            .or_default()
+            .insert(self.arg, arg);
+        self.vm.run(self.code, self.cache)
+    }
+
+    pub fn run_without_caching_effect(mut self, arg: V) -> Result<VmState, usize> {
         self.vm.temps.push(arg);
-        self.vm.run(self.code)
+        self.vm.run(self.code, self.cache)
+    }
+
+    pub fn reload(mut self, bytecode: Bytecode) -> Result<VmState, usize> {
+        self.code = bytecode;
+        self.vm = Vm::default();
+        self.vm.ip = self.code.start;
+        self.vm.run(self.code, self.cache)
     }
 }
 

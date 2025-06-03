@@ -2,7 +2,7 @@ use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use vorpal::{
     bytecode::{Bytecode, NIL, Op},
-    compile::{A, Ast, Call, Expr, compile_expr, desugar, parse},
+    compile::{A, Ast, Call, Expr, compile, compile_expr, desugar, parse},
     run::{VmState, pretty},
 };
 
@@ -271,10 +271,10 @@ fn test(path: PathBuf) -> Result<(), String> {
         for vm in compiled {
             match vm.run() {
                 Ok(VmState::Done(v, strs)) => actual.push(pretty(&v, &strs)),
-                Ok(VmState::Resumable(arg, vm)) => actual.push(format!(
+                Ok(VmState::Resumable(vm)) => actual.push(format!(
                     "{}!({})",
-                    vm.get_effect_name().unwrap(),
-                    pretty(&arg, vm.strings())
+                    vm.effect().unwrap(),
+                    pretty(vm.arg(), vm.strings())
                 )),
                 Err(e) => actual.push(format!("Error at op {e}")),
             }
@@ -334,7 +334,7 @@ fn test_run_rec() -> Result<(), String> {
     test(PathBuf::from("tests/run_rec.txt"))
 }
 
-fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
+fn test_with_print(path: PathBuf) -> Result<(), String> {
     let tests = parse_tests(path.clone())?;
     let mut results = vec![];
     for (code, expected) in tests {
@@ -344,9 +344,9 @@ fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
             let mut result = vm.run();
             loop {
                 match result {
-                    Ok(VmState::Resumable(arg, vm)) => {
-                        let arg = pretty(&arg, vm.strings());
-                        match vm.get_effect_name().unwrap() {
+                    Ok(VmState::Resumable(vm)) => {
+                        let arg = pretty(vm.arg(), vm.strings());
+                        match vm.effect().unwrap() {
                             eff if eff == "print" => {
                                 printed.push(format!("\"{arg}\"\n"));
                                 result = vm.run(Bytecode::nil());
@@ -368,12 +368,54 @@ fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
 
 #[test]
 fn test_run_with_effects() -> Result<(), String> {
-    test_with_print_effect(PathBuf::from("tests/run_with_effects.txt"))
+    test_with_print(PathBuf::from("tests/run_with_effects.txt"))
 }
 
 #[test]
 fn test_run_with_rec_effects() -> Result<(), String> {
-    test_with_print_effect(PathBuf::from("tests/run_with_rec_effects.txt"))
+    test_with_print(PathBuf::from("tests/run_with_rec_effects.txt"))
+}
+
+fn test_with_reload(path: PathBuf) -> Result<(), String> {
+    let tests = parse_tests(path.clone())?;
+    let mut results = vec![];
+    for (code, expected) in tests {
+        let (mut actual, compiled) = test_without_run(&code);
+        for vm in compiled {
+            let mut printed = vec![];
+            let mut result = vm.run();
+            loop {
+                match result {
+                    Ok(VmState::Resumable(vm)) => {
+                        let arg = pretty(vm.arg(), vm.strings());
+                        match vm.effect().unwrap() {
+                            eff if eff == "reload" => {
+                                let arg_str = &arg[1..arg.len() - 1];
+                                let bytecode = compile(arg_str).unwrap();
+                                result = vm.reload(bytecode);
+                            }
+                            eff if eff == "log" => {
+                                printed.push(format!("\"{arg}\"\n"));
+                                result = vm.run(Bytecode::nil());
+                            }
+                            name => break actual.push(format!("{name}!({arg})")),
+                        }
+                    }
+                    Ok(VmState::Done(v, strs)) => {
+                        break actual.push(printed.join("") + &pretty(&v, &strs));
+                    }
+                    Err(e) => break actual.push(format!("Error at op {e}")),
+                }
+            }
+        }
+        results.push((code, expected, actual));
+    }
+    report(path, results)
+}
+
+#[test]
+fn test_run_with_reload() -> Result<(), String> {
+    test_with_reload(PathBuf::from("tests/run_with_reload.txt"))
 }
 
 #[test]
