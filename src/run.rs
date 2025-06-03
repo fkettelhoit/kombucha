@@ -3,7 +3,7 @@ use std::{borrow::Cow, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub enum V {
-    Fn(usize, usize, usize),
+    Fn(usize),
     String(usize),
     Effect(usize),
     Record(usize, Vec<Rc<V>>),
@@ -95,15 +95,16 @@ impl Vm {
                 }
                 Op::LoadString(s) => temps.push(V::String(s)),
                 Op::LoadEffect(eff) => temps.push(V::Effect(eff)),
-                Op::LoadFn { code, fvars } => temps.push(V::Fn(code, fvars, frames.len())),
+                Op::LoadFn(code) => temps.push(V::Fn(code)),
+                Op::LoadClosure { code, fvars } => {
+                    let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
+                    temps.push(V::Closure(code, captured))
+                }
                 Op::ApplyFnToArg | Op::ApplyArgToFn => {
-                    let (mut arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
+                    let (arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
                         (Op::ApplyFnToArg, b, a) => (b, a),
                         (_, b, a) => (a, b),
                     };
-                    if let V::Fn(c, v, _) = arg {
-                        arg = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
-                    }
                     match (f, arg) {
                         (V::Effect(eff), arg) => {
                             let handler = handlers.iter().rev().find(|h| h.effect == eff);
@@ -160,7 +161,7 @@ impl Vm {
                             vars.push(arg);
                             ip = c;
                         }
-                        (V::Fn(c, _, _), arg) => {
+                        (V::Fn(c), arg) => {
                             frames.push((vars.len(), ip));
                             vars.push(arg);
                             ip = c;
@@ -174,18 +175,8 @@ impl Vm {
                 }
                 Op::Return => {
                     let (frame, ret) = frames.pop().ok_or(i)?;
-                    match (temps.last().cloned(), code.ops.get(ret)) {
-                        (Some(V::Fn(c, v, f)), _) if f == frames.len() + 1 => {
-                            let _f = temps.pop();
-                            temps.push(V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec())));
-                            vars.truncate(frame);
-                            ip = ret
-                        }
-                        _ => {
-                            vars.truncate(frame);
-                            ip = ret
-                        }
-                    }
+                    vars.truncate(frame);
+                    ip = ret
                 }
                 Op::Unpack => match (
                     temps.pop().ok_or(i)?,
@@ -209,12 +200,9 @@ impl Vm {
                     }
                 },
                 Op::Try => {
-                    let mut handler = temps.pop().ok_or(i)?;
+                    let handler = temps.pop().ok_or(i)?;
                     let eff = temps.pop().ok_or(i)?;
                     let v = temps.pop().ok_or(i)?;
-                    if let V::Fn(c, v, _) = handler {
-                        handler = V::Closure(c, Rc::new(vars[vars.len() - v..].to_vec()));
-                    }
                     match eff {
                         V::Effect(effect) => {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
@@ -263,7 +251,7 @@ pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
         V::String(s) if strs[*s] == NIL => "[]".to_string(),
         V::String(s) => strs[*s].to_string(),
         V::Effect(eff) => format!("{}!", strs[*eff]),
-        V::Fn(c, v, frame) => format!("{c}(captured:{v},frame:{frame})"),
+        V::Fn(c) => format!("{c}"),
         V::Closure(c, vs) => {
             let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("{c} [{}]", closed.join(", "))

@@ -8,10 +8,10 @@ Foo(Bar, Baz)
     Bar )
   Baz )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadClosure { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn { code: 00000, fvars: 00000 }
+00003: LoadFn(00000)
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -40,10 +40,10 @@ Foo(Bar, Baz(Qux))
   ( Baz
     Qux ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadClosure { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn { code: 00000, fvars: 00000 }
+00003: LoadFn(00000)
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -69,10 +69,10 @@ Foo()
 ( Foo
   [] )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadClosure { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn { code: 00000, fvars: 00000 }
+00003: LoadFn(00000)
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -97,10 +97,10 @@ Foo([], Bar)
     [] )
   Bar )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadClosure { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn { code: 00000, fvars: 00000 }
+00003: LoadFn(00000)
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -128,10 +128,10 @@ Foo([], Bar)
     B )
   A )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadClosure { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn { code: 00000, fvars: 00000 }
+00003: LoadFn(00000)
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
@@ -162,10 +162,10 @@ Foo([], Bar)
     B )
   A )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadClosure { code: 00002, fvars: 00001 }
 00001:   Return
 00002: LoadVar(00001)
-00003: LoadFn { code: 00000, fvars: 00000 }
+00003: LoadFn(00000)
 00004: LoadVar(00001)
 00005: ApplyFnToArg
 00006: ApplyFnToArg
