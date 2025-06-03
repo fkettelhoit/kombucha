@@ -174,3 +174,16 @@ Baz(Qux)//
   Bar)
 (Baz
   Qux)
+
+---
+
+Foo("bar")
+
+(Foo
+  "bar")
+
+---
+
+"foo
+
+"foo
