@@ -1,6 +1,18 @@
 use crate::bytecode::{Bytecode, NIL, Op, Reflect};
 use std::{borrow::Cow, rc::Rc};
 
+impl Bytecode {
+    pub fn nil() -> V {
+        V::String(Reflect::Nil as usize)
+    }
+
+    pub fn run(self) -> Result<VmState, usize> {
+        let mut vm = Vm::default();
+        vm.ip = self.start;
+        vm.run(self)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum V {
     Fn(usize),
@@ -9,6 +21,19 @@ pub enum V {
     Record(usize, Vec<Rc<V>>),
     Closure(usize, Rc<Vec<V>>),
     Resumable(usize, Box<Vm>),
+}
+
+#[derive(Debug)]
+pub enum VmState {
+    Done(V, Vec<Cow<'static, str>>),
+    Resumable(V, Resumable),
+}
+
+#[derive(Debug)]
+pub struct Resumable {
+    code: Bytecode,
+    vm: Vm,
+    effect: usize,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -26,54 +51,6 @@ struct Handler {
     handler: V,
     state: (usize, usize, usize, usize),
     ret: usize,
-}
-
-#[derive(Debug)]
-pub enum VmState {
-    Done(V, Vec<Cow<'static, str>>),
-    Resumable(Resumable, V),
-}
-
-#[derive(Debug)]
-pub struct Resumable(Bytecode, Vm, usize);
-
-impl Resumable {
-    pub fn strings(&self) -> &Vec<Cow<'static, str>> {
-        &self.0.strings
-    }
-
-    pub fn get_effect_name(&self) -> Option<&str> {
-        let Resumable(code, _, eff) = self;
-        code.strings.get(*eff).map(|s| s.as_ref())
-    }
-
-    pub fn intern_string(&mut self, s: impl Into<Cow<'static, str>>) -> V {
-        let s = s.into();
-        let Resumable(bc, _, _) = self;
-        let s = bc.strings.iter().position(|x| *x == s).unwrap_or_else(|| {
-            bc.strings.push(s);
-            bc.strings.len() - 1
-        });
-        V::String(s)
-    }
-
-    pub fn run(self, arg: V) -> Result<VmState, usize> {
-        let Resumable(bc, mut vm, _) = self;
-        vm.temps.push(arg);
-        vm.run(bc)
-    }
-}
-
-impl Bytecode {
-    pub fn nil() -> V {
-        V::String(Reflect::Nil as usize)
-    }
-
-    pub fn run(self) -> Result<VmState, usize> {
-        let mut vm = Vm::default();
-        vm.ip = self.start;
-        vm.run(self)
-    }
 }
 
 impl Vm {
@@ -106,8 +83,8 @@ impl Vm {
                         (_, b, a) => (a, b),
                     };
                     match (f, arg) {
-                        (V::Effect(eff), arg) => {
-                            let handler = handlers.iter().rev().find(|h| h.effect == eff);
+                        (V::Effect(effect), arg) => {
+                            let handler = handlers.iter().rev().find(|h| h.effect == effect);
                             match handler.cloned() {
                                 Some(handler) => {
                                     let (v, t, f, h) = handler.state;
@@ -136,7 +113,10 @@ impl Vm {
                                         frames,
                                         handlers,
                                     };
-                                    return Ok(VmState::Resumable(Resumable(code, vm, eff), arg));
+                                    return Ok(VmState::Resumable(
+                                        arg,
+                                        Resumable { code, vm, effect },
+                                    ));
                                 }
                             }
                         }
@@ -243,6 +223,31 @@ impl Vm {
             }
         }
         Ok(VmState::Done(temps.pop().ok_or(ip)?, code.strings))
+    }
+}
+
+impl Resumable {
+    pub fn strings(&self) -> &Vec<Cow<'static, str>> {
+        &self.code.strings
+    }
+
+    pub fn get_effect_name(&self) -> Option<&str> {
+        self.code.strings.get(self.effect).map(|s| s.as_ref())
+    }
+
+    pub fn intern_string(&mut self, s: impl Into<Cow<'static, str>>) -> V {
+        let s = s.into();
+        let mut strs = self.code.strings.iter();
+        let s = strs.position(|x| *x == s).unwrap_or_else(|| {
+            self.code.strings.push(s);
+            self.code.strings.len() - 1
+        });
+        V::String(s)
+    }
+
+    pub fn run(mut self, arg: V) -> Result<VmState, usize> {
+        self.vm.temps.push(arg);
+        self.vm.run(self.code)
     }
 }
 

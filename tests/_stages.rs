@@ -271,10 +271,10 @@ fn test(path: PathBuf) -> Result<(), String> {
         for vm in compiled {
             match vm.run() {
                 Ok(VmState::Done(v, strs)) => actual.push(pretty(&v, &strs)),
-                Ok(VmState::Resumable(res, arg)) => actual.push(format!(
+                Ok(VmState::Resumable(arg, vm)) => actual.push(format!(
                     "{}!({})",
-                    res.get_effect_name().unwrap(),
-                    pretty(&arg, res.strings())
+                    vm.get_effect_name().unwrap(),
+                    pretty(&arg, vm.strings())
                 )),
                 Err(e) => actual.push(format!("Error at op {e}")),
             }
@@ -344,7 +344,7 @@ fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
             let mut result = vm.run();
             loop {
                 match result {
-                    Ok(VmState::Resumable(vm, arg)) => {
+                    Ok(VmState::Resumable(arg, vm)) => {
                         let arg = pretty(&arg, vm.strings());
                         match vm.get_effect_name().unwrap() {
                             eff if eff == "print" => {
