@@ -111,7 +111,7 @@ foo = Foo
 
 ---
 
-f'('x, 'y) = {
+'f('x, 'y) = {
   match: Pair(x, y) with: Vec(
     Pair('x, 'x) => { x }
     Pair('x, 'y) => { Mismatch }
@@ -120,7 +120,7 @@ f'('x, 'y) = {
 }
 
 (=
-  (f'
+  ('f
     'x
     'y)
   { (match-with
