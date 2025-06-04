@@ -1,0 +1,10 @@
+'loop = ('loop ~> {
+    'x => {
+        print!(x)
+        sleep!()
+        loop(Bar(x))
+    }
+})
+loop("Hello")
+('loop ~> { sleep!() })()
+reload!()

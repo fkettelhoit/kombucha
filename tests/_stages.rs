@@ -273,7 +273,7 @@ fn test(path: PathBuf) -> Result<(), String> {
                 Ok(VmState::Done(v, strs)) => actual.push(pretty(&v, &strs)),
                 Ok(VmState::Resumable(vm)) => actual.push(format!(
                     "{}!({})",
-                    vm.effect().unwrap(),
+                    vm.effect(),
                     pretty(vm.arg(), vm.strings())
                 )),
                 Err(e) => actual.push(format!("Error at op {e}")),
@@ -346,7 +346,7 @@ fn test_with_print(path: PathBuf) -> Result<(), String> {
                 match result {
                     Ok(VmState::Resumable(vm)) => {
                         let arg = pretty(vm.arg(), vm.strings());
-                        match vm.effect().unwrap() {
+                        match vm.effect() {
                             eff if eff == "print" => {
                                 printed.push(format!("\"{arg}\"\n"));
                                 result = vm.run(Bytecode::nil());
@@ -388,7 +388,7 @@ fn test_with_reload(path: PathBuf) -> Result<(), String> {
                 match result {
                     Ok(VmState::Resumable(vm)) => {
                         let arg = pretty(vm.arg(), vm.strings());
-                        match vm.effect().unwrap() {
+                        match vm.effect() {
                             eff if eff == "reload" => {
                                 let arg_str = &arg[1..arg.len() - 1];
                                 let bytecode = compile(arg_str).unwrap();

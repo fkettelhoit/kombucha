@@ -237,12 +237,16 @@ impl Vm {
 }
 
 impl Resumable {
+    pub fn code(&self) -> &Bytecode {
+        &self.code
+    }
+
     pub fn strings(&self) -> &Vec<Cow<'static, str>> {
         &self.code.strings
     }
 
-    pub fn effect(&self) -> Option<&str> {
-        self.code.strings.get(self.effect).map(|s| s.as_ref())
+    pub fn effect(&self) -> &str {
+        &self.code.strings[self.effect]
     }
 
     pub fn arg(&self) -> &V {
@@ -268,7 +272,7 @@ impl Resumable {
         self.vm.run(self.code, self.cache)
     }
 
-    pub fn run_without_caching_effect(mut self, arg: V) -> Result<VmState, usize> {
+    pub fn run_uncached(mut self, arg: V) -> Result<VmState, usize> {
         self.vm.temps.push(arg);
         self.vm.run(self.code, self.cache)
     }

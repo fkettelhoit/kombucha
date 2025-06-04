@@ -108,7 +108,7 @@ fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
         Ok(VmState::Done(v, strs)) => Ok(pretty(&v, &strs)),
         Ok(VmState::Resumable(vm)) => Err(format!(
             "{}!({})",
-            vm.effect().unwrap(),
+            vm.effect(),
             pretty(vm.arg(), vm.strings())
         )),
         Err(e) => Err(format!("Error at op {e}")),

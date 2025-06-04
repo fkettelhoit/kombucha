@@ -16,14 +16,14 @@ pub const COMPOUND: &str = "Compound";
 pub const TEMPLATE: &str = "Template";
 pub const TUPLE: &str = "Tuple";
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Bytecode {
     pub strings: Vec<Cow<'static, str>>,
     pub ops: Vec<Op>,
     pub start: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Op {
     LoadClosure { code: usize, fvars: usize },
     LoadFn(usize),
