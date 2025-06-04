@@ -25,8 +25,7 @@ pub struct Bytecode {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Op {
-    LoadClosure { code: usize, fvars: usize },
-    LoadFn(usize),
+    LoadFn { code: usize, fvars: usize },
     LoadString(usize),
     LoadEffect(usize),
     LoadVar(usize),
@@ -65,10 +64,13 @@ impl Bytecode {
         for (i, op) in self.ops.iter().copied().enumerate() {
             let tag_shift = 4;
             match op {
-                Op::LoadVar(v) => {
-                    check_size(i, v, 12)?;
-                    buf.push(1 << tag_shift | ((v >> 8 & 0x0F) as u8));
-                    buf.push((v & 0xFF) as u8);
+                Op::LoadFn { code, fvars } => {
+                    check_size(i, code, 20)?;
+                    check_size(i, fvars, 8)?;
+                    buf.push(1 << tag_shift | ((code >> 16 & 0x0F) as u8));
+                    buf.push((code >> 8 & 0xFF) as u8);
+                    buf.push((code & 0xFF) as u8);
+                    buf.push((fvars & 0xFF) as u8);
                 }
                 Op::LoadString(str) => {
                     check_size(i, str, 20)?;
@@ -82,27 +84,18 @@ impl Bytecode {
                     buf.push((eff >> 8 & 0xFF) as u8);
                     buf.push((eff & 0xFF) as u8);
                 }
-                Op::LoadFn(code) => {
-                    check_size(i, code, 20)?;
-                    buf.push(4 << tag_shift | ((code >> 16 & 0x0F) as u8));
-                    buf.push((code >> 8 & 0xFF) as u8);
-                    buf.push((code & 0xFF) as u8);
+                Op::LoadVar(v) => {
+                    check_size(i, v, 12)?;
+                    buf.push(4 << tag_shift | ((v >> 8 & 0x0F) as u8));
+                    buf.push((v & 0xFF) as u8);
                 }
-                Op::LoadClosure { code, fvars } => {
-                    check_size(i, code, 20)?;
-                    check_size(i, fvars, 8)?;
-                    buf.push(5 << tag_shift | ((code >> 16 & 0x0F) as u8));
-                    buf.push((code >> 8 & 0xFF) as u8);
-                    buf.push((code & 0xFF) as u8);
-                    buf.push((fvars & 0xFF) as u8);
-                }
-                Op::ApplyFnToArg => buf.push(6 << tag_shift),
-                Op::ApplyArgToFn => buf.push(7 << tag_shift),
-                Op::Return => buf.push(8 << tag_shift),
-                Op::Cmp => buf.push(9 << tag_shift),
-                Op::Unpack => buf.push(10 << tag_shift),
-                Op::Try => buf.push(11 << tag_shift),
-                Op::Unwind => buf.push(12 << tag_shift),
+                Op::ApplyFnToArg => buf.push(5 << tag_shift),
+                Op::ApplyArgToFn => buf.push(6 << tag_shift),
+                Op::Return => buf.push(7 << tag_shift),
+                Op::Cmp => buf.push(8 << tag_shift),
+                Op::Unpack => buf.push(9 << tag_shift),
+                Op::Try => buf.push(10 << tag_shift),
+                Op::Unwind => buf.push(11 << tag_shift),
             }
         }
         Ok(buf)
@@ -143,10 +136,13 @@ impl Bytecode {
             let tag = (buf[i] >> 4) & 0x0F;
             match tag {
                 1 => {
-                    check_bytes(buf, i, 2, "LoadVar")?;
-                    let v = ((buf[i] & 0x0F) as usize) << 8 | buf[i + 1] as usize;
-                    ops.push(Op::LoadVar(v));
-                    i += 1;
+                    check_bytes(buf, i, 4, "LoadClosure")?;
+                    let code = ((buf[i] & 0x0F) as usize) << 16
+                        | (buf[i + 1] as usize) << 8
+                        | buf[i + 2] as usize;
+                    let fvars = buf[i + 3] as usize;
+                    ops.push(Op::LoadFn { code, fvars });
+                    i += 3;
                 }
                 2 => {
                     check_bytes(buf, i, 3, "LoadString")?;
@@ -165,29 +161,18 @@ impl Bytecode {
                     i += 2;
                 }
                 4 => {
-                    check_bytes(buf, i, 3, "LoadFn")?;
-                    let code = ((buf[i] & 0x0F) as usize) << 16
-                        | (buf[i + 1] as usize) << 8
-                        | buf[i + 2] as usize;
-                    ops.push(Op::LoadFn(code));
-                    i += 2;
+                    check_bytes(buf, i, 2, "LoadVar")?;
+                    let v = ((buf[i] & 0x0F) as usize) << 8 | buf[i + 1] as usize;
+                    ops.push(Op::LoadVar(v));
+                    i += 1;
                 }
-                5 => {
-                    check_bytes(buf, i, 4, "LoadClosure")?;
-                    let code = ((buf[i] & 0x0F) as usize) << 16
-                        | (buf[i + 1] as usize) << 8
-                        | buf[i + 2] as usize;
-                    let fvars = buf[i + 3] as usize;
-                    ops.push(Op::LoadClosure { code, fvars });
-                    i += 3;
-                }
-                6 => ops.push(Op::ApplyFnToArg),
-                7 => ops.push(Op::ApplyArgToFn),
-                8 => ops.push(Op::Return),
-                9 => ops.push(Op::Cmp),
-                10 => ops.push(Op::Unpack),
-                11 => ops.push(Op::Try),
-                12 => ops.push(Op::Unwind),
+                5 => ops.push(Op::ApplyFnToArg),
+                6 => ops.push(Op::ApplyArgToFn),
+                7 => ops.push(Op::Return),
+                8 => ops.push(Op::Cmp),
+                9 => ops.push(Op::Unpack),
+                10 => ops.push(Op::Try),
+                11 => ops.push(Op::Unwind),
                 _ => return Err(format!("Invalid opcode {tag} at {i}")),
             }
             i += 1;

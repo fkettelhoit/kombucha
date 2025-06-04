@@ -15,7 +15,6 @@ impl Bytecode {
 
 #[derive(Debug, Clone)]
 pub enum V {
-    Fn(usize),
     String(usize),
     Effect(usize),
     Record(usize, Vec<Rc<V>>),
@@ -72,8 +71,7 @@ impl Vm {
                 }
                 Op::LoadString(s) => temps.push(V::String(s)),
                 Op::LoadEffect(eff) => temps.push(V::Effect(eff)),
-                Op::LoadFn(code) => temps.push(V::Fn(code)),
-                Op::LoadClosure { code, fvars } => {
+                Op::LoadFn { code, fvars } => {
                     let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
                     temps.push(V::Closure(code, captured))
                 }
@@ -138,11 +136,6 @@ impl Vm {
                             // TODO: if the next op is an Op::Return, we might want to do TCO
                             frames.push((vars.len(), ip));
                             vars.extend(captured.iter().cloned());
-                            vars.push(arg);
-                            ip = c;
-                        }
-                        (V::Fn(c), arg) => {
-                            frames.push((vars.len(), ip));
                             vars.push(arg);
                             ip = c;
                         }
@@ -256,7 +249,6 @@ pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
         V::String(s) if strs[*s] == NIL => "[]".to_string(),
         V::String(s) => strs[*s].to_string(),
         V::Effect(eff) => format!("{}!", strs[*eff]),
-        V::Fn(c) => format!("{c}"),
         V::Closure(c, vs) => {
             let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("{c} [{}]", closed.join(", "))

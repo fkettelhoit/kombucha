@@ -487,11 +487,11 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
                 f.push(Op::Return);
                 let fvars = f.iter().fold(0, |captured, op| match *op {
                     Op::LoadVar(v) if v > captured => v,
-                    Op::LoadClosure { fvars, .. } if fvars > captured => fvars - 1,
+                    Op::LoadFn { fvars, .. } if fvars > captured => fvars - 1,
                     _ => captured,
                 });
                 let code = fns.len();
-                ops.push(Op::LoadClosure { code, fvars });
+                ops.push(Op::LoadFn { code, fvars });
                 fns.extend(f);
             }
             Expr::App(f, arg) => {
@@ -507,7 +507,7 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
             }
             Expr::Rec(body) => {
                 compile(args + 1, *body, ops, fns);
-                ops.push(Op::LoadFn(0)); // the built-in fixed-point combinator
+                ops.push(Op::LoadFn { code: 0, fvars: 0 }); // the built-in fixed-point combinator
                 ops.push(Op::ApplyArgToFn);
             }
             Expr::Cmp(a, b, if_t, if_f) => {
@@ -544,16 +544,16 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
     // fix = f => x => f(fix(f))(x)
     let mut bytecode = vec![
         // 0: f => ...
-        Op::LoadClosure { code: 2, fvars: 1 },
+        Op::LoadFn { code: 2, fvars: 1 },
         Op::Return,
         // 2: ... x => f(fix(f))(x)
-        Op::LoadVar(0),   // x
-        Op::LoadVar(1),   // x, f
-        Op::LoadFn(0),    // x, f, fix
-        Op::ApplyArgToFn, // x, fix(f)
-        Op::LoadVar(1),   // x, fix(f), f
-        Op::ApplyArgToFn, // x, f(fix(f))
-        Op::ApplyArgToFn, // f(fix(f))(x)
+        Op::LoadVar(0),                   // x
+        Op::LoadVar(1),                   // x, f
+        Op::LoadFn { code: 0, fvars: 0 }, // x, f, fix
+        Op::ApplyArgToFn,                 // x, fix(f)
+        Op::LoadVar(1),                   // x, fix(f), f
+        Op::ApplyArgToFn,                 // x, f(fix(f))
+        Op::ApplyArgToFn,                 // f(fix(f))(x)
         Op::Return,
     ];
     compile(0, expr, &mut main, &mut bytecode);
