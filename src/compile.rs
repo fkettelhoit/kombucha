@@ -1,7 +1,7 @@
 use std::{
-    cmp::max,
+    cmp::{max, min},
     iter::{Peekable, once},
-    mem,
+    mem, usize,
     vec::IntoIter,
 };
 
@@ -458,14 +458,32 @@ pub fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), S
 }
 
 pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
-    fn compile(args: usize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
+    fn params(expr: &Expr) -> usize {
+        match expr {
+            Expr::String(_) => usize::MAX,
+            Expr::Var(_) | Expr::Effect(_) => 1,
+            Expr::Abs(body) => params(body).saturating_add(1),
+            Expr::Rec(f) => params(f).saturating_sub(1),
+            Expr::App(_, arg) if params(arg) == 0 => 0,
+            Expr::App(f, _) => params(f).saturating_sub(1),
+            Expr::Unpack(val, _, _) if params(val) == 0 => 0,
+            Expr::Handle(_, eff, _) if params(eff) == 0 => 0,
+            Expr::Handle(val, _, handler) => min(params(val), params(handler).saturating_sub(2)),
+            Expr::Cmp(a, b, _, _) if params(a) == 0 || params(b) == 0 => 0,
+            Expr::Unpack(_, if_t, if_f) | Expr::Cmp(_, _, if_t, if_f) => min(
+                params(if_t).saturating_sub(2),
+                params(if_f).saturating_sub(1),
+            ),
+        }
+    }
+    fn compile(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
         match expr {
             Expr::Var(v) => ops.push(Op::LoadVar(v)),
             Expr::String(s) => ops.push(Op::LoadString(s)),
             Expr::Effect(e) => ops.push(Op::LoadEffect(e)),
             Expr::Abs(body) => {
                 let mut f = vec![];
-                compile(if args == 0 { 0 } else { args - 1 }, *body, &mut f, fns);
+                compile(args, *body, &mut f, fns);
                 f.push(Op::Return);
                 let fvars = f.iter().fold(0, |captured, op| match *op {
                     Op::LoadVar(v) if v > captured => v,
@@ -473,17 +491,19 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
                     _ => captured,
                 });
                 let code = fns.len();
-                if fvars == 0 {
-                    ops.push(Op::LoadFn(code))
-                } else {
-                    ops.push(Op::LoadClosure { code, fvars });
-                }
+                ops.push(Op::LoadClosure { code, fvars });
                 fns.extend(f);
             }
             Expr::App(f, arg) => {
-                compile(args + 1, *f, ops, fns);
-                compile(0, *arg, ops, fns);
-                ops.push(Op::ApplyFnToArg);
+                if params(&f) > 0 {
+                    compile(0, *arg, ops, fns);
+                    compile(args + 1, *f, ops, fns);
+                    ops.push(Op::ApplyArgToFn);
+                } else {
+                    compile(args + 1, *f, ops, fns);
+                    compile(0, *arg, ops, fns);
+                    ops.push(Op::ApplyFnToArg);
+                }
             }
             Expr::Rec(body) => {
                 compile(args + 1, *body, ops, fns);
@@ -496,7 +516,7 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
                 compile(args + 1, *if_t, ops, fns);
                 compile(args + 1, *if_f, ops, fns);
                 ops.push(Op::Cmp);
-                ops.push(Op::ApplyFnToArg);
+                ops.push(Op::ApplyArgToFn);
             }
             Expr::Unpack(val, if_t, if_f) => {
                 compile(0, *val, ops, fns);
@@ -527,13 +547,13 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
         Op::LoadClosure { code: 2, fvars: 1 },
         Op::Return,
         // 2: ... x => f(fix(f))(x)
-        Op::LoadVar(1),   // f
-        Op::LoadFn(0),    // f, fix
-        Op::LoadVar(1),   // f, fix, f
-        Op::ApplyFnToArg, // f, fix(f)
-        Op::ApplyFnToArg, // f(fix(f))
-        Op::LoadVar(0),   // f(fix(f)), x
-        Op::ApplyFnToArg, // f(fix(f))(x)
+        Op::LoadVar(0),   // x
+        Op::LoadVar(1),   // x, f
+        Op::LoadFn(0),    // x, f, fix
+        Op::ApplyArgToFn, // x, fix(f)
+        Op::LoadVar(1),   // x, fix(f), f
+        Op::ApplyArgToFn, // x, f(fix(f))
+        Op::ApplyArgToFn, // f(fix(f))(x)
         Op::Return,
     ];
     compile(0, expr, &mut main, &mut bytecode);

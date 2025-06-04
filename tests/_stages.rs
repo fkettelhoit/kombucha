@@ -1,7 +1,7 @@
 use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use vorpal::{
-    bytecode::{Bytecode, NIL, Op},
+    bytecode::{Bytecode, NIL},
     compile::{A, Ast, Call, Expr, compile_expr, desugar, parse},
     run::{VmState, pretty},
 };
@@ -117,25 +117,6 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
     buf
 }
 
-fn pretty_bytecode(vm: &Bytecode) -> String {
-    let mut buf = String::new();
-    for (i, op) in vm.ops.iter().enumerate() {
-        match op {
-            Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),
-            Op::LoadString(s) => match vm.strings.get(*s) {
-                Some(s) => buf.push_str(&format!("{i:05}: PushString(\"{s}\")\n")),
-                None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
-            },
-            Op::LoadEffect(s) => match vm.strings.get(*s) {
-                Some(s) => buf.push_str(&format!("{i:05}: PushEffect(\"{s}\")\n")),
-                None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
-            },
-            _ => buf.push_str(&format!("{i:05}: {op:05?}\n")),
-        }
-    }
-    buf
-}
-
 #[derive(Debug, Clone)]
 struct Failure {
     code: String,
@@ -174,7 +155,7 @@ fn test_without_run(code: &str) -> (Vec<String>, Vec<Bytecode>) {
                     let bytecode = compile_expr(expr, strs.clone());
                     let bytes = bytecode.as_bytes().unwrap();
                     let bytecode = Bytecode::parse(&bytes).unwrap();
-                    results.push(pretty_bytecode(&bytecode));
+                    results.push(bytecode.pretty());
                     compiled.push(bytecode);
                 }
             }

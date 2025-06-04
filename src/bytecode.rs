@@ -198,4 +198,23 @@ impl Bytecode {
             start: start_op as usize,
         })
     }
+
+    pub fn pretty(&self) -> String {
+        let mut buf = String::new();
+        for (i, op) in self.ops.iter().enumerate() {
+            match op {
+                Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),
+                Op::LoadString(s) => match self.strings.get(*s) {
+                    Some(s) => buf.push_str(&format!("{i:05}: PushString(\"{s}\")\n")),
+                    None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+                },
+                Op::LoadEffect(s) => match self.strings.get(*s) {
+                    Some(s) => buf.push_str(&format!("{i:05}: PushEffect(\"{s}\")\n")),
+                    None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+                },
+                _ => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+            }
+        }
+        buf
+    }
 }

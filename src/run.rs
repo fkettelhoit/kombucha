@@ -217,8 +217,8 @@ impl Vm {
                         (V::String(a), V::String(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
-                    temps.push(branch);
                     temps.push(V::String(Reflect::Nil as usize));
+                    temps.push(branch);
                 }
             }
         }
