@@ -30,7 +30,7 @@ pub enum VmState {
 
 #[derive(Debug)]
 pub struct Resumable {
-    code: Bytecode,
+    bytecode: Bytecode,
     vm: Vm,
     effect: usize,
 }
@@ -53,7 +53,7 @@ struct Handler {
 }
 
 impl Vm {
-    fn run(self, code: Bytecode) -> Result<VmState, usize> {
+    fn run(self, bytecode: Bytecode) -> Result<VmState, usize> {
         let Vm {
             mut ip,
             mut vars,
@@ -61,7 +61,7 @@ impl Vm {
             mut frames,
             mut handlers,
         } = self;
-        while let Some(op) = code.ops.get(ip).copied() {
+        while let Some(op) = bytecode.ops.get(ip).copied() {
             let i = ip;
             ip += 1;
             match op {
@@ -71,10 +71,33 @@ impl Vm {
                 }
                 Op::LoadString(s) => temps.push(V::String(s)),
                 Op::LoadEffect(eff) => temps.push(V::Effect(eff)),
-                Op::LoadFn { code, fvars } => {
-                    let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                    temps.push(V::Closure(code, captured))
-                }
+                Op::LoadFn { code, fvars } => match bytecode.ops.get(i + 1).ok_or(i)? {
+                    Op::ApplyArgToFn => {
+                        frames.push((vars.len(), ip + 1));
+                        vars.push(temps.pop().ok_or(ip)?);
+                        ip = code;
+                    }
+                    Op::Return => {
+                        let (_, ret) = *frames.last().ok_or(ip)?;
+                        match bytecode.ops.get(ret).ok_or(ip)? {
+                            Op::ApplyArgToFn => {
+                                let (frame, ret) = frames.pop().ok_or(ip)?;
+                                let arg = temps.pop().ok_or(ip + 1)?;
+                                frames.push((frame, ret + 1));
+                                vars.push(arg);
+                                ip = code;
+                            }
+                            _ => {
+                                let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
+                                temps.push(V::Closure(code, captured))
+                            }
+                        }
+                    }
+                    _ => {
+                        let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
+                        temps.push(V::Closure(code, captured))
+                    }
+                },
                 Op::ApplyFnToArg | Op::ApplyArgToFn => {
                     let (arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
                         (Op::ApplyFnToArg, b, a) => (b, a),
@@ -113,7 +136,11 @@ impl Vm {
                                     };
                                     return Ok(VmState::Resumable(
                                         arg,
-                                        Resumable { code, vm, effect },
+                                        Resumable {
+                                            bytecode,
+                                            vm,
+                                            effect,
+                                        },
                                     ));
                                 }
                             }
@@ -215,32 +242,32 @@ impl Vm {
                 }
             }
         }
-        Ok(VmState::Done(temps.pop().ok_or(ip)?, code.strings))
+        Ok(VmState::Done(temps.pop().ok_or(ip)?, bytecode.strings))
     }
 }
 
 impl Resumable {
     pub fn strings(&self) -> &Vec<Cow<'static, str>> {
-        &self.code.strings
+        &self.bytecode.strings
     }
 
     pub fn get_effect_name(&self) -> Option<&str> {
-        self.code.strings.get(self.effect).map(|s| s.as_ref())
+        self.bytecode.strings.get(self.effect).map(|s| s.as_ref())
     }
 
     pub fn intern_string(&mut self, s: impl Into<Cow<'static, str>>) -> V {
         let s = s.into();
-        let mut strs = self.code.strings.iter();
+        let mut strs = self.bytecode.strings.iter();
         let s = strs.position(|x| *x == s).unwrap_or_else(|| {
-            self.code.strings.push(s);
-            self.code.strings.len() - 1
+            self.bytecode.strings.push(s);
+            self.bytecode.strings.len() - 1
         });
         V::String(s)
     }
 
     pub fn run(mut self, arg: V) -> Result<VmState, usize> {
         self.vm.temps.push(arg);
-        self.vm.run(self.code)
+        self.vm.run(self.bytecode)
     }
 }
 
