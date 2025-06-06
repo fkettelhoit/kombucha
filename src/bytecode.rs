@@ -40,11 +40,7 @@ pub enum Op {
 
 impl Bytecode {
     pub fn new(strings: Vec<impl Into<Cow<'static, str>>>, ops: Vec<Op>, start: usize) -> Self {
-        Bytecode {
-            strings: strings.into_iter().map(|s| s.into()).collect(),
-            ops,
-            start,
-        }
+        Bytecode { strings: strings.into_iter().map(|s| s.into()).collect(), ops, start }
     }
 
     pub fn as_bytes(&self) -> Result<Vec<u8>, String> {
@@ -177,11 +173,7 @@ impl Bytecode {
             }
             i += 1;
         }
-        Ok(Bytecode {
-            strings,
-            ops,
-            start: start_op as usize,
-        })
+        Ok(Bytecode { strings, ops, start: start_op as usize })
     }
 
     pub fn pretty(&self) -> String {

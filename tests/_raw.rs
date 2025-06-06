@@ -6,10 +6,7 @@ use vorpal::{
 #[test]
 fn eval_raw_app1() {
     // (\x.x) "Foo"
-    let expr = Expr::App(
-        Box::new(Expr::Abs(Box::new(Expr::Var(0)))),
-        Box::new(Expr::String(0)),
-    );
+    let expr = Expr::App(Box::new(Expr::Abs(Box::new(Expr::Var(0)))), Box::new(Expr::String(0)));
     let strings = vec!["Foo"];
     assert_eq!(eval_expr(expr, strings).unwrap(), "Foo");
 }
@@ -34,15 +31,13 @@ fn eval_raw_app3() {
     let expr = Expr::App(
         Box::new(Expr::App(
             Box::new(Expr::App(
-                Box::new(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Abs(
+                Box::new(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::Abs(Box::new(Expr::App(
                     Box::new(Expr::App(
-                        Box::new(Expr::App(
-                            Box::new(Expr::App(Box::new(Expr::String(3)), Box::new(Expr::Var(0)))),
-                            Box::new(Expr::Var(2)),
-                        )),
-                        Box::new(Expr::Var(0)),
+                        Box::new(Expr::App(Box::new(Expr::String(3)), Box::new(Expr::Var(0)))),
+                        Box::new(Expr::Var(2)),
                     )),
-                )))))),
+                    Box::new(Expr::Var(0)),
+                )))))))),
                 Box::new(Expr::String(0)),
             )),
             Box::new(Expr::String(1)),
@@ -106,11 +101,9 @@ fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
     let bytecode = compile_expr(expr, strings.into_iter().map(|s| s.to_string()).collect());
     match bytecode.run() {
         Ok(VmState::Done(v, strs)) => Ok(pretty(&v, &strs)),
-        Ok(VmState::Resumable(arg, vm)) => Err(format!(
-            "{}!({})",
-            vm.get_effect_name().unwrap(),
-            pretty(&arg, vm.strings())
-        )),
+        Ok(VmState::Resumable(arg, vm)) => {
+            Err(format!("{}!({})", vm.get_effect_name().unwrap(), pretty(&arg, vm.strings())))
+        }
         Err(e) => Err(format!("Error at op {e}")),
     }
 }

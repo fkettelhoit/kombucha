@@ -54,13 +54,7 @@ struct Handler {
 
 impl Vm {
     fn run(self, bytecode: Bytecode) -> Result<VmState, usize> {
-        let Vm {
-            mut ip,
-            mut vars,
-            mut temps,
-            mut frames,
-            mut handlers,
-        } = self;
+        let Vm { mut ip, mut vars, mut temps, mut frames, mut handlers } = self;
         while let Some(op) = bytecode.ops.get(ip).copied() {
             let i = ip;
             ip += 1;
@@ -127,20 +121,10 @@ impl Vm {
                                     ip = handler.ret;
                                 }
                                 None => {
-                                    let vm = Vm {
-                                        ip,
-                                        vars,
-                                        temps,
-                                        frames,
-                                        handlers,
-                                    };
+                                    let vm = Vm { ip, vars, temps, frames, handlers };
                                     return Ok(VmState::Resumable(
                                         arg,
-                                        Resumable {
-                                            bytecode,
-                                            vm,
-                                            effect,
-                                        },
+                                        Resumable { bytecode, vm, effect },
                                     ));
                                 }
                             }
@@ -178,27 +162,21 @@ impl Vm {
                     vars.truncate(frame);
                     ip = ret
                 }
-                Op::Unpack => match (
-                    temps.pop().ok_or(i)?,
-                    temps.pop().ok_or(i)?,
-                    temps.pop().ok_or(i)?,
-                ) {
-                    (_, t, V::Record(f, mut xs)) => {
-                        let x = xs.pop().ok_or(i)?;
-                        temps.push(x.as_ref().clone());
-                        temps.push(if xs.is_empty() {
-                            V::String(f)
-                        } else {
-                            V::Record(f, xs)
-                        });
-                        temps.push(t);
+                Op::Unpack => {
+                    match (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
+                        (_, t, V::Record(f, mut xs)) => {
+                            let x = xs.pop().ok_or(i)?;
+                            temps.push(x.as_ref().clone());
+                            temps.push(if xs.is_empty() { V::String(f) } else { V::Record(f, xs) });
+                            temps.push(t);
+                        }
+                        (f, _, _) => {
+                            temps.push(V::String(Reflect::Nil as usize));
+                            temps.push(f);
+                            ip += 1;
+                        }
                     }
-                    (f, _, _) => {
-                        temps.push(V::String(Reflect::Nil as usize));
-                        temps.push(f);
-                        ip += 1;
-                    }
-                },
+                }
                 Op::Try => {
                     let handler = temps.pop().ok_or(i)?;
                     let eff = temps.pop().ok_or(i)?;
@@ -207,12 +185,7 @@ impl Vm {
                         V::Effect(effect) => {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
                             let ret = ip + 2; // skip apply + unwind
-                            handlers.push(Handler {
-                                effect,
-                                handler,
-                                state,
-                                ret,
-                            });
+                            handlers.push(Handler { effect, handler, state, ret });
                             temps.push(V::String(Reflect::Nil as usize));
                             temps.push(v);
                         }

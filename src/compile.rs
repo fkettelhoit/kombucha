@@ -58,9 +58,7 @@ fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
             let (j, _) = chars.find(|(_, c)| *c == '\n').unwrap_or_default();
             i = j + 1;
         } else if is_str_literal {
-            let (j, _) = chars
-                .find(|(_, c)| *c == '"')
-                .unwrap_or((code.len() - 1, '"'));
+            let (j, _) = chars.find(|(_, c)| *c == '"').unwrap_or((code.len() - 1, '"'));
             toks.push((Tok::String, i - 1, &code[i - 1..j + 1]));
             i = j + 1;
         }
@@ -259,11 +257,7 @@ pub fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), S
         vars: Vec<&'c str>,
         strs: Vec<String>,
     }
-    let mut ctx = Ctx {
-        bindings: vec![],
-        vars: vec![],
-        strs: vec![String::new(); 6],
-    };
+    let mut ctx = Ctx { bindings: vec![], vars: vec![], strs: vec![String::new(); 6] };
     ctx.strs[Reflect::Nil as usize] = NIL.to_string();
     ctx.strs[Reflect::Value as usize] = VALUE.to_string();
     ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
@@ -342,14 +336,10 @@ pub fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), S
                 }
                 Ok(app(Expr::String(reflector as usize), f))
             }
-            A::Var(_) | A::String(_) | A::List(_) | A::Call(_, _) => Ok(app(
-                Expr::String(Reflect::Value as usize),
-                desug_val(ast, ctx)?,
-            )),
-            A::Binding(_) => Ok(app(
-                Expr::String(Reflect::Binding as usize),
-                desug_val(ast, ctx)?,
-            )),
+            A::Var(_) | A::String(_) | A::List(_) | A::Call(_, _) => {
+                Ok(app(Expr::String(Reflect::Value as usize), desug_val(ast, ctx)?))
+            }
+            A::Binding(_) => Ok(app(Expr::String(Reflect::Binding as usize), desug_val(ast, ctx)?)),
             A::Block(_) => desug_val(ast, ctx),
         }
     }
@@ -470,10 +460,9 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
             Expr::Handle(_, eff, _) if params(eff) == 0 => 0,
             Expr::Handle(val, _, handler) => min(params(val), params(handler).saturating_sub(2)),
             Expr::Cmp(a, b, _, _) if params(a) == 0 || params(b) == 0 => 0,
-            Expr::Unpack(_, if_t, if_f) | Expr::Cmp(_, _, if_t, if_f) => min(
-                params(if_t).saturating_sub(2),
-                params(if_f).saturating_sub(1),
-            ),
+            Expr::Unpack(_, if_t, if_f) | Expr::Cmp(_, _, if_t, if_f) => {
+                min(params(if_t).saturating_sub(2), params(if_f).saturating_sub(1))
+            }
         }
     }
     fn compile(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
