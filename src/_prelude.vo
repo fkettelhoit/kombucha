@@ -29,6 +29,13 @@
 'zip = (['xs, 'ys] => {
     reverse(zip([], xs, ys))
 })
+'destructure = ('destructure ~> { ['acc, 'compound] => {
+    __unpack(compound, ['xs, 'x] => {
+        destructure(acc(x), xs)
+    }, {
+        [compound, acc]
+    })
+} })([])
 'match-with = (['value, 'clauses] => {
     'result = fold(['result, 'clause] => {
         __compare(result, [], {
@@ -82,16 +89,23 @@
     }, [])
     'unify = ('unify ~> { ['pattern, 'value] => {
         __unpack(pattern, ['type, 'pattern] => {
-            __compare(type, Binding, {
-                [[pattern, value]]
-            }, {
+            __unpack(type, ['type, 'f] => {
                 __compare(type, Compound, {
-                    'zipped = zip(pattern, value)
+                    'v = destructure(value)
+                    'vf = first(v)
+                    'vargs = second(v)
+                    'zipped = reverse(zip(pattern(f), vargs(vf)))
                     __compare(zipped, [], {
-                        no-match!([pattern, value])
+                        no-match!([type(f, pattern), value])
                     }, {
-                        join(flatten(map(apply(unify), zip(pattern, value))))
+                        join(flatten(map(apply(unify), zipped)))
                     })
+                }, {
+                    invalid!(type(f, pattern))
+                })
+            }, {
+                __compare(type, Binding, {
+                    [[pattern, value]]
                 }, {
                     __compare(pattern == value, True, {}, {
                         no-match!([pattern, value])

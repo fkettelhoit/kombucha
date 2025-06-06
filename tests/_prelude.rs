@@ -4,10 +4,10 @@ use vorpal::{
 };
 
 #[test]
-fn test_prelude() -> Result<(), String> {
+fn prelude_match_pair() -> Result<(), String> {
     let code = "
 match: Pair(Foo, Foo) with: [
-    Pair('x, Bar) -> { Bar }
+    '_('x, Bar) -> { Bar }
     Pair('x, 'x) -> { Twice(x) }
 ]
 ";

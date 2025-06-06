@@ -5,16 +5,14 @@ pub enum Reflect {
     Value = 1,
     Binding = 2,
     Compound = 3,
-    Template = 4,
-    Tuple = 5,
+    List = 4,
 }
 
 pub const NIL: &str = "";
 pub const VALUE: &str = "Value";
 pub const BINDING: &str = "Binding";
 pub const COMPOUND: &str = "Compound";
-pub const TEMPLATE: &str = "Template";
-pub const TUPLE: &str = "Tuple";
+pub const LIST: &str = "List";
 
 #[derive(Debug, Clone, Default)]
 pub struct Bytecode {

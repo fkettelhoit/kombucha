@@ -5,7 +5,7 @@ use std::{
     vec::IntoIter,
 };
 
-use crate::bytecode::{BINDING, Bytecode, COMPOUND, NIL, Op, Reflect, TEMPLATE, TUPLE, VALUE};
+use crate::bytecode::{BINDING, Bytecode, COMPOUND, LIST, NIL, Op, Reflect, VALUE};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tok {
@@ -262,8 +262,7 @@ pub fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), S
     ctx.strs[Reflect::Value as usize] = VALUE.to_string();
     ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
     ctx.strs[Reflect::Compound as usize] = COMPOUND.to_string();
-    ctx.strs[Reflect::Template as usize] = TEMPLATE.to_string();
-    ctx.strs[Reflect::Tuple as usize] = TUPLE.to_string();
+    ctx.strs[Reflect::List as usize] = LIST.to_string();
 
     fn resolve_var(v: &str, ctx: &Ctx) -> Option<usize> {
         ctx.vars.iter().rev().position(|x| *x == v)
@@ -303,38 +302,26 @@ pub fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), S
                 for item in desugared_items {
                     f = app(f, item)
                 }
-                Ok(app(Expr::String(Reflect::Tuple as usize), f))
+                Ok(app(Expr::String(Reflect::List as usize), f))
             }
             A::Call(call, args) if has_bindings => {
                 let mut desugared_args = vec![];
                 for arg in args {
                     desugared_args.push(desug_reflect(arg, ctx)?);
                 }
-                let mut reflector = Reflect::Compound;
-                let mut f = match call {
-                    Call::Infix(f) => desug_val(Ast(ast.0, A::Var(f)), ctx)?,
-                    Call::Prefix(f) => {
-                        if let Ast(_, A::Binding(_)) = *f {
-                            reflector = Reflect::Template
-                        }
-                        desug_val(*f, ctx)?
-                    }
+                let f = match call {
+                    Call::Infix(f) => desug_reflect(Ast(ast.0, A::Var(f)), ctx)?,
+                    Call::Prefix(f) => desug_reflect(*f, ctx)?,
                     Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
-                        Some(v) => Expr::Var(v),
+                        Some(v) => app(Expr::String(Reflect::Value as usize), Expr::Var(v)),
                         None => return Err((ast.0, keywords.join("-"))),
                     },
                 };
-                if desugared_args.is_empty() {
-                    let nil = app(
-                        Expr::String(Reflect::Value as usize),
-                        Expr::String(Reflect::Nil as usize),
-                    );
-                    f = app(f, nil)
+                let mut list = Expr::String(Reflect::Nil as usize);
+                for item in desugared_args.into_iter().rev() {
+                    list = app(list, item)
                 }
-                for arg in desugared_args {
-                    f = app(f, arg)
-                }
-                Ok(app(Expr::String(reflector as usize), f))
+                Ok(app(app(Expr::String(Reflect::Compound as usize), f), list))
             }
             A::Var(_) | A::String(_) | A::List(_) | A::Call(_, _) => {
                 Ok(app(Expr::String(Reflect::Value as usize), desug_val(ast, ctx)?))
@@ -403,15 +390,15 @@ pub fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), S
                 Ok(expr)
             }
             A::List(items) => {
-                let mut tuple = Expr::String(Reflect::Nil as usize);
+                let mut list = Expr::String(Reflect::Nil as usize);
                 let mut desugared = vec![];
                 for item in items {
                     desugared.push(desug_val(item, ctx)?);
                 }
                 for item in desugared.into_iter().rev() {
-                    tuple = app(tuple, item)
+                    list = app(list, item)
                 }
-                Ok(tuple)
+                Ok(list)
             }
             A::Call(call, args) => {
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
