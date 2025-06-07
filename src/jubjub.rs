@@ -1,7 +1,6 @@
-use std::{env::args, fs::read_to_string, process::ExitCode, thread::sleep, time::Duration};
+use std::{env::args, fs::read_to_string, process::ExitCode};
 
 use vorpal::{
-    bytecode::Bytecode,
     compile::compile,
     run::{VmState, pretty},
 };
@@ -21,7 +20,7 @@ fn main() -> ExitCode {
         }
         Ok(code) => match compile(&code) {
             Ok(vm) => {
-                let mut result = vm.run();
+                let result = vm.run();
                 loop {
                     match result {
                         Ok(VmState::Resumable(arg, vm)) => match vm.get_effect_name().unwrap() {
