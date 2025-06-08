@@ -187,3 +187,10 @@ Foo("bar")
 "foo
 
 "foo
+
+---
+
+Foo(##"foo"bar"##)
+
+(Foo
+  "foo"bar")

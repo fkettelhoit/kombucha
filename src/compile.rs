@@ -38,7 +38,7 @@ fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
             _ => None,
         };
         let is_comment = c == '/' && code.get(j + 1..j + 2) == Some("/");
-        let is_str_literal = c == '"';
+        let is_str_literal = code[j..].chars().skip_while(|&c| c == '#').next() == Some('"');
         if tok.is_some() || c.is_ascii_whitespace() || is_comment || is_str_literal {
             if let (Some(n), Some(l)) = (code[i..j].chars().next(), code[i..j].chars().last()) {
                 let tok = match (n, l) {
@@ -58,9 +58,12 @@ fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
             let (j, _) = chars.find(|(_, c)| *c == '\n').unwrap_or_default();
             i = j + 1;
         } else if is_str_literal {
-            let (j, _) = chars.find(|(_, c)| *c == '"').unwrap_or((code.len() - 1, '"'));
-            toks.push((Tok::String, i - 1, &code[i - 1..j + 1]));
-            i = j + 1;
+            let n = code[j..].chars().take_while(|&ch| ch == '#').count();
+            let end = format!("\"{}", "#".repeat(n));
+            let j = chars.by_ref().skip(n).map(|(j, _)| j).find(|j| code[*j..].starts_with(&end));
+            let end = j.map(|j| j + 1).unwrap_or(code.len());
+            toks.push((Tok::String, i - 1, &code[i + n - 1..end]));
+            i = end + n;
         }
     }
     toks
