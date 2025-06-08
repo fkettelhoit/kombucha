@@ -63,12 +63,12 @@ False
 
 ---
 
-'f = ('x => { __compare(x, Bar, { True }, { False }) }), f(Bar)
+:f = (:x => { __compare(x, Bar, { True }, { False }) }), f(Bar)
 
 (=
-  'f
+  :f
   (=>
-    'x
+    :x
     { (__compare
         x
         Bar
@@ -176,12 +176,12 @@ True
 
 ---
 
-'f = ('x => { __compare(x, Foo, { True }, { False }) }), Pair(f(Foo), f(Bar))
+:f = (:x => { __compare(x, Foo, { True }, { False }) }), Pair(f(Foo), f(Bar))
 
 (=
-  'f
+  :f
   (=>
-    'x
+    :x
     { (__compare
         x
         Foo

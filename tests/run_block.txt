@@ -1,10 +1,10 @@
-'x = Foo, 'y = Bar, Pair(x, y)
+:x = Foo, :y = Bar, Pair(x, y)
 
 (=
-  'x
+  :x
   Foo)
 (=
-  'y
+  :y
   Bar)
 (Pair
   x
@@ -82,12 +82,12 @@ Pair(Foo, Bar)
 
 ---
 
-'f = ('x => { Foo(x) }), f(Bar)
+:f = (:x => { Foo(x) }), f(Bar)
 
 (=
-  'f
+  :f
   (=>
-    'x
+    :x
     { (Foo
         x) }))
 (f

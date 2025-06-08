@@ -1,25 +1,25 @@
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-fold(['acc, 'x] => { acc(x) }, [], [A, B, C])
+fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -29,8 +29,8 @@ fold(['acc, 'x] => { acc(x) }, [], [A, B, C])
             { acc }) }) }))
 (fold
   (=>
-    ( 'acc
-      'x )
+    ( :acc
+      :x )
     { (acc
         x) })
   (  )
@@ -241,31 +241,31 @@ fold(['acc, 'x] => { acc(x) }, [], [A, B, C])
 
 ---
 
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-'rev = ('xs => {
-    fold(['xs, 'x] => { xs(x) }, [], xs)
+:rev = (:xs => {
+    fold([:xs, :x] => { xs(x) }, [], xs)
 })
 rev([A, B, C])
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -274,13 +274,13 @@ rev([A, B, C])
                   xs) })
             { acc }) }) }))
 (=
-  'rev
+  :rev
   (=>
-    'xs
+    :xs
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               x) })
         (  )
@@ -535,31 +535,31 @@ rev([A, B, C])
 
 ---
 
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-'apply = (['f, 'xs] => {
-    fold(['f, 'x] => { f(x) }, f, xs)
+:apply = ([:f, :xs] => {
+    fold([:f, :x] => { f(x) }, f, xs)
 })
-apply(['x, 'y, 'z] => { Triple(x, y, z) }, [A, B, C])
+apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -568,23 +568,23 @@ apply(['x, 'y, 'z] => { Triple(x, y, z) }, [A, B, C])
                   xs) })
             { acc }) }) }))
 (=
-  'apply
+  :apply
   (=>
-    ( 'f
-      'xs )
+    ( :f
+      :xs )
     { (fold
         (=>
-          ( 'f
-            'x )
+          ( :f
+            :x )
           { (f
               x) })
         f
         xs) }))
 (apply
   (=>
-    ( 'x
-      'y
-      'z )
+    ( :x
+      :y
+      :z )
     { (Triple
         x
         y
@@ -889,34 +889,34 @@ Triple(A, B, C)
 
 ---
 
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-'rev = ('xs => {
-    fold(['xs, 'x] => { xs(x) }, [], xs)
+:rev = (:xs => {
+    fold([:xs, :x] => { xs(x) }, [], xs)
 })
-'map = (['f, 'xs] => {
-    fold(['xs, 'x] => { xs(f(x)) }, [], rev(xs))
+:map = ([:f, :xs] => {
+    fold([:xs, :x] => { xs(f(x)) }, [], rev(xs))
 })
-map('x => { Foo(x) }, [A, B, C])
+map(:x => { Foo(x) }, [A, B, C])
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -925,26 +925,26 @@ map('x => { Foo(x) }, [A, B, C])
                   xs) })
             { acc }) }) }))
 (=
-  'rev
+  :rev
   (=>
-    'xs
+    :xs
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               x) })
         (  )
         xs) }))
 (=
-  'map
+  :map
   (=>
-    ( 'f
-      'xs )
+    ( :f
+      :xs )
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               (f
                 x)) })
@@ -953,7 +953,7 @@ map('x => { Foo(x) }, [A, B, C])
           xs)) }))
 (map
   (=>
-    'x
+    :x
     { (Foo
         x) })
   ( A
@@ -1316,24 +1316,24 @@ map('x => { Foo(x) }, [A, B, C])
 
 ---
 
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-'rev = ('xs => {
-    fold(['xs, 'x] => { xs(x) }, [], xs)
+:rev = (:xs => {
+    fold([:xs, :x] => { xs(x) }, [], xs)
 })
-'zip = ('zip ~> { ['acc, 'xs, 'ys] => {
-    __unpack(xs, ['xs, 'x] => {
-        __unpack(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
+:zip = (:zip ~> { [:acc, :xs, :ys] => {
+    __unpack(xs, [:xs, :x] => {
+        __unpack(ys, [:ys, :y] => { zip(acc([x, y]), xs, ys) }, {})
     }, {
-        __unpack(ys, ['ys, 'y] => {}, { acc })
+        __unpack(ys, [:ys, :y] => {}, { acc })
     })
 }})
-'zip = (['xs, 'ys] => { rev(zip([], xs, ys)) })
+:zip = ([:xs, :ys] => { rev(zip([], xs, ys)) })
 [
     zip([A, B, C], [X, Y, Z])
     zip([A, B, C], [X, Y])
@@ -1343,18 +1343,18 @@ map('x => { Foo(x) }, [A, B, C])
 ]
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -1363,35 +1363,35 @@ map('x => { Foo(x) }, [A, B, C])
                   xs) })
             { acc }) }) }))
 (=
-  'rev
+  :rev
   (=>
-    'xs
+    :xs
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               x) })
         (  )
         xs) }))
 (=
-  'zip
+  :zip
   (~>
-    'zip
+    :zip
     { (=>
-        ( 'acc
-          'xs
-          'ys )
+        ( :acc
+          :xs
+          :ys )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (__unpack
                   ys
                   (=>
-                    ( 'ys
-                      'y )
+                    ( :ys
+                      :y )
                     { (zip
                         (acc
                           ( x
@@ -1402,15 +1402,15 @@ map('x => { Foo(x) }, [A, B, C])
             { (__unpack
                 ys
                 (=>
-                  ( 'ys
-                    'y )
+                  ( :ys
+                    :y )
                   {  })
                 { acc }) }) }) }))
 (=
-  'zip
+  :zip
   (=>
-    ( 'xs
-      'ys )
+    ( :xs
+      :ys )
     { (rev
         (zip
           (  )
@@ -2088,9 +2088,9 @@ map('x => { Foo(x) }, [A, B, C])
 
 ---
 
-'== = ('== ~> { ['a, 'b] => {
-    __unpack(a, ['xs, 'x] => {
-        __unpack(b, ['ys, 'y] => {
+:== = (:== ~> { [:a, :b] => {
+    __unpack(a, [:xs, :x] => {
+        __unpack(b, [:ys, :y] => {
             __compare(x == y, True, { xs == ys }, { False })
         }, {
             False
@@ -2104,29 +2104,29 @@ map('x => { Foo(x) }, [A, B, C])
     Foo == Bar
     Foo(Bar) == Foo(Bar)
     Foo(Bar) == Foo(Baz)
-    'a == 'a
-    'a == 'b
-    'f('a) == 'f('a)
-    'f('a) == 'g('a)
+    :a == :a
+    :a == :b
+    :f(:a) == :f(:a)
+    :f(:a) == :g(:a)
 ]
 
 (=
-  '==
+  :==
   (~>
-    '==
+    :==
     { (=>
-        ( 'a
-          'b )
+        ( :a
+          :b )
         { (__unpack
             a
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (__unpack
                   b
                   (=>
-                    ( 'ys
-                      'y )
+                    ( :ys
+                      :y )
                     { (__compare
                         (==
                           x
@@ -2159,21 +2159,21 @@ map('x => { Foo(x) }, [A, B, C])
     (Foo
       Baz))
   (==
-    'a
-    'a)
+    :a
+    :a)
   (==
-    'a
-    'b)
+    :a
+    :b)
   (==
-    ('f
-      'a)
-    ('f
-      'a))
+    (:f
+      :a)
+    (:f
+      :a))
   (==
-    ('f
-      'a)
-    ('g
-      'a)) )
+    (:f
+      :a)
+    (:g
+      :a)) )
 
 ( ( ( =>
         =>
@@ -2551,36 +2551,36 @@ map('x => { Foo(x) }, [A, B, C])
 
 ---
 
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-'rev = ('xs => {
-    fold(['xs, 'x] => { xs(x) }, [], xs)
+:rev = (:xs => {
+    fold([:xs, :x] => { xs(x) }, [], xs)
 })
-'flatten = ('xs => {
-    rev(fold(['acc, 'x] => {
-        fold(['acc, 'x] => { acc(x) }, acc, x)
+:flatten = (:xs => {
+    rev(fold([:acc, :x] => {
+        fold([:acc, :x] => { acc(x) }, acc, x)
     }, [], xs))
 })
 flatten([[A, B], [C, D]])
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -2589,30 +2589,30 @@ flatten([[A, B], [C, D]])
                   xs) })
             { acc }) }) }))
 (=
-  'rev
+  :rev
   (=>
-    'xs
+    :xs
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               x) })
         (  )
         xs) }))
 (=
-  'flatten
+  :flatten
   (=>
-    'xs
+    :xs
     { (rev
         (fold
           (=>
-            ( 'acc
-              'x )
+            ( :acc
+              :x )
             { (fold
                 (=>
-                  ( 'acc
-                    'x )
+                  ( :acc
+                    :x )
                   { (acc
                       x) })
                 acc
@@ -2990,8 +2990,8 @@ flatten([[A, B], [C, D]])
 
 ---
 
-'destructure = ('destructure ~> { ['acc, 'compound] => {
-    __unpack(compound, ['xs, 'x] => {
+:destructure = (:destructure ~> { [:acc, :compound] => {
+    __unpack(compound, [:xs, :x] => {
         destructure(acc(x), xs)
     }, {
         [compound, acc]
@@ -3000,17 +3000,17 @@ flatten([[A, B], [C, D]])
 destructure(Foo(Bar, Baz, Qux))
 
 (=
-  'destructure
+  :destructure
   ((~>
-    'destructure
+    :destructure
     { (=>
-        ( 'acc
-          'compound )
+        ( :acc
+          :compound )
         { (__unpack
             compound
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (destructure
                   (acc
                     x)
@@ -3191,47 +3191,47 @@ destructure(Foo(Bar, Baz, Qux))
 
 ---
 
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-'apply = (['f, 'xs] => {
-    fold(['f, 'x] => { f(x) }, f, xs)
+:apply = ([:f, :xs] => {
+    fold([:f, :x] => { f(x) }, f, xs)
 })
-'reverse = ('xs => {
-    fold(['xs, 'x] => { xs(x) }, [], xs)
+:reverse = (:xs => {
+    fold([:xs, :x] => { xs(x) }, [], xs)
 })
-'map = (['f, 'xs] => {
-    fold(['xs, 'x] => { xs(f(x)) }, [], reverse(xs))
+:map = ([:f, :xs] => {
+    fold([:xs, :x] => { xs(f(x)) }, [], reverse(xs))
 })
-'flatten = ('xs => {
-    reverse(fold(['acc, 'x] => {
-        fold(['acc, 'x] => { acc(x) }, acc, x)
+:flatten = (:xs => {
+    reverse(fold([:acc, :x] => {
+        fold([:acc, :x] => { acc(x) }, acc, x)
     }, [], xs))
 })
-'zip = ('zip ~> { ['acc, 'xs, 'ys] => {
-    __unpack(xs, ['xs, 'x] => {
-        __unpack(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
+:zip = (:zip ~> { [:acc, :xs, :ys] => {
+    __unpack(xs, [:xs, :x] => {
+        __unpack(ys, [:ys, :y] => { zip(acc([x, y]), xs, ys) }, {})
     }, {
-        __unpack(ys, ['ys, 'y] => {}, { acc })
+        __unpack(ys, [:ys, :y] => {}, { acc })
     })
 }})
-'zip = (['xs, 'ys] => {
+:zip = ([:xs, :ys] => {
     reverse(zip([], xs, ys))
 })
-'destructure = ('destructure ~> { ['acc, 'compound] => {
-    __unpack(compound, ['xs, 'x] => {
+:destructure = (:destructure ~> { [:acc, :compound] => {
+    __unpack(compound, [:xs, :x] => {
         destructure(acc(x), xs)
     }, {
         [compound, acc]
     })
 } })([])
-'== = ('== ~> { ['a, 'b] => {
-    __unpack(a, ['xs, 'x] => {
-        __unpack(b, ['ys, 'y] => {
+:== = (:== ~> { [:a, :b] => {
+    __unpack(a, [:xs, :x] => {
+        __unpack(b, [:ys, :y] => {
             __compare(x == y, True, { xs == ys }, { False })
         }, {
             False
@@ -3240,18 +3240,18 @@ destructure(Foo(Bar, Baz, Qux))
         __compare(a, b, { True }, { False })
     })
 }})
-'first = ('xs => {
-    __unpack(xs, ['_, 'x] => { x }, { xs })
+:first = (:xs => {
+    __unpack(xs, [:_, :x] => { x }, { xs })
 })
-'second = ('xs => {
-    __unpack(xs, ['xs, '_] => { first(xs) }, { xs })
+:second = (:xs => {
+    __unpack(xs, [:xs, :_] => { first(xs) }, { xs })
 })
-'join = fold(['acc, 'pair] => {
-    'xvar = first(pair)
-    'xval = second(pair)
-    fold(['_, 'pair] => {
-        'yvar = first(pair)
-        'yval = second(pair)
+:join = fold([:acc, :pair] => {
+    :xvar = first(pair)
+    :xval = second(pair)
+    fold([:_, :pair] => {
+        :yvar = first(pair)
+        :yval = second(pair)
         __compare(xvar, yvar, {
             __compare(xval == yval, False, {
                 no-match!([[xvar, xval], [yvar, yval]])
@@ -3260,14 +3260,14 @@ destructure(Foo(Bar, Baz, Qux))
     }, [], acc)
     acc(pair)
 }, [])
-'unify = ('unify ~> { ['pattern, 'value] => {
-    __unpack(pattern, ['type, 'pattern] => {
-        __unpack(type, ['type, 'f] => {
+:unify = (:unify ~> { [:pattern, :value] => {
+    __unpack(pattern, [:type, :pattern] => {
+        __unpack(type, [:type, :f] => {
             __compare(type, Compound, {
-                'v = destructure(value)
-                'vf = first(v)
-                'vargs = second(v)
-                'zipped = reverse(zip(pattern(f), vargs(vf)))
+                :v = destructure(value)
+                :vf = first(v)
+                :vargs = second(v)
+                :zipped = reverse(zip(pattern(f), vargs(vf)))
                 __compare(zipped, [], {
                     no-match!([type(f, pattern), value])
                 }, {
@@ -3289,47 +3289,47 @@ destructure(Foo(Bar, Baz, Qux))
         invalid!(pattern)
     })
 }})
-'-> = (['pattern, 'body, 'value] => {
+:-> = ([:pattern, :body, :value] => {
     __handle( {
-        'args = map(second, unify(pattern, value))
+        :args = map(second, unify(pattern, value))
         __compare(args, [], {
             body()
         }, {
             apply(body, args)
         })
-    }, no-match!, ['_, 'arg] => {
+    }, no-match!, [:_, :arg] => {
         no-match!(arg)
     })
 })
 __handle({
     [
         (Foo -> { Bar })(Foo)
-        ('x -> { x })(Foo)
-        ('x -> { Bar })(Foo)
+        (:x -> { x })(Foo)
+        (:x -> { Bar })(Foo)
         (Pair(Foo, Bar) -> { Foo })(Pair(Foo, Bar))
-        (Pair('x, 'y) -> { y })(Pair(Foo, Bar))
-        (Pair('x, Bar) -> { x })(Pair(Foo, Bar))
-        (Pair('x, 'x) -> { x })(Pair(Bar, Bar))
-        ('foo('x, 'y) -> { y })(Pair(Foo, Bar))
-        (Pair('x, 'x) -> { x })(Pair(Foo, Bar))
+        (Pair(:x, :y) -> { y })(Pair(Foo, Bar))
+        (Pair(:x, Bar) -> { x })(Pair(Foo, Bar))
+        (Pair(:x, :x) -> { x })(Pair(Bar, Bar))
+        (:foo(:x, :y) -> { y })(Pair(Foo, Bar))
+        (Pair(:x, :x) -> { x })(Pair(Foo, Bar))
     ]
-}, no-match!, ['r, 'arg] => {
+}, no-match!, [:r, :arg] => {
     r(NoMatch(arg))
 })
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -3338,39 +3338,39 @@ __handle({
                   xs) })
             { acc }) }) }))
 (=
-  'apply
+  :apply
   (=>
-    ( 'f
-      'xs )
+    ( :f
+      :xs )
     { (fold
         (=>
-          ( 'f
-            'x )
+          ( :f
+            :x )
           { (f
               x) })
         f
         xs) }))
 (=
-  'reverse
+  :reverse
   (=>
-    'xs
+    :xs
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               x) })
         (  )
         xs) }))
 (=
-  'map
+  :map
   (=>
-    ( 'f
-      'xs )
+    ( :f
+      :xs )
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               (f
                 x)) })
@@ -3378,18 +3378,18 @@ __handle({
         (reverse
           xs)) }))
 (=
-  'flatten
+  :flatten
   (=>
-    'xs
+    :xs
     { (reverse
         (fold
           (=>
-            ( 'acc
-              'x )
+            ( :acc
+              :x )
             { (fold
                 (=>
-                  ( 'acc
-                    'x )
+                  ( :acc
+                    :x )
                   { (acc
                       x) })
                 acc
@@ -3397,23 +3397,23 @@ __handle({
           (  )
           xs)) }))
 (=
-  'zip
+  :zip
   (~>
-    'zip
+    :zip
     { (=>
-        ( 'acc
-          'xs
-          'ys )
+        ( :acc
+          :xs
+          :ys )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (__unpack
                   ys
                   (=>
-                    ( 'ys
-                      'y )
+                    ( :ys
+                      :y )
                     { (zip
                         (acc
                           ( x
@@ -3424,32 +3424,32 @@ __handle({
             { (__unpack
                 ys
                 (=>
-                  ( 'ys
-                    'y )
+                  ( :ys
+                    :y )
                   {  })
                 { acc }) }) }) }))
 (=
-  'zip
+  :zip
   (=>
-    ( 'xs
-      'ys )
+    ( :xs
+      :ys )
     { (reverse
         (zip
           (  )
           xs
           ys)) }))
 (=
-  'destructure
+  :destructure
   ((~>
-    'destructure
+    :destructure
     { (=>
-        ( 'acc
-          'compound )
+        ( :acc
+          :compound )
         { (__unpack
             compound
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (destructure
                   (acc
                     x)
@@ -3458,22 +3458,22 @@ __handle({
                 acc ) }) }) })
     (  )))
 (=
-  '==
+  :==
   (~>
-    '==
+    :==
     { (=>
-        ( 'a
-          'b )
+        ( :a
+          :b )
         { (__unpack
             a
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (__unpack
                   b
                   (=>
-                    ( 'ys
-                      'y )
+                    ( :ys
+                      :y )
                     { (__compare
                         (==
                           x
@@ -3490,52 +3490,52 @@ __handle({
                 { True }
                 { False }) }) }) }))
 (=
-  'first
+  :first
   (=>
-    'xs
+    :xs
     { (__unpack
         xs
         (=>
-          ( '_
-            'x )
+          ( :_
+            :x )
           { x })
         { xs }) }))
 (=
-  'second
+  :second
   (=>
-    'xs
+    :xs
     { (__unpack
         xs
         (=>
-          ( 'xs
-            '_ )
+          ( :xs
+            :_ )
           { (first
               xs) })
         { xs }) }))
 (=
-  'join
+  :join
   (fold
     (=>
-      ( 'acc
-        'pair )
+      ( :acc
+        :pair )
       { (=
-          'xvar
+          :xvar
           (first
             pair))
         (=
-          'xval
+          :xval
           (second
             pair))
         (fold
           (=>
-            ( '_
-              'pair )
+            ( :_
+              :pair )
             { (=
-                'yvar
+                :yvar
                 (first
                   pair))
               (=
-                'yval
+                :yval
                 (second
                   pair))
               (__compare
@@ -3559,39 +3559,39 @@ __handle({
           pair) })
     (  )))
 (=
-  'unify
+  :unify
   (~>
-    'unify
+    :unify
     { (=>
-        ( 'pattern
-          'value )
+        ( :pattern
+          :value )
         { (__unpack
             pattern
             (=>
-              ( 'type
-                'pattern )
+              ( :type
+                :pattern )
               { (__unpack
                   type
                   (=>
-                    ( 'type
-                      'f )
+                    ( :type
+                      :f )
                     { (__compare
                         type
                         Compound
                         { (=
-                            'v
+                            :v
                             (destructure
                               value))
                           (=
-                            'vf
+                            :vf
                             (first
                               v))
                           (=
-                            'vargs
+                            :vargs
                             (second
                               v))
                           (=
-                            'zipped
+                            :zipped
                             (reverse
                               (zip
                                 (pattern
@@ -3633,14 +3633,14 @@ __handle({
             { (invalid!
                 pattern) }) }) }))
 (=
-  '->
+  :->
   (=>
-    ( 'pattern
-      'body
-      'value )
+    ( :pattern
+      :body
+      :value )
     { (__handle
         { (=
-            'args
+            :args
             (map
               second
               (unify
@@ -3655,8 +3655,8 @@ __handle({
                 args) }) }
         no-match!
         (=>
-          ( '_
-            'arg )
+          ( :_
+            :arg )
           { (no-match!
               arg) })) }))
 (__handle
@@ -3665,11 +3665,11 @@ __handle({
         { Bar })
         Foo)
       ((->
-        'x
+        :x
         { x })
         Foo)
       ((->
-        'x
+        :x
         { Bar })
         Foo)
       ((->
@@ -3682,15 +3682,15 @@ __handle({
           Bar))
       ((->
         (Pair
-          'x
-          'y)
+          :x
+          :y)
         { y })
         (Pair
           Foo
           Bar))
       ((->
         (Pair
-          'x
+          :x
           Bar)
         { x })
         (Pair
@@ -3698,32 +3698,32 @@ __handle({
           Bar))
       ((->
         (Pair
-          'x
-          'x)
+          :x
+          :x)
         { x })
         (Pair
           Bar
           Bar))
       ((->
-        ('foo
-          'x
-          'y)
+        (:foo
+          :x
+          :y)
         { y })
         (Pair
           Foo
           Bar))
       ((->
         (Pair
-          'x
-          'x)
+          :x
+          :x)
         { x })
         (Pair
           Foo
           Bar)) ) }
   no-match!
   (=>
-    ( 'r
-      'arg )
+    ( :r
+      :arg )
     { (r
         (NoMatch
           arg)) }))
@@ -6530,47 +6530,47 @@ __handle({
 
 ---
 
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-'apply = (['f, 'xs] => {
-    fold(['f, 'x] => { f(x) }, f, xs)
+:apply = ([:f, :xs] => {
+    fold([:f, :x] => { f(x) }, f, xs)
 })
-'reverse = ('xs => {
-    fold(['xs, 'x] => { xs(x) }, [], xs)
+:reverse = (:xs => {
+    fold([:xs, :x] => { xs(x) }, [], xs)
 })
-'map = (['f, 'xs] => {
-    fold(['xs, 'x] => { xs(f(x)) }, [], reverse(xs))
+:map = ([:f, :xs] => {
+    fold([:xs, :x] => { xs(f(x)) }, [], reverse(xs))
 })
-'flatten = ('xs => {
-    reverse(fold(['acc, 'x] => {
-        fold(['acc, 'x] => { acc(x) }, acc, x)
+:flatten = (:xs => {
+    reverse(fold([:acc, :x] => {
+        fold([:acc, :x] => { acc(x) }, acc, x)
     }, [], xs))
 })
-'zip = ('zip ~> { ['acc, 'xs, 'ys] => {
-    __unpack(xs, ['xs, 'x] => {
-        __unpack(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
+:zip = (:zip ~> { [:acc, :xs, :ys] => {
+    __unpack(xs, [:xs, :x] => {
+        __unpack(ys, [:ys, :y] => { zip(acc([x, y]), xs, ys) }, {})
     }, {
-        __unpack(ys, ['ys, 'y] => {}, { acc })
+        __unpack(ys, [:ys, :y] => {}, { acc })
     })
 }})
-'zip = (['xs, 'ys] => {
+:zip = ([:xs, :ys] => {
     reverse(zip([], xs, ys))
 })
-'destructure = ('destructure ~> { ['acc, 'compound] => {
-    __unpack(compound, ['xs, 'x] => {
+:destructure = (:destructure ~> { [:acc, :compound] => {
+    __unpack(compound, [:xs, :x] => {
         destructure(acc(x), xs)
     }, {
         [compound, acc]
     })
 } })([])
-'== = ('== ~> { ['a, 'b] => {
-    __unpack(a, ['xs, 'x] => {
-        __unpack(b, ['ys, 'y] => {
+:== = (:== ~> { [:a, :b] => {
+    __unpack(a, [:xs, :x] => {
+        __unpack(b, [:ys, :y] => {
             __compare(x == y, True, { xs == ys }, { False })
         }, {
             False
@@ -6579,18 +6579,18 @@ __handle({
         __compare(a, b, { True }, { False })
     })
 }})
-'first = ('xs => {
-    __unpack(xs, ['_, 'x] => { x }, { xs })
+:first = (:xs => {
+    __unpack(xs, [:_, :x] => { x }, { xs })
 })
-'second = ('xs => {
-    __unpack(xs, ['xs, '_] => { first(xs) }, { xs })
+:second = (:xs => {
+    __unpack(xs, [:xs, :_] => { first(xs) }, { xs })
 })
-'join = fold(['acc, 'pair] => {
-    'xvar = first(pair)
-    'xval = second(pair)
-    fold(['_, 'pair] => {
-        'yvar = first(pair)
-        'yval = second(pair)
+:join = fold([:acc, :pair] => {
+    :xvar = first(pair)
+    :xval = second(pair)
+    fold([:_, :pair] => {
+        :yvar = first(pair)
+        :yval = second(pair)
         __compare(xvar, yvar, {
             __compare(xval == yval, False, {
                 no-match!([[xvar, xval], [yvar, yval]])
@@ -6599,14 +6599,14 @@ __handle({
     }, [], acc)
     acc(pair)
 }, [])
-'unify = ('unify ~> { ['pattern, 'value] => {
-    __unpack(pattern, ['type, 'pattern] => {
-        __unpack(type, ['type, 'f] => {
+:unify = (:unify ~> { [:pattern, :value] => {
+    __unpack(pattern, [:type, :pattern] => {
+        __unpack(type, [:type, :f] => {
             __compare(type, Compound, {
-                'v = destructure(value)
-                'vf = first(v)
-                'vargs = second(v)
-                'zipped = reverse(zip(pattern(f), vargs(vf)))
+                :v = destructure(value)
+                :vf = first(v)
+                :vargs = second(v)
+                :zipped = reverse(zip(pattern(f), vargs(vf)))
                 __compare(zipped, [], {
                     no-match!([type(f, pattern), value])
                 }, {
@@ -6628,47 +6628,47 @@ __handle({
         invalid!(pattern)
     })
 }})
-'-> = (['pattern, 'body, 'value] => {
+:-> = ([:pattern, :body, :value] => {
     __handle( {
-        'args = map(second, unify(pattern, value))
+        :args = map(second, unify(pattern, value))
         __compare(args, [], {
             body()
         }, {
             apply(body, args)
         })
-    }, no-match!, ['_, 'arg] => {
+    }, no-match!, [:_, :arg] => {
         no-match!(arg)
     })
 })
 __handle({
     [
         (Foo -> { Bar })(Foo)
-        ('x -> { x })(Foo)
-        ('x -> { Bar })(Foo)
+        (:x -> { x })(Foo)
+        (:x -> { Bar })(Foo)
         (Pair(Foo, Bar) -> { Foo })(Pair(Foo, Bar))
-        (Pair('x, 'y) -> { y })(Pair(Foo, Bar))
-        (Pair('x, Bar) -> { x })(Pair(Foo, Bar))
-        (Pair('x, 'x) -> { x })(Pair(Bar, Bar))
-        ('foo('x, 'y) -> { y })(Pair(Foo, Bar))
-        (Pair('x, 'x) -> { x })(Pair(Foo, Bar))
+        (Pair(:x, :y) -> { y })(Pair(Foo, Bar))
+        (Pair(:x, Bar) -> { x })(Pair(Foo, Bar))
+        (Pair(:x, :x) -> { x })(Pair(Bar, Bar))
+        (:foo(:x, :y) -> { y })(Pair(Foo, Bar))
+        (Pair(:x, :x) -> { x })(Pair(Foo, Bar))
     ]
-}, no-match!, ['r, 'arg] => {
+}, no-match!, [:r, :arg] => {
     r(NoMatch(arg))
 })
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -6677,39 +6677,39 @@ __handle({
                   xs) })
             { acc }) }) }))
 (=
-  'apply
+  :apply
   (=>
-    ( 'f
-      'xs )
+    ( :f
+      :xs )
     { (fold
         (=>
-          ( 'f
-            'x )
+          ( :f
+            :x )
           { (f
               x) })
         f
         xs) }))
 (=
-  'reverse
+  :reverse
   (=>
-    'xs
+    :xs
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               x) })
         (  )
         xs) }))
 (=
-  'map
+  :map
   (=>
-    ( 'f
-      'xs )
+    ( :f
+      :xs )
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               (f
                 x)) })
@@ -6717,18 +6717,18 @@ __handle({
         (reverse
           xs)) }))
 (=
-  'flatten
+  :flatten
   (=>
-    'xs
+    :xs
     { (reverse
         (fold
           (=>
-            ( 'acc
-              'x )
+            ( :acc
+              :x )
             { (fold
                 (=>
-                  ( 'acc
-                    'x )
+                  ( :acc
+                    :x )
                   { (acc
                       x) })
                 acc
@@ -6736,23 +6736,23 @@ __handle({
           (  )
           xs)) }))
 (=
-  'zip
+  :zip
   (~>
-    'zip
+    :zip
     { (=>
-        ( 'acc
-          'xs
-          'ys )
+        ( :acc
+          :xs
+          :ys )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (__unpack
                   ys
                   (=>
-                    ( 'ys
-                      'y )
+                    ( :ys
+                      :y )
                     { (zip
                         (acc
                           ( x
@@ -6763,32 +6763,32 @@ __handle({
             { (__unpack
                 ys
                 (=>
-                  ( 'ys
-                    'y )
+                  ( :ys
+                    :y )
                   {  })
                 { acc }) }) }) }))
 (=
-  'zip
+  :zip
   (=>
-    ( 'xs
-      'ys )
+    ( :xs
+      :ys )
     { (reverse
         (zip
           (  )
           xs
           ys)) }))
 (=
-  'destructure
+  :destructure
   ((~>
-    'destructure
+    :destructure
     { (=>
-        ( 'acc
-          'compound )
+        ( :acc
+          :compound )
         { (__unpack
             compound
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (destructure
                   (acc
                     x)
@@ -6797,22 +6797,22 @@ __handle({
                 acc ) }) }) })
     (  )))
 (=
-  '==
+  :==
   (~>
-    '==
+    :==
     { (=>
-        ( 'a
-          'b )
+        ( :a
+          :b )
         { (__unpack
             a
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (__unpack
                   b
                   (=>
-                    ( 'ys
-                      'y )
+                    ( :ys
+                      :y )
                     { (__compare
                         (==
                           x
@@ -6829,52 +6829,52 @@ __handle({
                 { True }
                 { False }) }) }) }))
 (=
-  'first
+  :first
   (=>
-    'xs
+    :xs
     { (__unpack
         xs
         (=>
-          ( '_
-            'x )
+          ( :_
+            :x )
           { x })
         { xs }) }))
 (=
-  'second
+  :second
   (=>
-    'xs
+    :xs
     { (__unpack
         xs
         (=>
-          ( 'xs
-            '_ )
+          ( :xs
+            :_ )
           { (first
               xs) })
         { xs }) }))
 (=
-  'join
+  :join
   (fold
     (=>
-      ( 'acc
-        'pair )
+      ( :acc
+        :pair )
       { (=
-          'xvar
+          :xvar
           (first
             pair))
         (=
-          'xval
+          :xval
           (second
             pair))
         (fold
           (=>
-            ( '_
-              'pair )
+            ( :_
+              :pair )
             { (=
-                'yvar
+                :yvar
                 (first
                   pair))
               (=
-                'yval
+                :yval
                 (second
                   pair))
               (__compare
@@ -6898,39 +6898,39 @@ __handle({
           pair) })
     (  )))
 (=
-  'unify
+  :unify
   (~>
-    'unify
+    :unify
     { (=>
-        ( 'pattern
-          'value )
+        ( :pattern
+          :value )
         { (__unpack
             pattern
             (=>
-              ( 'type
-                'pattern )
+              ( :type
+                :pattern )
               { (__unpack
                   type
                   (=>
-                    ( 'type
-                      'f )
+                    ( :type
+                      :f )
                     { (__compare
                         type
                         Compound
                         { (=
-                            'v
+                            :v
                             (destructure
                               value))
                           (=
-                            'vf
+                            :vf
                             (first
                               v))
                           (=
-                            'vargs
+                            :vargs
                             (second
                               v))
                           (=
-                            'zipped
+                            :zipped
                             (reverse
                               (zip
                                 (pattern
@@ -6972,14 +6972,14 @@ __handle({
             { (invalid!
                 pattern) }) }) }))
 (=
-  '->
+  :->
   (=>
-    ( 'pattern
-      'body
-      'value )
+    ( :pattern
+      :body
+      :value )
     { (__handle
         { (=
-            'args
+            :args
             (map
               second
               (unify
@@ -6994,8 +6994,8 @@ __handle({
                 args) }) }
         no-match!
         (=>
-          ( '_
-            'arg )
+          ( :_
+            :arg )
           { (no-match!
               arg) })) }))
 (__handle
@@ -7004,11 +7004,11 @@ __handle({
         { Bar })
         Foo)
       ((->
-        'x
+        :x
         { x })
         Foo)
       ((->
-        'x
+        :x
         { Bar })
         Foo)
       ((->
@@ -7021,15 +7021,15 @@ __handle({
           Bar))
       ((->
         (Pair
-          'x
-          'y)
+          :x
+          :y)
         { y })
         (Pair
           Foo
           Bar))
       ((->
         (Pair
-          'x
+          :x
           Bar)
         { x })
         (Pair
@@ -7037,32 +7037,32 @@ __handle({
           Bar))
       ((->
         (Pair
-          'x
-          'x)
+          :x
+          :x)
         { x })
         (Pair
           Bar
           Bar))
       ((->
-        ('foo
-          'x
-          'y)
+        (:foo
+          :x
+          :y)
         { y })
         (Pair
           Foo
           Bar))
       ((->
         (Pair
-          'x
-          'x)
+          :x
+          :x)
         { x })
         (Pair
           Foo
           Bar)) ) }
   no-match!
   (=>
-    ( 'r
-      'arg )
+    ( :r
+      :arg )
     { (r
         (NoMatch
           arg)) }))
@@ -9869,47 +9869,47 @@ __handle({
 
 ---
 
-'fold = ('fold ~> { ['f, 'acc, 'xs] => {
-    __unpack(xs, ['xs, 'x] => {
+:fold = (:fold ~> { [:f, :acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
         fold(f, f(acc, x), xs)
     }, {
         acc
     })
 }})
-'apply = (['f, 'xs] => {
-    fold(['f, 'x] => { f(x) }, f, xs)
+:apply = ([:f, :xs] => {
+    fold([:f, :x] => { f(x) }, f, xs)
 })
-'reverse = ('xs => {
-    fold(['xs, 'x] => { xs(x) }, [], xs)
+:reverse = (:xs => {
+    fold([:xs, :x] => { xs(x) }, [], xs)
 })
-'map = (['f, 'xs] => {
-    fold(['xs, 'x] => { xs(f(x)) }, [], reverse(xs))
+:map = ([:f, :xs] => {
+    fold([:xs, :x] => { xs(f(x)) }, [], reverse(xs))
 })
-'flatten = ('xs => {
-    reverse(fold(['acc, 'x] => {
-        fold(['acc, 'x] => { acc(x) }, acc, x)
+:flatten = (:xs => {
+    reverse(fold([:acc, :x] => {
+        fold([:acc, :x] => { acc(x) }, acc, x)
     }, [], xs))
 })
-'zip = ('zip ~> { ['acc, 'xs, 'ys] => {
-    __unpack(xs, ['xs, 'x] => {
-        __unpack(ys, ['ys, 'y] => { zip(acc([x, y]), xs, ys) }, {})
+:zip = (:zip ~> { [:acc, :xs, :ys] => {
+    __unpack(xs, [:xs, :x] => {
+        __unpack(ys, [:ys, :y] => { zip(acc([x, y]), xs, ys) }, {})
     }, {
-        __unpack(ys, ['ys, 'y] => {}, { acc })
+        __unpack(ys, [:ys, :y] => {}, { acc })
     })
 }})
-'zip = (['xs, 'ys] => {
+:zip = ([:xs, :ys] => {
     reverse(zip([], xs, ys))
 })
-'destructure = ('destructure ~> { ['acc, 'compound] => {
-    __unpack(compound, ['xs, 'x] => {
+:destructure = (:destructure ~> { [:acc, :compound] => {
+    __unpack(compound, [:xs, :x] => {
         destructure(acc(x), xs)
     }, {
         [compound, acc]
     })
 } })([])
-'== = ('== ~> { ['a, 'b] => {
-    __unpack(a, ['xs, 'x] => {
-        __unpack(b, ['ys, 'y] => {
+:== = (:== ~> { [:a, :b] => {
+    __unpack(a, [:xs, :x] => {
+        __unpack(b, [:ys, :y] => {
             __compare(x == y, True, { xs == ys }, { False })
         }, {
             False
@@ -9918,18 +9918,18 @@ __handle({
         __compare(a, b, { True }, { False })
     })
 }})
-'first = ('xs => {
-    __unpack(xs, ['_, 'x] => { x }, { xs })
+:first = (:xs => {
+    __unpack(xs, [:_, :x] => { x }, { xs })
 })
-'second = ('xs => {
-    __unpack(xs, ['xs, '_] => { first(xs) }, { xs })
+:second = (:xs => {
+    __unpack(xs, [:xs, :_] => { first(xs) }, { xs })
 })
-'join = fold(['acc, 'pair] => {
-    'xvar = first(pair)
-    'xval = second(pair)
-    fold(['_, 'pair] => {
-        'yvar = first(pair)
-        'yval = second(pair)
+:join = fold([:acc, :pair] => {
+    :xvar = first(pair)
+    :xval = second(pair)
+    fold([:_, :pair] => {
+        :yvar = first(pair)
+        :yval = second(pair)
         __compare(xvar, yvar, {
             __compare(xval == yval, False, {
                 no-match!([[xvar, xval], [yvar, yval]])
@@ -9938,14 +9938,14 @@ __handle({
     }, [], acc)
     acc(pair)
 }, [])
-'unify = ('unify ~> { ['pattern, 'value] => {
-    __unpack(pattern, ['type, 'pattern] => {
-        __unpack(type, ['type, 'f] => {
+:unify = (:unify ~> { [:pattern, :value] => {
+    __unpack(pattern, [:type, :pattern] => {
+        __unpack(type, [:type, :f] => {
             __compare(type, Compound, {
-                'v = destructure(value)
-                'vf = first(v)
-                'vargs = second(v)
-                'zipped = reverse(zip(pattern(f), vargs(vf)))
+                :v = destructure(value)
+                :vf = first(v)
+                :vargs = second(v)
+                :zipped = reverse(zip(pattern(f), vargs(vf)))
                 __compare(zipped, [], {
                     no-match!([type(f, pattern), value])
                 }, {
@@ -9967,29 +9967,29 @@ __handle({
         invalid!(pattern)
     })
 }})
-'-> = (['pattern, 'body, 'value] => {
+:-> = ([:pattern, :body, :value] => {
     __handle( {
-        'args = map(second, unify(pattern, value))
+        :args = map(second, unify(pattern, value))
         __compare(args, [], {
             body()
         }, {
             apply(body, args)
         })
-    }, no-match!, ['_, 'arg] => {
+    }, no-match!, [:_, :arg] => {
         no-match!(arg)
     })
 })
-'match-with = (['value, 'clauses] => {
-    'result = fold(['result, 'clause] => {
+:match-with = ([:value, :clauses] => {
+    :result = fold([:result, :clause] => {
         __compare(result, [], {
             __handle({
                 Match(clause(value))
-            }, no-match!, ['r, 'arg] => {})
+            }, no-match!, [:r, :arg] => {})
         }, {
             result
         })
     }, [], clauses)
-    __unpack(result, ['_, 'result] => {
+    __unpack(result, [:_, :result] => {
         result
     }, {
         no-match!(value)
@@ -9997,35 +9997,35 @@ __handle({
 })
 [
     match: Pair(Foo, Bar) with: [
-        Pair('x, 'x) -> { Twice(x, x) }
-        Pair('x, Foo) -> { SecondIsFoo }
-        Pair('x, 'y) -> { y }
-        '_ -> { throw!(InvalidPair) }
+        Pair(:x, :x) -> { Twice(x, x) }
+        Pair(:x, Foo) -> { SecondIsFoo }
+        Pair(:x, :y) -> { y }
+        :_ -> { throw!(InvalidPair) }
     ]
     __handle({
         match: Foo with: [
-            Pair('x, 'x) -> { Twice(x, x) }
-            Pair('x, Foo) -> { SecondIsFoo }
-            Pair('x, 'y) -> { y }
+            Pair(:x, :x) -> { Twice(x, x) }
+            Pair(:x, Foo) -> { SecondIsFoo }
+            Pair(:x, :y) -> { y }
         ]
-    }, no-match!, ['_, 'arg] => {
+    }, no-match!, [:_, :arg] => {
         NoMatch(arg)
     })
 ]
 
 (=
-  'fold
+  :fold
   (~>
-    'fold
+    :fold
     { (=>
-        ( 'f
-          'acc
-          'xs )
+        ( :f
+          :acc
+          :xs )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (fold
                   f
                   (f
@@ -10034,39 +10034,39 @@ __handle({
                   xs) })
             { acc }) }) }))
 (=
-  'apply
+  :apply
   (=>
-    ( 'f
-      'xs )
+    ( :f
+      :xs )
     { (fold
         (=>
-          ( 'f
-            'x )
+          ( :f
+            :x )
           { (f
               x) })
         f
         xs) }))
 (=
-  'reverse
+  :reverse
   (=>
-    'xs
+    :xs
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               x) })
         (  )
         xs) }))
 (=
-  'map
+  :map
   (=>
-    ( 'f
-      'xs )
+    ( :f
+      :xs )
     { (fold
         (=>
-          ( 'xs
-            'x )
+          ( :xs
+            :x )
           { (xs
               (f
                 x)) })
@@ -10074,18 +10074,18 @@ __handle({
         (reverse
           xs)) }))
 (=
-  'flatten
+  :flatten
   (=>
-    'xs
+    :xs
     { (reverse
         (fold
           (=>
-            ( 'acc
-              'x )
+            ( :acc
+              :x )
             { (fold
                 (=>
-                  ( 'acc
-                    'x )
+                  ( :acc
+                    :x )
                   { (acc
                       x) })
                 acc
@@ -10093,23 +10093,23 @@ __handle({
           (  )
           xs)) }))
 (=
-  'zip
+  :zip
   (~>
-    'zip
+    :zip
     { (=>
-        ( 'acc
-          'xs
-          'ys )
+        ( :acc
+          :xs
+          :ys )
         { (__unpack
             xs
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (__unpack
                   ys
                   (=>
-                    ( 'ys
-                      'y )
+                    ( :ys
+                      :y )
                     { (zip
                         (acc
                           ( x
@@ -10120,32 +10120,32 @@ __handle({
             { (__unpack
                 ys
                 (=>
-                  ( 'ys
-                    'y )
+                  ( :ys
+                    :y )
                   {  })
                 { acc }) }) }) }))
 (=
-  'zip
+  :zip
   (=>
-    ( 'xs
-      'ys )
+    ( :xs
+      :ys )
     { (reverse
         (zip
           (  )
           xs
           ys)) }))
 (=
-  'destructure
+  :destructure
   ((~>
-    'destructure
+    :destructure
     { (=>
-        ( 'acc
-          'compound )
+        ( :acc
+          :compound )
         { (__unpack
             compound
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (destructure
                   (acc
                     x)
@@ -10154,22 +10154,22 @@ __handle({
                 acc ) }) }) })
     (  )))
 (=
-  '==
+  :==
   (~>
-    '==
+    :==
     { (=>
-        ( 'a
-          'b )
+        ( :a
+          :b )
         { (__unpack
             a
             (=>
-              ( 'xs
-                'x )
+              ( :xs
+                :x )
               { (__unpack
                   b
                   (=>
-                    ( 'ys
-                      'y )
+                    ( :ys
+                      :y )
                     { (__compare
                         (==
                           x
@@ -10186,52 +10186,52 @@ __handle({
                 { True }
                 { False }) }) }) }))
 (=
-  'first
+  :first
   (=>
-    'xs
+    :xs
     { (__unpack
         xs
         (=>
-          ( '_
-            'x )
+          ( :_
+            :x )
           { x })
         { xs }) }))
 (=
-  'second
+  :second
   (=>
-    'xs
+    :xs
     { (__unpack
         xs
         (=>
-          ( 'xs
-            '_ )
+          ( :xs
+            :_ )
           { (first
               xs) })
         { xs }) }))
 (=
-  'join
+  :join
   (fold
     (=>
-      ( 'acc
-        'pair )
+      ( :acc
+        :pair )
       { (=
-          'xvar
+          :xvar
           (first
             pair))
         (=
-          'xval
+          :xval
           (second
             pair))
         (fold
           (=>
-            ( '_
-              'pair )
+            ( :_
+              :pair )
             { (=
-                'yvar
+                :yvar
                 (first
                   pair))
               (=
-                'yval
+                :yval
                 (second
                   pair))
               (__compare
@@ -10255,39 +10255,39 @@ __handle({
           pair) })
     (  )))
 (=
-  'unify
+  :unify
   (~>
-    'unify
+    :unify
     { (=>
-        ( 'pattern
-          'value )
+        ( :pattern
+          :value )
         { (__unpack
             pattern
             (=>
-              ( 'type
-                'pattern )
+              ( :type
+                :pattern )
               { (__unpack
                   type
                   (=>
-                    ( 'type
-                      'f )
+                    ( :type
+                      :f )
                     { (__compare
                         type
                         Compound
                         { (=
-                            'v
+                            :v
                             (destructure
                               value))
                           (=
-                            'vf
+                            :vf
                             (first
                               v))
                           (=
-                            'vargs
+                            :vargs
                             (second
                               v))
                           (=
-                            'zipped
+                            :zipped
                             (reverse
                               (zip
                                 (pattern
@@ -10329,14 +10329,14 @@ __handle({
             { (invalid!
                 pattern) }) }) }))
 (=
-  '->
+  :->
   (=>
-    ( 'pattern
-      'body
-      'value )
+    ( :pattern
+      :body
+      :value )
     { (__handle
         { (=
-            'args
+            :args
             (map
               second
               (unify
@@ -10351,21 +10351,21 @@ __handle({
                 args) }) }
         no-match!
         (=>
-          ( '_
-            'arg )
+          ( :_
+            :arg )
           { (no-match!
               arg) })) }))
 (=
-  'match-with
+  :match-with
   (=>
-    ( 'value
-      'clauses )
+    ( :value
+      :clauses )
     { (=
-        'result
+        :result
         (fold
           (=>
-            ( 'result
-              'clause )
+            ( :result
+              :clause )
             { (__compare
                 result
                 (  )
@@ -10375,8 +10375,8 @@ __handle({
                           value)) }
                     no-match!
                     (=>
-                      ( 'r
-                        'arg )
+                      ( :r
+                        :arg )
                       {  })) }
                 { result }) })
           (  )
@@ -10384,8 +10384,8 @@ __handle({
       (__unpack
         result
         (=>
-          ( '_
-            'result )
+          ( :_
+            :result )
           { result })
         { (no-match!
             value) }) }))
@@ -10395,23 +10395,23 @@ __handle({
       Bar)
     ( (->
         (Pair
-          'x
-          'x)
+          :x
+          :x)
         { (Twice
             x
             x) })
       (->
         (Pair
-          'x
+          :x
           Foo)
         { SecondIsFoo })
       (->
         (Pair
-          'x
-          'y)
+          :x
+          :y)
         { y })
       (->
-        '_
+        :_
         { (throw!
             InvalidPair) }) ))
   (__handle
@@ -10419,25 +10419,25 @@ __handle({
         Foo
         ( (->
             (Pair
-              'x
-              'x)
+              :x
+              :x)
             { (Twice
                 x
                 x) })
           (->
             (Pair
-              'x
+              :x
               Foo)
             { SecondIsFoo })
           (->
             (Pair
-              'x
-              'y)
+              :x
+              :y)
             { y }) )) }
     no-match!
     (=>
-      ( '_
-        'arg )
+      ( :_
+        :arg )
       { (NoMatch
           arg) })) )
 

@@ -1,13 +1,13 @@
-__unpack(Foo(Bar, Baz), 'f => { 'x => { x } }, { Error })
+__unpack(Foo(Bar, Baz), :f => { :x => { x } }, { Error })
 
 (__unpack
   (Foo
     Bar
     Baz)
   (=>
-    'f
+    :f
     { (=>
-        'x
+        :x
         { x }) })
   { Error })
 
@@ -94,14 +94,14 @@ Baz
 
 ---
 
-__unpack(Foo, 'f => { 'x => { x } }, { Error })
+__unpack(Foo, :f => { :x => { x } }, { Error })
 
 (__unpack
   Foo
   (=>
-    'f
+    :f
     { (=>
-        'x
+        :x
         { x }) })
   { Error })
 
@@ -182,16 +182,16 @@ Error
 
 ---
 
-__unpack(Foo(Bar, Baz), 'f => { 'x => { f } }, { Error })
+__unpack(Foo(Bar, Baz), :f => { :x => { f } }, { Error })
 
 (__unpack
   (Foo
     Bar
     Baz)
   (=>
-    'f
+    :f
     { (=>
-        'x
+        :x
         { f }) })
   { Error })
 
@@ -278,15 +278,15 @@ Foo(Bar)
 
 ---
 
-__unpack(Foo(Bar), 'f => { 'x => { f } }, { Error })
+__unpack(Foo(Bar), :f => { :x => { f } }, { Error })
 
 (__unpack
   (Foo
     Bar)
   (=>
-    'f
+    :f
     { (=>
-        'x
+        :x
         { f }) })
   { Error })
 

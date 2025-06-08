@@ -1,7 +1,7 @@
-('x => { Bar })(Foo)
+(:x => { Bar })(Foo)
 
 ((=>
-  'x
+  :x
   { Bar })
   Foo)
 
@@ -41,10 +41,10 @@ Bar
 
 ---
 
-('x => { x })(Foo)
+(:x => { x })(Foo)
 
 ((=>
-  'x
+  :x
   { x })
   Foo)
 
@@ -84,12 +84,12 @@ Foo
 
 ---
 
-('x => { 'y => { x } })(Foo, Bar)
+(:x => { :y => { x } })(Foo, Bar)
 
 ((=>
-  'x
+  :x
   { (=>
-      'y
+      :y
       { x }) })
   Foo
   Bar)
@@ -148,14 +148,14 @@ Foo
 
 ---
 
-('x => { 'y => { 'z => { Vec(z, x, z) } } })(Foo, Bar, Baz)
+(:x => { :y => { :z => { Vec(z, x, z) } } })(Foo, Bar, Baz)
 
 ((=>
-  'x
+  :x
   { (=>
-      'y
+      :y
       { (=>
-          'z
+          :z
           { (Vec
               z
               x

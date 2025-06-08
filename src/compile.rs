@@ -43,7 +43,7 @@ fn scan(code: &str) -> Vec<(Tok, usize, &str)> {
             if let (Some(n), Some(l)) = (code[i..j].chars().next(), code[i..j].chars().last()) {
                 let tok = match (n, l) {
                     (n, _) if n.is_ascii_uppercase() => Tok::String,
-                    ('\'', _) => Tok::Binding,
+                    (':', _) => Tok::Binding,
                     (_, ':') => Tok::Keyword,
                     _ => Tok::Symbol,
                 };

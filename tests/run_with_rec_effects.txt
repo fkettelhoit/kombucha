@@ -1,21 +1,21 @@
-('acc => {
+(:acc => {
     __handle({
         effect!(Foo)
-    }, effect!, 'r => { 'x => {
+    }, effect!, :r => { :x => {
         r(acc(x))
     } })
 })(List)
 
 ((=>
-  'acc
+  :acc
   { (__handle
       { (effect!
           Foo) }
       effect!
       (=>
-        'r
+        :r
         { (=>
-            'x
+            :x
             { (r
                 (acc
                   x)) }) })) })
@@ -127,11 +127,11 @@ List(Foo)
 
 ---
 
-'with-toggle = ('loop ~> {
-    'val => { 'r => {
+:with-toggle = (:loop ~> {
+    :val => { :r => {
         __handle({
             r(val)
-        }, toggle!, 'r => { ' => {
+        }, toggle!, :r => { : => {
             __compare(val, True, {
               loop(False, r)
             }, {
@@ -143,21 +143,21 @@ List(Foo)
 with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 
 (=
-  'with-toggle
+  :with-toggle
   (~>
-    'loop
+    :loop
     { (=>
-        'val
+        :val
         { (=>
-            'r
+            :r
             { (__handle
                 { (r
                     val) }
                 toggle!
                 (=>
-                  'r
+                  :r
                   { (=>
-                      '
+                      :
                       { (__compare
                           val
                           True

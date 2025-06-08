@@ -1,32 +1,32 @@
 // A simple html generator
 
-'escape = ('str => { str })
+:escape = (:str => { str })
 
-'gen-inline = ('inline => {
+:gen-inline = (:inline => {
     match: inline with: [
-        Em('content) -> { ["<em>", escape(content), "</em>"] }
-        Strong('content) -> { ["<strong>", escape(content), "</strong>"] }
-        Code('content) -> { ["<code>", escape(content), "</code>"] }
-        Link('href, 'content) -> { [#"<a href=""#, href, #"">"#, escape(content), "</a>"] }
-        '_ -> { [escape(inline)] }
+        Em(:content) -> { ["<em>", escape(content), "</em>"] }
+        Strong(:content) -> { ["<strong>", escape(content), "</strong>"] }
+        Code(:content) -> { ["<code>", escape(content), "</code>"] }
+        Link(:href, :content) -> { [#"<a href=""#, href, #"">"#, escape(content), "</a>"] }
+        :_ -> { [escape(inline)] }
     ]
 })
 
-'gen-block = ('gen-block ~> { 'block => {
+:gen-block = (:gen-block ~> { :block => {
     match: block with: [
-        Paragraph('inline) -> { [
+        Paragraph(:inline) -> { [
             flatten([
                 ["<p>"], flatten(map(gen-inline, inline)), ["</p>"]
             ])
         ] }
-        Subsection('title, 'blocks) -> { flatten([
+        Subsection(:title, :blocks) -> { flatten([
             [
                 ["<h3>", escape(title), "</h3>"]
             ]
             flatten(map(gen-block, blocks))
         ]) }
-        Unordered('blocks) -> {
-            'gen-item = ('item => { flatten([
+        Unordered(:blocks) -> {
+            :gen-item = (:item => { flatten([
                 [
                     ["<li>"]
                 ]
@@ -45,15 +45,15 @@
                 ]
             ])
         }
-        Code('code) -> { [
+        Code(:code) -> { [
             ["<pre><code>", escape(code), "</code></pre>"]
         ] }
     ]
 } })
 
-'gen-section = ('section => {
+:gen-section = (:section => {
     match: section with: [
-        Section('title, 'blocks) -> { flatten([
+        Section(:title, :blocks) -> { flatten([
             [
                 ["<h2>", escape(title), "</h2>"]
             ]
@@ -62,9 +62,9 @@
     ]
 })
 
-'generate = ('page => {
+:generate = (:page => {
     match: page with: [
-        Page('lang, 'stylesheet, 'title, 'sections) -> { flatten([
+        Page(:lang, :stylesheet, :title, :sections) -> { flatten([
             [
                 ["<!DOCTYPE html>"]
                 [#"<html lang=""#, escape(lang), #"">"#]
@@ -86,7 +86,7 @@
     ]
 })
 
-'page = Page("en", "styles/style.css", "Page Title", [
+:page = Page("en", "styles/style.css", "Page Title", [
     Section("Section Title", [
         Paragraph([
             "This is a ", Strong("paragraph"), " with inline ", Code("code"), "."

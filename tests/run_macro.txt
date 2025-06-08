@@ -1,8 +1,8 @@
-(['x, '_] => { x })(Foo, {})
+([:x, :_] => { x })(Foo, {})
 
 ((=>
-  ( 'x
-    '_ )
+  ( :x
+    :_ )
   { x })
   Foo
   {  })
@@ -61,13 +61,13 @@ Value(Foo)
 
 ---
 
-(['x, '_] => { x })('binding, {})
+([:x, :_] => { x })(:binding, {})
 
 ((=>
-  ( 'x
-    '_ )
+  ( :x
+    :_ )
   { x })
-  'binding
+  :binding
   {  })
 
 ( ( ( ( =>
@@ -124,11 +124,11 @@ Binding("binding")
 
 ---
 
-(['x, '_] => { x })(Foo(Bar, Baz), {})
+([:x, :_] => { x })(Foo(Bar, Baz), {})
 
 ((=>
-  ( 'x
-    '_ )
+  ( :x
+    :_ )
   { x })
   (Foo
     Bar
@@ -195,15 +195,15 @@ Value(Foo(Bar, Baz))
 
 ---
 
-(['x, '_] => { x })(Foo(Bar, 'baz), {})
+([:x, :_] => { x })(Foo(Bar, :baz), {})
 
 ((=>
-  ( 'x
-    '_ )
+  ( :x
+    :_ )
   { x })
   (Foo
     Bar
-    'baz)
+    :baz)
   {  })
 
 ( ( ( ( =>
@@ -278,15 +278,15 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 
 ---
 
-(['x, '_] => { x })('foo(Bar, 'baz), {})
+([:x, :_] => { x })(:foo(Bar, :baz), {})
 
 ((=>
-  ( 'x
-    '_ )
+  ( :x
+    :_ )
   { x })
-  ('foo
+  (:foo
     Bar
-    'baz)
+    :baz)
   {  })
 
 ( ( ( ( =>

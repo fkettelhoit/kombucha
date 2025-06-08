@@ -10,17 +10,17 @@ Foo
 
 ---
 
-'foo
+:foo
 
-'foo
+:foo
 
 ---
 
-{ foo, Foo, 'foo }
+{ foo, Foo, :foo }
 
 { foo
   Foo
-  'foo }
+  :foo }
 
 ---
 
@@ -92,37 +92,37 @@ if: x == y do: (foo: Bar baz: Qux) else: Bar
 ---
 
 foo = Foo
-'id = ('x => { x })
-'x = id(id(foo))
+:id = (:x => { x })
+:x = id(id(foo))
 
 (=
   foo
   Foo)
 (=
-  'id
+  :id
   (=>
-    'x
+    :x
     { x }))
 (=
-  'x
+  :x
   (id
     (id
       foo)))
 
 ---
 
-'f('x, 'y) = {
+:f(:x, :y) = {
   match: Pair(x, y) with: Vec(
-    Pair('x, 'x) => { x }
-    Pair('x, 'y) => { Mismatch }
-    ' => { InvalidPair }
+    Pair(:x, :x) => { x }
+    Pair(:x, :y) => { Mismatch }
+    : => { InvalidPair }
   )
 }
 
 (=
-  ('f
-    'x
-    'y)
+  (:f
+    :x
+    :y)
   { (match-with
       (Pair
         x
@@ -130,16 +130,16 @@ foo = Foo
       (Vec
         (=>
           (Pair
-            'x
-            'x)
+            :x
+            :x)
           { x })
         (=>
           (Pair
-            'x
-            'y)
+            :x
+            :y)
           { Mismatch })
         (=>
-          '
+          :
           { InvalidPair }))) })
 
 ---

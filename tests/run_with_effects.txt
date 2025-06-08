@@ -76,15 +76,15 @@ print!(Foo), print!(Bar), print!(FooBar)
 
 ---
 
-'foo = ('x => { 'y => { pair!(Args(x, y)) } })
-__handle({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
+:foo = (:x => { :y => { pair!(Args(x, y)) } })
+__handle({ foo(Bar, Baz) }, pair!, :r => { :arg => { Pair(arg) } })
 
 (=
-  'foo
+  :foo
   (=>
-    'x
+    :x
     { (=>
-        'y
+        :y
         { (pair!
             (Args
               x
@@ -95,9 +95,9 @@ __handle({ foo(Bar, Baz) }, pair!, 'r => { 'arg => { Pair(arg) } })
       Baz) }
   pair!
   (=>
-    'r
+    :r
     { (=>
-        'arg
+        :arg
         { (Pair
             arg) }) }))
 
@@ -252,15 +252,15 @@ Pair(Args(Bar, Baz))
 
 ---
 
-__handle({ Foo }, unused!, 'r => { ' => { Error }})
+__handle({ Foo }, unused!, :r => { : => { Error }})
 
 (__handle
   { Foo }
   unused!
   (=>
-    'r
+    :r
     { (=>
-        '
+        :
         { Error }) }))
 
 ( ( ( =>
@@ -342,16 +342,16 @@ Foo
 
 ---
 
-__handle({ effect!(Foo) }, effect!, 'r => { 'arg => { arg(r(Bar)) }})
+__handle({ effect!(Foo) }, effect!, :r => { :arg => { arg(r(Bar)) }})
 
 (__handle
   { (effect!
       Foo) }
   effect!
   (=>
-    'r
+    :r
     { (=>
-        'arg
+        :arg
         { (arg
             (r
               Bar)) }) }))
@@ -446,7 +446,7 @@ Foo(Bar)
 
 __handle({
     Foo(eff!())
-}, eff!, 'r => { ' => {
+}, eff!, :r => { : => {
     Pair(r(Bar), r(Baz))
 } })
 
@@ -455,9 +455,9 @@ __handle({
       (eff!)) }
   eff!
   (=>
-    'r
+    :r
     { (=>
-        '
+        :
         { (Pair
             (r
               Bar)
@@ -561,10 +561,10 @@ Pair(Foo(Bar), Foo(Baz))
 
 ---
 
-'foo = Foo, __handle({ List(elems!(foo)) }, elems!, 'r => { 'x => { Twice(r(x, x), r(Baz)) } })
+:foo = Foo, __handle({ List(elems!(foo)) }, elems!, :r => { :x => { Twice(r(x, x), r(Baz)) } })
 
 (=
-  'foo
+  :foo
   Foo)
 (__handle
   { (List
@@ -572,9 +572,9 @@ Pair(Foo(Bar), Foo(Baz))
         foo)) }
   elems!
   (=>
-    'r
+    :r
     { (=>
-        'x
+        :x
         { (Twice
             (r
               x
@@ -708,8 +708,8 @@ Twice(List(Foo, Foo), List(Baz))
 
 Foo(__handle({
   Baz(effect!(), effect!())
-}, effect!, 'r => {
-  ' => {
+}, effect!, :r => {
+  : => {
     Bar(r(Qux))
   }
 }))
@@ -721,9 +721,9 @@ Foo(__handle({
         (effect!)) }
     effect!
     (=>
-      'r
+      :r
       { (=>
-          '
+          :
           { (Bar
               (r
                 Qux)) }) })))
@@ -830,12 +830,12 @@ effect!([])
 
 __handle({
   List(get!(), get!())
-}, get!, 'r => {
-  ' => {
+}, get!, :r => {
+  : => {
     __handle({
       r(Foo)
-    }, get!, 'r => {
-      ' => {
+    }, get!, :r => {
+      : => {
         r(Bar)
       }
     })
@@ -848,17 +848,17 @@ __handle({
       (get!)) }
   get!
   (=>
-    'r
+    :r
     { (=>
-        '
+        :
         { (__handle
             { (r
                 Foo) }
             get!
             (=>
-              'r
+              :r
               { (=>
-                  '
+                  :
                   { (r
                       Bar) }) })) }) }))
 
@@ -1021,25 +1021,25 @@ List(Foo, Bar)
 ---
 
 __handle({
-    __handle({ throw!() }, throw!, '_ => { '_ => {}})
+    __handle({ throw!() }, throw!, :_ => { :_ => {}})
     throw!()
-}, throw!, '_ => { '_ => {} })
+}, throw!, :_ => { :_ => {} })
 
 (__handle
   { (__handle
       { (throw!) }
       throw!
       (=>
-        '_
+        :_
         { (=>
-            '_
+            :_
             {  }) }))
     (throw!) }
   throw!
   (=>
-    '_
+    :_
     { (=>
-        '_
+        :_
         {  }) }))
 
 ( ( ( =>

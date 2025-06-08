@@ -1,11 +1,11 @@
-'f = ('f ~> { '_ => { Foo } }), f(Bar)
+:f = (:f ~> { :_ => { Foo } }), f(Bar)
 
 (=
-  'f
+  :f
   (~>
-    'f
+    :f
     { (=>
-        '_
+        :_
         { Foo }) }))
 (f
   Bar)
@@ -88,14 +88,14 @@ Foo
 
 ---
 
-'f = ('f ~> { 'x => { Foo(x) } }), f(Bar)
+:f = (:f ~> { :x => { Foo(x) } }), f(Bar)
 
 (=
-  'f
+  :f
   (~>
-    'f
+    :f
     { (=>
-        'x
+        :x
         { (Foo
             x) }) }))
 (f
@@ -182,20 +182,20 @@ Foo(Bar)
 
 ---
 
-'f = ('f ~> { 'xs => { __unpack(xs, 'xs => { '_ => { f(xs) } }, { xs }) } }), f(Foo(Bar, Baz))
+:f = (:f ~> { :xs => { __unpack(xs, :xs => { :_ => { f(xs) } }, { xs }) } }), f(Foo(Bar, Baz))
 
 (=
-  'f
+  :f
   (~>
-    'f
+    :f
     { (=>
-        'xs
+        :xs
         { (__unpack
             xs
             (=>
-              'xs
+              :xs
               { (=>
-                  '_
+                  :_
                   { (f
                       xs) }) })
             { xs }) }) }))

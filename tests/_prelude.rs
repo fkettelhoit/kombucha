@@ -4,8 +4,8 @@ use vorpal::{compile::compile, run::State};
 fn prelude_match_pair() -> Result<(), String> {
     let code = "
 match: Pair(Foo, Foo) with: [
-    '_('x, Bar) -> { Bar }
-    Pair('x, 'x) -> { Twice(x) }
+    :_(:x, Bar) -> { Bar }
+    Pair(:x, :x) -> { Twice(x) }
 ]
 ";
     let bytecode = compile(code).unwrap();
