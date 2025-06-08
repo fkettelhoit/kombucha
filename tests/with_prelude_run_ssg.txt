@@ -1,13 +1,4 @@
-// Notes:
-// - I don't have a way to check that something is a string
-// - There is no pipe syntax like |> or a UFCS .call syntax
-// - it's not possible to match on arbitrary structures like 'style('content)
-// - how can I build a flatten-all functions that matches on lists vs strings?
-// Todo:
-// [x] change the AST representation for Compound and Template
-// [x] fix pattern matching for compounds
-// [ ] make it easy to use the data in Rust (serde?)
-// [ ] support keyword call syntax for atoms (possibly ignoring order?)
+// A simple html generator
 
 'escape = ('str => { str })
 
@@ -15,34 +6,57 @@
     match: inline with: [
         Em('content) -> { ["<em>", escape(content), "</em>"] }
         Strong('content) -> { ["<strong>", escape(content), "</strong>"] }
+        Code('content) -> { ["<code>", escape(content), "</code>"] }
+        Link('href, 'content) -> { [#"<a href=""#, href, #"">"#, escape(content), "</a>"] }
         '_ -> { [escape(inline)] }
     ]
 })
 
 'gen-block = ('gen-block ~> { 'block => {
     match: block with: [
-        Paragraph('inline) -> { flatten([
-            ["<p>"], flatten(map(gen-inline, inline)), ["</p>"]
+        Paragraph('inline) -> { [
+            flatten([
+                ["<p>"], flatten(map(gen-inline, inline)), ["</p>"]
+            ])
+        ] }
+        Subsection('title, 'blocks) -> { flatten([
+            [
+                ["<h3>", escape(title), "</h3>"]
+            ]
+            flatten(map(gen-block, blocks))
         ]) }
         Unordered('blocks) -> {
             'gen-item = ('item => { flatten([
-                ["<li>"]
+                [
+                    ["<li>"]
+                ]
                 gen-block(item)
-                ["</li>"]
+                [
+                    ["</li>"]
+                ]
             ])})
             flatten([
-                ["<ul>"]
+                [
+                    ["<ul>"]
+                ]
                 flatten(map(gen-item, blocks))
-                ["</ul>"]
+                [
+                    ["</ul>"]
+                ]
             ])
         }
+        Code('code) -> { [
+            ["<pre><code>", escape(code), "</code></pre>"]
+        ] }
     ]
 } })
 
 'gen-section = ('section => {
     match: section with: [
         Section('title, 'blocks) -> { flatten([
-            ["<h2>", escape(title), "</h2>"]
+            [
+                ["<h2>", escape(title), "</h2>"]
+            ]
             flatten(map(gen-block, blocks))
         ]) }
     ]
@@ -50,34 +64,45 @@
 
 'generate = ('page => {
     match: page with: [
-        Page('title, 'sections) -> { flatten([
+        Page('lang, 'stylesheet, 'title, 'sections) -> { flatten([
             [
-                "<head>"
-                "<title>", escape(title), "</title>"
-                "</head>"
-                "<body>"
-                "<h1>"
-                escape(title)
-                "</h1>"
+                ["<!DOCTYPE html>"]
+                [#"<html lang=""#, escape(lang), #"">"#]
+                ["<head>"]
+                [#"<meta charset="utf-8" />"#]
+                [#"<meta name="viewport" content="width=device-width, initial-scale=1" />"#]
+                [#"<link rel="stylesheet" href=""#, escape(stylesheet), #"" />"#]
+                ["<title>", escape(title), "</title>"]
+                ["</head>"]
+                ["<body>"]
+                ["<h1>", escape(title), "</h1>"]
             ]
             flatten(map(gen-section, sections))
             [
-                "</body>"
+                ["</body>"]
+                ["</html>"]
             ]
         ]) }
     ]
 })
 
-'page = Page("Page Title", [
+'page = Page("en", "styles/style.css", "Page Title", [
     Section("Section Title", [
         Paragraph([
-            "This is a "
-            Strong("paragraph")
-            "."
+            "This is a ", Strong("paragraph"), " with inline ", Code("code"), "."
         ])
         Unordered([
+            Paragraph(["Another paragraph with a ", Link("http://www.example.com", "link"), "."])
+        ])
+        Subsection("Subsection Title", [
+            Paragraph(["Another paragraph."])
             Paragraph(["Another paragraph."])
         ])
+        Code(#"
+            pub fn foo() {
+                "My String"
+            }
+            "#)
     ])
 ])
 

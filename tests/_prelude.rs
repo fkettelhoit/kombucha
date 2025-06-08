@@ -22,8 +22,11 @@ fn prelude_generate_html() -> Result<(), String> {
     let bytecode = compile(code).unwrap();
     match bytecode.run().unwrap() {
         State::Done(v) => {
-            let result: Vec<String> = v.deserialize().unwrap();
-            assert_eq!(result.join(""), include_str!("with_prelude_run_ssg.out.txt"))
+            let result: Vec<Vec<String>> = v.deserialize().unwrap();
+            assert_eq!(
+                result.iter().map(|l| l.join("")).collect::<Vec<_>>().join("\n"),
+                include_str!("with_prelude_run_ssg.out.txt")
+            )
         }
         State::Resumable(_) => panic!("Found a resumable!"),
     }
