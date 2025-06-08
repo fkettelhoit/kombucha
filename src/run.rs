@@ -2,11 +2,11 @@ use crate::bytecode::{Bytecode, NIL, Op, Reflect};
 use std::{borrow::Cow, rc::Rc};
 
 impl Bytecode {
-    pub fn nil() -> V {
-        V::String(Reflect::Nil as usize)
+    pub fn nil() -> Val {
+        Val::String(Reflect::Nil as usize)
     }
 
-    pub fn run(self) -> Result<VmState, usize> {
+    pub fn run(self) -> Result<State, usize> {
         let mut vm = Vm::default();
         vm.ip = self.start;
         vm.run(self)
@@ -14,32 +14,39 @@ impl Bytecode {
 }
 
 #[derive(Debug, Clone)]
-pub enum V {
+pub enum Val {
     String(usize),
     Effect(usize),
-    Record(usize, Vec<Rc<V>>),
-    Closure(usize, Rc<Vec<V>>),
+    Record(usize, Vec<Rc<Val>>),
+    Closure(usize, Rc<Vec<Val>>),
     Resumable(usize, Box<Vm>),
 }
 
 #[derive(Debug)]
-pub enum VmState {
-    Done(V, Vec<Cow<'static, str>>),
-    Resumable(V, Resumable),
+pub enum State {
+    Done(Value),
+    Resumable(Resumable),
+}
+
+#[derive(Debug)]
+pub struct Value {
+    pub(crate) strings: Vec<Cow<'static, str>>,
+    pub(crate) val: Val,
 }
 
 #[derive(Debug)]
 pub struct Resumable {
-    bytecode: Bytecode,
-    vm: Vm,
-    effect: usize,
+    pub(crate) bytecode: Bytecode,
+    pub(crate) effect: usize,
+    pub(crate) arg: Val,
+    pub(crate) vm: Vm,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct Vm {
     ip: usize,
-    vars: Vec<V>,
-    temps: Vec<V>,
+    vars: Vec<Val>,
+    temps: Vec<Val>,
     frames: Vec<(usize, usize)>,
     handlers: Vec<Handler>,
 }
@@ -47,24 +54,24 @@ pub struct Vm {
 #[derive(Debug, Clone)]
 struct Handler {
     effect: usize,
-    handler: V,
+    handler: Val,
     state: (usize, usize, usize, usize),
     ret: usize,
 }
 
 impl Vm {
-    fn run(self, bytecode: Bytecode) -> Result<VmState, usize> {
+    fn run(self, bytecode: Bytecode) -> Result<State, usize> {
         let Vm { mut ip, mut vars, mut temps, mut frames, mut handlers } = self;
         while let Some(op) = bytecode.ops.get(ip).copied() {
             let i = ip;
             ip += 1;
             match op {
                 Op::LoadVar(v) => {
-                    let v: &V = &vars[vars.len() - 1 - v];
+                    let v: &Val = &vars[vars.len() - 1 - v];
                     temps.push(v.clone());
                 }
-                Op::LoadString(s) => temps.push(V::String(s)),
-                Op::LoadEffect(eff) => temps.push(V::Effect(eff)),
+                Op::LoadString(s) => temps.push(Val::String(s)),
+                Op::LoadEffect(eff) => temps.push(Val::Effect(eff)),
                 Op::LoadFn { code, fvars } => match bytecode.ops.get(i + 1).ok_or(i)? {
                     Op::ApplyArgToFn => {
                         frames.push((vars.len(), ip + 1));
@@ -83,13 +90,13 @@ impl Vm {
                             }
                             _ => {
                                 let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                                temps.push(V::Closure(code, captured))
+                                temps.push(Val::Closure(code, captured))
                             }
                         }
                     }
                     _ => {
                         let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                        temps.push(V::Closure(code, captured))
+                        temps.push(Val::Closure(code, captured))
                     }
                 },
                 Op::ApplyFnToArg | Op::ApplyArgToFn => {
@@ -98,7 +105,7 @@ impl Vm {
                         (_, b, a) => (a, b),
                     };
                     match (f, arg) {
-                        (V::Effect(effect), arg) => {
+                        (Val::Effect(effect), arg) => {
                             let handler = handlers.iter().rev().find(|h| h.effect == effect);
                             match handler.cloned() {
                                 Some(handler) => {
@@ -116,20 +123,18 @@ impl Vm {
                                         handlers: res_handlers,
                                     };
                                     temps.push(arg);
-                                    temps.push(V::Resumable(v, Box::new(vm)));
+                                    temps.push(Val::Resumable(v, Box::new(vm)));
                                     temps.push(handler.handler);
                                     ip = handler.ret;
                                 }
                                 None => {
                                     let vm = Vm { ip, vars, temps, frames, handlers };
-                                    return Ok(VmState::Resumable(
-                                        arg,
-                                        Resumable { bytecode, vm, effect },
-                                    ));
+                                    let r = Resumable { bytecode, effect, arg, vm };
+                                    return Ok(State::Resumable(r));
                                 }
                             }
                         }
-                        (V::Resumable(v, vm), arg) => {
+                        (Val::Resumable(v, vm), arg) => {
                             let offset = vars.len() as i64 - v as i64;
                             frames.push((vars.len(), ip));
                             vars.extend(vm.vars);
@@ -143,17 +148,17 @@ impl Vm {
                             temps.push(arg);
                             ip = vm.ip;
                         }
-                        (V::Closure(c, captured), arg) => {
+                        (Val::Closure(c, captured), arg) => {
                             // TODO: if the next op is an Op::Return, we might want to do TCO
                             frames.push((vars.len(), ip));
                             vars.extend(captured.iter().cloned());
                             vars.push(arg);
                             ip = c;
                         }
-                        (V::String(s), arg) => temps.push(V::Record(s, vec![Rc::new(arg)])),
-                        (V::Record(s, mut items), arg) => {
+                        (Val::String(s), arg) => temps.push(Val::Record(s, vec![Rc::new(arg)])),
+                        (Val::Record(s, mut items), arg) => {
                             items.push(Rc::new(arg));
-                            temps.push(V::Record(s, items))
+                            temps.push(Val::Record(s, items))
                         }
                     }
                 }
@@ -164,14 +169,18 @@ impl Vm {
                 }
                 Op::Unpack => {
                     match (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
-                        (_, t, V::Record(f, mut xs)) => {
+                        (_, t, Val::Record(f, mut xs)) => {
                             let x = xs.pop().ok_or(i)?;
                             temps.push(x.as_ref().clone());
-                            temps.push(if xs.is_empty() { V::String(f) } else { V::Record(f, xs) });
+                            temps.push(if xs.is_empty() {
+                                Val::String(f)
+                            } else {
+                                Val::Record(f, xs)
+                            });
                             temps.push(t);
                         }
                         (f, _, _) => {
-                            temps.push(V::String(Reflect::Nil as usize));
+                            temps.push(Val::String(Reflect::Nil as usize));
                             temps.push(f);
                             ip += 1;
                         }
@@ -182,11 +191,11 @@ impl Vm {
                     let eff = temps.pop().ok_or(i)?;
                     let v = temps.pop().ok_or(i)?;
                     match eff {
-                        V::Effect(effect) => {
+                        Val::Effect(effect) => {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
                             let ret = ip + 2; // skip apply + unwind
                             handlers.push(Handler { effect, handler, state, ret });
-                            temps.push(V::String(Reflect::Nil as usize));
+                            temps.push(Val::String(Reflect::Nil as usize));
                             temps.push(v);
                         }
                         _ => {
@@ -207,61 +216,99 @@ impl Vm {
                         temps.pop().ok_or(i)?,
                     );
                     let branch = match (a, b, t, f) {
-                        (V::String(a), V::String(b), t, _) if a == b => t,
+                        (Val::String(a), Val::String(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
-                    temps.push(V::String(Reflect::Nil as usize));
+                    temps.push(Val::String(Reflect::Nil as usize));
                     temps.push(branch);
                 }
             }
         }
-        Ok(VmState::Done(temps.pop().ok_or(ip)?, bytecode.strings))
+        let val = temps.pop().ok_or(ip)?;
+        Ok(State::Done(Value { val, strings: bytecode.strings }))
+    }
+}
+
+impl Value {
+    pub fn strings(&mut self) -> &mut Vec<Cow<'static, str>> {
+        &mut self.strings
+    }
+
+    pub fn value(&self) -> &Val {
+        &self.val
     }
 }
 
 impl Resumable {
-    pub fn strings(&self) -> &Vec<Cow<'static, str>> {
-        &self.bytecode.strings
+    pub fn strings(&mut self) -> &mut Vec<Cow<'static, str>> {
+        &mut self.bytecode.strings
     }
 
-    pub fn get_effect_name(&self) -> Option<&str> {
-        self.bytecode.strings.get(self.effect).map(|s| s.as_ref())
+    pub fn effect(&self) -> &str {
+        self.bytecode.strings.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
     }
 
-    pub fn intern_string(&mut self, s: impl Into<Cow<'static, str>>) -> V {
-        let s = s.into();
-        let mut strs = self.bytecode.strings.iter();
-        let s = strs.position(|x| *x == s).unwrap_or_else(|| {
-            self.bytecode.strings.push(s);
-            self.bytecode.strings.len() - 1
-        });
-        V::String(s)
+    pub fn arg_pretty(&self) -> String {
+        pretty(&self.arg, &self.bytecode.strings)
     }
 
-    pub fn run(mut self, arg: V) -> Result<VmState, usize> {
+    pub fn intern_atom(&mut self, s: impl Into<Cow<'static, str>>) -> Val {
+        Val::String(intern(&mut self.bytecode.strings, s))
+    }
+
+    pub fn intern_string(&mut self, s: impl AsRef<str>) -> Val {
+        Val::String(intern(&mut self.bytecode.strings, format!("\"{}\"", s.as_ref())))
+    }
+
+    pub fn run(mut self, arg: Val) -> Result<State, usize> {
         self.vm.temps.push(arg);
         self.vm.run(self.bytecode)
     }
 }
 
-pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
+pub(crate) fn intern_atom(
+    strs: &mut Vec<Cow<'static, str>>,
+    s: impl Into<Cow<'static, str>>,
+) -> Val {
+    Val::String(intern(strs, s))
+}
+
+pub(crate) fn intern_string(strs: &mut Vec<Cow<'static, str>>, s: impl AsRef<str>) -> Val {
+    Val::String(intern(strs, format!("\"{}\"", s.as_ref())))
+}
+
+pub(crate) fn intern(strs: &mut Vec<Cow<'static, str>>, s: impl Into<Cow<'static, str>>) -> usize {
+    let s = s.into();
+    strs.iter().position(|x| *x == s).unwrap_or_else(|| {
+        strs.push(s);
+        strs.len() - 1
+    })
+}
+
+impl Value {
+    pub fn pretty(&self) -> String {
+        pretty(&self.val, &self.strings)
+    }
+}
+
+fn pretty(v: &Val, strs: &Vec<Cow<'static, str>>) -> String {
     match v {
-        V::String(s) if strs[*s] == NIL => "[]".to_string(),
-        V::String(s) => strs[*s].to_string(),
-        V::Effect(eff) => format!("{}!", strs[*eff]),
-        V::Closure(c, vs) => {
+        Val::String(s) if strs[*s] == NIL => "[]".to_string(),
+        Val::String(s) => strs[*s].to_string(),
+        Val::Effect(eff) => format!("{}!", strs[*eff]),
+        Val::Closure(c, vs) => {
             let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("{c} [{}]", closed.join(", "))
         }
-        V::Record(s, vs) if strs[*s] == NIL => {
+        Val::Record(s, vs) if strs[*s] == NIL => {
             let items = vs.iter().rev().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("[{}]", items.join(", "))
         }
-        V::Record(s, vs) => {
+        Val::Record(s, vs) => {
             if vs.len() == 1 {
                 match *vs[0] {
-                    V::String(v) if strs[v] == NIL => {
-                        return format!("{}()", pretty(&V::String(*s), strs));
+                    Val::String(v) if strs[v] == NIL => {
+                        return format!("{}()", pretty(&Val::String(*s), strs));
                     }
                     _ => {}
                 }
@@ -269,7 +316,7 @@ pub fn pretty(v: &V, strs: &Vec<Cow<'static, str>>) -> String {
             let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("{}({})", strs[*s].to_string(), items.join(", "))
         }
-        V::Resumable(_, _) => {
+        Val::Resumable(_, _) => {
             format!("resumable")
         }
     }

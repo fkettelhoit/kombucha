@@ -1,1 +1,1 @@
-["<head>", "<title>", "Page Title", "</title>", "</head>", "<body>", "<h1>", "Page Title", "</h1>", "<h2>", "Section Title", "</h2>", "<p>", "This is a ", "<strong>", "paragraph", "</strong>", ".", "</p>", "<ul>", "<li>", "<p>", "Another paragraph.", "</p>", "</li>", "</ul>", "</body>"]
+<head><title>Page Title</title></head><body><h1>Page Title</h1><h2>Section Title</h2><p>This is a <strong>paragraph</strong>.</p><ul><li><p>Another paragraph.</p></li></ul></body>

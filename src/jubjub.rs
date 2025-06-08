@@ -1,9 +1,6 @@
 use std::{env::args, fs::read_to_string, process::ExitCode};
 
-use vorpal::{
-    compile::compile,
-    run::{VmState, pretty},
-};
+use vorpal::{compile::compile, run::State};
 
 fn main() -> ExitCode {
     let mut args = args();
@@ -23,14 +20,14 @@ fn main() -> ExitCode {
                 let result = vm.run();
                 loop {
                     match result {
-                        Ok(VmState::Resumable(arg, vm)) => match vm.get_effect_name().unwrap() {
+                        Ok(State::Resumable(vm)) => match vm.effect() {
                             "write" => todo!(),
                             eff => {
-                                eprintln!("{eff}!({})", pretty(&arg, vm.strings()));
+                                eprintln!("{eff}!({})", vm.arg_pretty());
                                 return ExitCode::FAILURE;
                             }
                         },
-                        Ok(VmState::Done(_, _)) => return ExitCode::SUCCESS,
+                        Ok(State::Done(_)) => return ExitCode::SUCCESS,
                         Err(e) => {
                             eprintln!("{e}");
                             return ExitCode::FAILURE;

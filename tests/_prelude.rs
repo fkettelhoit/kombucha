@@ -1,7 +1,4 @@
-use vorpal::{
-    compile::compile,
-    run::{VmState, pretty},
-};
+use vorpal::{compile::compile, run::State};
 
 #[test]
 fn prelude_match_pair() -> Result<(), String> {
@@ -13,8 +10,8 @@ match: Pair(Foo, Foo) with: [
 ";
     let bytecode = compile(code).unwrap();
     match bytecode.run().unwrap() {
-        VmState::Done(v, strings) => assert_eq!(pretty(&v, &strings), "Twice(Foo)"),
-        VmState::Resumable(_, _) => panic!("Found a resumable!"),
+        State::Done(v) => assert_eq!(v.pretty(), "Twice(Foo)"),
+        State::Resumable(_) => panic!("Found a resumable!"),
     }
     Ok(())
 }
@@ -24,10 +21,11 @@ fn prelude_generate_html() -> Result<(), String> {
     let code = include_str!("with_prelude_run_ssg.txt");
     let bytecode = compile(code).unwrap();
     match bytecode.run().unwrap() {
-        VmState::Done(v, strings) => {
-            assert_eq!(pretty(&v, &strings), include_str!("with_prelude_run_ssg.out.txt"))
+        State::Done(v) => {
+            let result: Vec<String> = v.deserialize().unwrap();
+            assert_eq!(result.join(""), include_str!("with_prelude_run_ssg.out.txt"))
         }
-        VmState::Resumable(_, _) => panic!("Found a resumable!"),
+        State::Resumable(_) => panic!("Found a resumable!"),
     }
     Ok(())
 }

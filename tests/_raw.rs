@@ -1,6 +1,6 @@
 use vorpal::{
     compile::{Expr, abs, app, compile_expr},
-    run::{VmState, pretty},
+    run::State,
 };
 
 #[test]
@@ -100,10 +100,8 @@ fn eval_raw_pop() {
 fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
     let bytecode = compile_expr(expr, strings.into_iter().map(|s| s.to_string()).collect());
     match bytecode.run() {
-        Ok(VmState::Done(v, strs)) => Ok(pretty(&v, &strs)),
-        Ok(VmState::Resumable(arg, vm)) => {
-            Err(format!("{}!({})", vm.get_effect_name().unwrap(), pretty(&arg, vm.strings())))
-        }
+        Ok(State::Done(v)) => Ok(v.pretty()),
+        Ok(State::Resumable(vm)) => Err(format!("{}!({})", vm.effect(), vm.arg_pretty())),
         Err(e) => Err(format!("Error at op {e}")),
     }
 }

@@ -3,7 +3,7 @@ use std::{env, fs, io::Write, iter::once, path::PathBuf};
 use vorpal::{
     bytecode::{Bytecode, NIL},
     compile::{A, Ast, Call, Expr, compile_expr, desugar, parse},
-    run::{VmState, pretty},
+    run::State,
 };
 
 fn pretty_prg<'c>(prg: &[Ast<'_>]) -> String {
@@ -251,12 +251,10 @@ fn test(path: PathBuf) -> Result<(), String> {
         let (mut actual, compiled) = test_without_run(&code);
         for vm in compiled {
             match vm.run() {
-                Ok(VmState::Done(v, strs)) => actual.push(pretty(&v, &strs)),
-                Ok(VmState::Resumable(arg, vm)) => actual.push(format!(
-                    "{}!({})",
-                    vm.get_effect_name().unwrap(),
-                    pretty(&arg, vm.strings())
-                )),
+                Ok(State::Done(v)) => actual.push(v.pretty()),
+                Ok(State::Resumable(vm)) => {
+                    actual.push(format!("{}!({})", vm.effect(), vm.arg_pretty()))
+                }
                 Err(e) => actual.push(format!("Error at op {e}")),
             }
         }
@@ -325,18 +323,18 @@ fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
             let mut result = vm.run();
             loop {
                 match result {
-                    Ok(VmState::Resumable(arg, vm)) => {
-                        let arg = pretty(&arg, vm.strings());
-                        match vm.get_effect_name().unwrap() {
-                            eff if eff == "print" => {
+                    Ok(State::Resumable(vm)) => {
+                        let arg = vm.arg_pretty();
+                        match vm.effect() {
+                            "print" => {
                                 printed.push(format!("\"{arg}\"\n"));
                                 result = vm.run(Bytecode::nil());
                             }
                             name => break actual.push(format!("{name}!({arg})")),
                         }
                     }
-                    Ok(VmState::Done(v, strs)) => {
-                        break actual.push(printed.join("") + &pretty(&v, &strs));
+                    Ok(State::Done(v)) => {
+                        break actual.push(printed.join("") + &v.pretty());
                     }
                     Err(e) => break actual.push(format!("Error at op {e}")),
                 }
