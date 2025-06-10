@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 pub enum Reflect {
     Nil = 0,
     Value = 1,
@@ -16,7 +14,7 @@ pub const LIST: &str = "List";
 
 #[derive(Debug, Clone, Default)]
 pub struct Bytecode {
-    pub strings: Vec<Cow<'static, str>>,
+    pub strings: Vec<String>,
     pub ops: Vec<Op>,
     pub start: usize,
 }
@@ -37,8 +35,8 @@ pub enum Op {
 }
 
 impl Bytecode {
-    pub fn new(strings: Vec<impl Into<Cow<'static, str>>>, ops: Vec<Op>, start: usize) -> Self {
-        Bytecode { strings: strings.into_iter().map(|s| s.into()).collect(), ops, start }
+    pub fn new(strings: Vec<String>, ops: Vec<Op>, start: usize) -> Self {
+        Bytecode { strings, ops, start }
     }
 
     pub fn as_bytes(&self) -> Result<Vec<u8>, String> {

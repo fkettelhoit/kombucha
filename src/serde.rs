@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt::Display, rc::Rc};
+use std::{fmt::Display, rc::Rc};
 
 use serde::{
     Deserialize, Serialize,
@@ -71,7 +71,7 @@ impl serde::de::Error for Error {
 }
 
 type Str = &'static str;
-type InternedStrs = Vec<Cow<'static, str>>;
+type InternedStrs = Vec<String>;
 
 pub struct Serializer<'a> {
     strs: &'a mut InternedStrs,
@@ -131,7 +131,7 @@ impl<'a> ser::Serializer for &'a mut Serializer<'a> {
 
     fn serialize_bool(self, v: bool) -> Result<Val> {
         let v = if v { "True" } else { "False" };
-        Ok(intern_atom(self.strs, v))
+        Ok(intern_atom(self.strs, v.to_string()))
     }
 
     fn serialize_i8(self, _v: i8) -> Result<Val> {
@@ -191,7 +191,7 @@ impl<'a> ser::Serializer for &'a mut Serializer<'a> {
     }
 
     fn serialize_some<T: ?Sized + serde::Serialize>(self, v: &T) -> Result<Val> {
-        let some = intern(self.strs, "Some");
+        let some = intern(self.strs, "Some".to_string());
         Ok(Val::Record(some, vec![Rc::new(v.serialize(self)?)]))
     }
 
@@ -204,7 +204,7 @@ impl<'a> ser::Serializer for &'a mut Serializer<'a> {
     }
 
     fn serialize_unit_variant(self, _: Str, _: u32, variant: Str) -> Result<Val> {
-        Ok(intern_atom(self.strs, variant))
+        Ok(intern_atom(self.strs, variant.to_string()))
     }
 
     fn serialize_newtype_struct<T>(self, _name: Str, v: &T) -> Result<Val>
@@ -218,7 +218,7 @@ impl<'a> ser::Serializer for &'a mut Serializer<'a> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let some = intern(self.strs, variant);
+        let some = intern(self.strs, variant.to_string());
         Ok(Val::Record(some, vec![Rc::new(v.serialize(self)?)]))
     }
 
@@ -293,7 +293,7 @@ impl<'a> ser::SerializeTupleStruct for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
-        let name = intern(self.strs, self.name);
+        let name = intern(self.strs, self.name.to_string());
         Ok(Val::Record(name, self.items.drain(..).collect()))
     }
 }
@@ -308,7 +308,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
-        let name = intern(self.strs, self.name);
+        let name = intern(self.strs, self.name.to_string());
         Ok(Val::Record(name, self.items.drain(..).collect()))
     }
 }
@@ -345,7 +345,7 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
-        let name = intern(self.strs, self.name);
+        let name = intern(self.strs, self.name.to_string());
         Ok(Val::Record(name, self.items.drain(..).collect()))
     }
 }
@@ -362,7 +362,7 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
-        let name = intern(self.strs, self.name);
+        let name = intern(self.strs, self.name.to_string());
         Ok(Val::Record(name, self.items.drain(..).collect()))
     }
 }
@@ -396,7 +396,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_any<V: de::Visitor<'de>>(self, v: V) -> Result<V::Value> {
         match self.current_input() {
             Val::String(s) => {
-                let s = self.strs.get(*s).ok_or(Error::InvalidStr)?.as_ref();
+                let s = self.strs.get(*s).ok_or(Error::InvalidStr)?.as_str();
                 if s == "True" || s == "False" {
                     self.deserialize_bool(v)
                 } else if s.len() == 1 || (s.starts_with('"') && s.ends_with('"') && s.len() == 3) {

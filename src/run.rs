@@ -1,5 +1,5 @@
 use crate::bytecode::{Bytecode, NIL, Op, Reflect};
-use std::{borrow::Cow, rc::Rc, usize};
+use std::{rc::Rc, usize};
 
 impl Bytecode {
     pub fn run(self) -> Result<State, usize> {
@@ -237,7 +237,7 @@ impl Resumable {
         pretty(&self.arg, &self.bytecode.strings)
     }
 
-    pub fn intern_atom(&mut self, s: impl Into<Cow<'static, str>>) -> Val {
+    pub fn intern_atom(&mut self, s: String) -> Val {
         Val::String(intern(&mut self.bytecode.strings, s))
     }
 
@@ -251,19 +251,15 @@ impl Resumable {
     }
 }
 
-pub(crate) fn intern_atom(
-    strs: &mut Vec<Cow<'static, str>>,
-    s: impl Into<Cow<'static, str>>,
-) -> Val {
+pub(crate) fn intern_atom(strs: &mut Vec<String>, s: String) -> Val {
     Val::String(intern(strs, s))
 }
 
-pub(crate) fn intern_string(strs: &mut Vec<Cow<'static, str>>, s: impl AsRef<str>) -> Val {
+pub(crate) fn intern_string(strs: &mut Vec<String>, s: impl AsRef<str>) -> Val {
     Val::String(intern(strs, format!("\"{}\"", s.as_ref())))
 }
 
-pub(crate) fn intern(strs: &mut Vec<Cow<'static, str>>, s: impl Into<Cow<'static, str>>) -> usize {
-    let s = s.into();
+pub(crate) fn intern(strs: &mut Vec<String>, s: String) -> usize {
     strs.iter().position(|x| *x == s).unwrap_or_else(|| {
         strs.push(s);
         strs.len() - 1
@@ -276,7 +272,7 @@ impl Value {
     }
 }
 
-fn pretty(v: &Val, strs: &Vec<Cow<'static, str>>) -> String {
+fn pretty(v: &Val, strs: &Vec<String>) -> String {
     match v {
         Val::String(s) if strs[*s] == NIL => "[]".to_string(),
         Val::String(s) => strs[*s].to_string(),

@@ -254,13 +254,13 @@ pub fn app(f: Expr, arg: Expr) -> Expr {
     Expr::App(Box::new(f), Box::new(arg))
 }
 
-pub struct Ctx<'c> {
-    pub bindings: Vec<&'c str>,
-    pub vars: Vec<&'c str>,
+pub struct Ctx {
+    pub bindings: Vec<String>,
+    pub vars: Vec<String>,
     pub strs: Vec<String>,
 }
 
-impl Ctx<'_> {
+impl Ctx {
     pub fn new() -> Self {
         let mut ctx = Ctx { bindings: vec![], vars: vec![], strs: vec![String::new(); 5] };
         ctx.strs[Reflect::Nil as usize] = NIL.to_string();
@@ -272,17 +272,17 @@ impl Ctx<'_> {
     }
 }
 
-pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx<'c>) -> Result<Expr, String> {
+pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<Expr, String> {
     fn resolve_var(v: &str, ctx: &Ctx) -> Option<usize> {
         ctx.vars.iter().rev().position(|x| *x == v)
     }
-    fn resolve_str<'c>(s: String, ctx: &mut Ctx<'c>) -> usize {
+    fn resolve_str<'c>(s: String, ctx: &mut Ctx) -> usize {
         ctx.strs.iter().position(|x| *x == s).unwrap_or_else(|| {
             ctx.strs.push(s);
             ctx.strs.len() - 1
         })
     }
-    fn contains_bindings<'c>(Ast(_, ast): &Ast<'c>) -> bool {
+    fn contains_bindings(Ast(_, ast): &Ast<'_>) -> bool {
         match ast {
             A::Binding(_) => true,
             A::Var(_) | A::String(_) | A::Block(_) => false,
@@ -299,7 +299,7 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx<'c>) -> Res
             },
         }
     }
-    fn desug_reflect<'c>(ast: Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, String)> {
+    fn desug_reflect(ast: Ast<'_>, ctx: &mut Ctx) -> Result<Expr, (usize, String)> {
         let has_bindings = contains_bindings(&ast);
         match ast.1 {
             A::List(items) if has_bindings => {
@@ -339,7 +339,7 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx<'c>) -> Res
             A::Block(_) => desug_val(ast, ctx),
         }
     }
-    fn desug_val<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx<'c>) -> Result<Expr, (usize, String)> {
+    fn desug_val<'c>(Ast(pos, ast): Ast<'c>, ctx: &mut Ctx) -> Result<Expr, (usize, String)> {
         match ast {
             A::Var(v) if v.ends_with("!") => {
                 Ok(Expr::Effect(resolve_str(v[..v.len() - 1].to_string(), ctx)))
@@ -369,7 +369,7 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx<'c>) -> Res
             },
             A::String(s) => Ok(Expr::String(resolve_str(s.to_string(), ctx))),
             A::Binding(b) => {
-                ctx.bindings.push(&b[1..]);
+                ctx.bindings.push(b[1..].to_string());
                 Ok(Expr::String(resolve_str(format!("\"{}\"", &b[1..]), ctx)))
             }
             A::Block(mut items) => {
@@ -381,7 +381,7 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx<'c>) -> Res
                     let bindings = ctx.bindings.len();
                     ctx.vars.extend(ctx.bindings.drain(..));
                     if bindings == 0 {
-                        ctx.vars.push("")
+                        ctx.vars.push(String::new())
                     }
                     desugared.push((bindings, desug_val(ast, ctx)?));
                 }
