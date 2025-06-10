@@ -2,7 +2,7 @@ use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use vorpal::{
     bytecode::{Bytecode, Ctx, NIL},
-    compile::{A, Ast, Call, Expr, compile_expr, desugar, parse},
+    compile::{A, Ast, Call, Expr, codegen, desugar, parse},
     run::State,
 };
 
@@ -153,7 +153,7 @@ fn test_without_run(code: &str) -> (Vec<String>, Vec<Bytecode>) {
                 Err(e) => results.push(e),
                 Ok(expr) => {
                     results.push(pretty_expr(&expr, &ctx.strs));
-                    let bytecode = compile_expr(expr, ctx);
+                    let bytecode = codegen(expr, ctx);
                     let bytes = bytecode.as_bytes().unwrap();
                     let bytecode = Bytecode::parse(&bytes).unwrap();
                     results.push(bytecode.pretty());
@@ -314,7 +314,7 @@ fn test_run_rec() -> Result<(), String> {
     test(PathBuf::from("tests/run_rec.txt"))
 }
 
-fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
+fn test_with_effects(path: PathBuf) -> Result<(), String> {
     let tests = parse_tests(path.clone())?;
     let mut results = vec![];
     for (code, expected) in tests {
@@ -331,6 +331,11 @@ fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
                                 printed.push(format!("\"{arg}\"\n"));
                                 let nil = vm.bytecode.serialize(&()).unwrap();
                                 result = vm.resume(nil);
+                            }
+                            "load" => {
+                                let code: String = vm.bytecode.deserialize(&vm.arg).unwrap();
+                                let start = vm.bytecode.load(&code).unwrap();
+                                result = vm.resume_at(start);
                             }
                             name => break actual.push(format!("{name}!({arg})")),
                         }
@@ -349,12 +354,12 @@ fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
 
 #[test]
 fn test_run_with_effects() -> Result<(), String> {
-    test_with_print_effect(PathBuf::from("tests/run_with_effects.txt"))
+    test_with_effects(PathBuf::from("tests/run_with_effects.txt"))
 }
 
 #[test]
 fn test_run_with_rec_effects() -> Result<(), String> {
-    test_with_print_effect(PathBuf::from("tests/run_with_rec_effects.txt"))
+    test_with_effects(PathBuf::from("tests/run_with_rec_effects.txt"))
 }
 
 #[test]

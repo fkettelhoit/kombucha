@@ -1201,3 +1201,66 @@ __handle({
 00101:   Return
 
 []
+
+---
+
+:x = load!("[Foo, Bar]")
+Pair(x, x)
+
+(=
+  :x
+  (load!
+    "[Foo, Bar]"))
+(Pair
+  x
+  x)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "x" )
+    ( load!
+      "[Foo, Bar]" ) )
+  =>
+    ( ( Pair
+        0 )
+      0 ) )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: ApplyArgToFn
+00006: LoadVar(00001)
+00007: ApplyArgToFn
+00008: ApplyArgToFn
+00009:   Return
+00010: LoadVar(00001)
+00011: LoadVar(00000)
+00012: ApplyArgToFn
+00013:   Return
+00014: LoadFn { code: 00010, fvars: 00001 }
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00000)
+00019: LoadVar(00000)
+00020: PushString("Pair")
+00021: ApplyArgToFn
+00022: ApplyArgToFn
+00023:   Return
+00024: PushString(""[Foo, Bar]"")
+00025: PushEffect("load")
+00026: ApplyArgToFn
+00027: PushString(""x"")
+00028: LoadFn { code: 00016, fvars: 00000 }
+00029: ApplyArgToFn
+00030: ApplyArgToFn
+00031: LoadFn { code: 00018, fvars: 00000 }
+00032: ApplyFnToArg
+00033:   Return
+
+Pair([Foo, Bar], [Foo, Bar])

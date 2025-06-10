@@ -437,87 +437,88 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<
     }
 }
 
-pub fn compile_expr(expr: Expr, ctx: Ctx) -> Bytecode {
-    fn params(expr: &Expr) -> usize {
-        match expr {
-            Expr::String(_) => usize::MAX,
-            Expr::Var(_) | Expr::Effect(_) => 1,
-            Expr::Abs(body) => params(body).saturating_add(1),
-            Expr::Rec(f) => params(f).saturating_sub(1),
-            Expr::App(_, arg) if params(arg) == 0 => 0,
-            Expr::App(f, _) => params(f).saturating_sub(1),
-            Expr::Unpack(val, _, _) if params(val) == 0 => 0,
-            Expr::Handle(_, eff, _) if params(eff) == 0 => 0,
-            Expr::Handle(val, _, handler) => min(params(val), params(handler).saturating_sub(2)),
-            Expr::Cmp(a, b, _, _) if params(a) == 0 || params(b) == 0 => 0,
-            Expr::Unpack(_, if_t, if_f) | Expr::Cmp(_, _, if_t, if_f) => {
-                min(params(if_t).saturating_sub(2), params(if_f).saturating_sub(1))
-            }
+fn params(expr: &Expr) -> usize {
+    match expr {
+        Expr::String(_) => usize::MAX,
+        Expr::Var(_) | Expr::Effect(_) => 1,
+        Expr::Abs(body) => params(body).saturating_add(1),
+        Expr::Rec(f) => params(f).saturating_sub(1),
+        Expr::App(_, arg) if params(arg) == 0 => 0,
+        Expr::App(f, _) => params(f).saturating_sub(1),
+        Expr::Unpack(val, _, _) if params(val) == 0 => 0,
+        Expr::Handle(_, eff, _) if params(eff) == 0 => 0,
+        Expr::Handle(val, _, handler) => min(params(val), params(handler).saturating_sub(2)),
+        Expr::Cmp(a, b, _, _) if params(a) == 0 || params(b) == 0 => 0,
+        Expr::Unpack(_, if_t, if_f) | Expr::Cmp(_, _, if_t, if_f) => {
+            min(params(if_t).saturating_sub(2), params(if_f).saturating_sub(1))
         }
     }
-    fn compile(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
-        match expr {
-            Expr::Var(v) => ops.push(Op::LoadVar(v)),
-            Expr::String(s) => ops.push(Op::LoadString(s)),
-            Expr::Effect(e) => ops.push(Op::LoadEffect(e)),
-            Expr::Abs(body) => {
-                let mut f = vec![];
-                compile(args, *body, &mut f, fns);
-                f.push(Op::Return);
-                let fvars = f.iter().fold(0, |captured, op| match *op {
-                    Op::LoadVar(v) if v > captured => v,
-                    Op::LoadFn { fvars, .. } if fvars > captured => fvars - 1,
-                    _ => captured,
-                });
-                let code = fns.len();
-                ops.push(Op::LoadFn { code, fvars });
-                fns.extend(f);
-            }
-            Expr::App(f, arg) => {
-                if params(&f) > 0 {
-                    compile(0, *arg, ops, fns);
-                    compile(args + 1, *f, ops, fns);
-                    ops.push(Op::ApplyArgToFn);
-                } else {
-                    compile(args + 1, *f, ops, fns);
-                    compile(0, *arg, ops, fns);
-                    ops.push(Op::ApplyFnToArg);
-                }
-            }
-            Expr::Rec(body) => {
-                compile(args + 1, *body, ops, fns);
-                ops.push(Op::LoadFn { code: 0, fvars: 0 }); // the built-in fixed-point combinator
-                ops.push(Op::ApplyArgToFn);
-            }
-            Expr::Cmp(a, b, if_t, if_f) => {
-                compile(0, *a, ops, fns);
-                compile(0, *b, ops, fns);
-                compile(args + 1, *if_t, ops, fns);
-                compile(args + 1, *if_f, ops, fns);
-                ops.push(Op::Cmp);
-                ops.push(Op::ApplyArgToFn);
-            }
-            Expr::Unpack(val, if_t, if_f) => {
-                compile(0, *val, ops, fns);
-                compile(args + 2, *if_t, ops, fns);
-                compile(args + 1, *if_f, ops, fns);
-                ops.push(Op::Unpack);
-                ops.push(Op::ApplyArgToFn);
-                ops.push(Op::ApplyArgToFn);
-            }
-            Expr::Handle(val, eff, handler) => {
-                compile(args + 1, *val, ops, fns);
-                compile(0, *eff, ops, fns);
-                compile(0, *handler, ops, fns);
-                ops.push(Op::Try);
-                ops.push(Op::ApplyArgToFn);
-                ops.push(Op::Unwind);
-                ops.push(Op::ApplyArgToFn);
-                ops.push(Op::ApplyArgToFn);
-            }
-        }
-    }
+}
 
+fn emit(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
+    match expr {
+        Expr::Var(v) => ops.push(Op::LoadVar(v)),
+        Expr::String(s) => ops.push(Op::LoadString(s)),
+        Expr::Effect(e) => ops.push(Op::LoadEffect(e)),
+        Expr::Abs(body) => {
+            let mut f = vec![];
+            emit(args, *body, &mut f, fns);
+            f.push(Op::Return);
+            let fvars = f.iter().fold(0, |captured, op| match *op {
+                Op::LoadVar(v) if v > captured => v,
+                Op::LoadFn { fvars, .. } if fvars > captured => fvars - 1,
+                _ => captured,
+            });
+            let code = fns.len();
+            ops.push(Op::LoadFn { code, fvars });
+            fns.extend(f);
+        }
+        Expr::App(f, arg) => {
+            if params(&f) > 0 {
+                emit(0, *arg, ops, fns);
+                emit(args + 1, *f, ops, fns);
+                ops.push(Op::ApplyArgToFn);
+            } else {
+                emit(args + 1, *f, ops, fns);
+                emit(0, *arg, ops, fns);
+                ops.push(Op::ApplyFnToArg);
+            }
+        }
+        Expr::Rec(body) => {
+            emit(args + 1, *body, ops, fns);
+            ops.push(Op::LoadFn { code: 0, fvars: 0 }); // the built-in fixed-point combinator
+            ops.push(Op::ApplyArgToFn);
+        }
+        Expr::Cmp(a, b, if_t, if_f) => {
+            emit(0, *a, ops, fns);
+            emit(0, *b, ops, fns);
+            emit(args + 1, *if_t, ops, fns);
+            emit(args + 1, *if_f, ops, fns);
+            ops.push(Op::Cmp);
+            ops.push(Op::ApplyArgToFn);
+        }
+        Expr::Unpack(val, if_t, if_f) => {
+            emit(0, *val, ops, fns);
+            emit(args + 2, *if_t, ops, fns);
+            emit(args + 1, *if_f, ops, fns);
+            ops.push(Op::Unpack);
+            ops.push(Op::ApplyArgToFn);
+            ops.push(Op::ApplyArgToFn);
+        }
+        Expr::Handle(val, eff, handler) => {
+            emit(args + 1, *val, ops, fns);
+            emit(0, *eff, ops, fns);
+            emit(0, *handler, ops, fns);
+            ops.push(Op::Try);
+            ops.push(Op::ApplyArgToFn);
+            ops.push(Op::Unwind);
+            ops.push(Op::ApplyArgToFn);
+            ops.push(Op::ApplyArgToFn);
+        }
+    }
+}
+
+pub fn codegen(expr: Expr, ctx: Ctx) -> Bytecode {
     let mut main = vec![];
 
     // fix = f => x => f(fix(f))(x)
@@ -535,7 +536,7 @@ pub fn compile_expr(expr: Expr, ctx: Ctx) -> Bytecode {
         Op::ApplyArgToFn,                 // f(fix(f))(x)
         Op::Return,
     ];
-    compile(0, expr, &mut main, &mut bytecode);
+    emit(0, expr, &mut main, &mut bytecode);
     main.push(Op::Return);
     let start = bytecode.len();
     bytecode.extend(main);
@@ -547,5 +548,18 @@ pub fn compile(code: &str) -> Result<Bytecode, String> {
     let parsed = parse(&code)?;
     let mut ctx = Ctx::new();
     let expr = desugar(parsed, &code, &mut ctx)?;
-    Ok(compile_expr(expr, ctx))
+    Ok(codegen(expr, ctx))
+}
+
+impl Bytecode {
+    pub fn load(&mut self, code: &str) -> Result<usize, String> {
+        let parsed = parse(&code)?;
+        let expr = desugar(parsed, &code, &mut self.ctx)?;
+        let mut main = vec![];
+        emit(0, expr, &mut main, &mut self.ops);
+        main.push(Op::Return);
+        let start = self.ops.len();
+        self.ops.extend(main);
+        Ok(start)
+    }
 }

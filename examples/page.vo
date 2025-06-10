@@ -1,0 +1,15 @@
+Page("en", "styles/style.css", "Page Title", [
+    Section("Section Title", [
+        Paragraph([
+            "This is a ", Strong("paragraph"), " with inline ", Code("code"), "."
+        ])
+        Unordered([
+            Paragraph(["Another paragraph with a ", Link("http://www.example.com", "link"), "."])
+        ])
+        Subsection("Subsection Title", [
+            Paragraph(["Another paragraph."])
+            Paragraph(["Another paragraph."])
+        ])
+        Code(#"["Foo", "Bar"]"#)
+    ])
+])

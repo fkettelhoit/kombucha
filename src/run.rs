@@ -249,6 +249,12 @@ impl Resumable {
         self.vm.temps.push(arg);
         self.vm.run(self.bytecode)
     }
+
+    pub fn resume_at(mut self, start: usize) -> Result<State, usize> {
+        self.vm.frames.push((self.vm.vars.len(), self.vm.ip));
+        self.vm.ip = start;
+        self.vm.run(self.bytecode)
+    }
 }
 
 pub(crate) fn intern_atom(strs: &mut Vec<String>, s: String) -> Val {
