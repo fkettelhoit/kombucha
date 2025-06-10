@@ -1,4 +1,5 @@
 use vorpal::{
+    bytecode::Ctx,
     compile::{Expr, abs, app, compile_expr},
     run::State,
 };
@@ -98,7 +99,9 @@ fn eval_raw_pop() {
 }
 
 fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
-    let bytecode = compile_expr(expr, strings.into_iter().map(|s| s.to_string()).collect());
+    let mut ctx = Ctx::default();
+    ctx.strs = strings.into_iter().map(|s| s.to_string()).collect();
+    let bytecode = compile_expr(expr, ctx);
     match bytecode.run() {
         Ok(State::Done(v)) => Ok(v.pretty()),
         Ok(State::Resumable(vm)) => Err(format!("{}!({})", vm.effect(), vm.arg_pretty())),

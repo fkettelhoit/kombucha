@@ -230,19 +230,19 @@ impl Vm {
 
 impl Resumable {
     pub fn effect(&self) -> &str {
-        self.bytecode.strings.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
+        self.bytecode.ctx.strs.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
     }
 
     pub fn arg_pretty(&self) -> String {
-        pretty(&self.arg, &self.bytecode.strings)
+        pretty(&self.arg, &self.bytecode.ctx.strs)
     }
 
     pub fn intern_atom(&mut self, s: String) -> Val {
-        Val::String(intern(&mut self.bytecode.strings, s))
+        Val::String(intern(&mut self.bytecode.ctx.strs, s))
     }
 
     pub fn intern_string(&mut self, s: impl AsRef<str>) -> Val {
-        Val::String(intern(&mut self.bytecode.strings, format!("\"{}\"", s.as_ref())))
+        Val::String(intern(&mut self.bytecode.ctx.strs, format!("\"{}\"", s.as_ref())))
     }
 
     pub fn resume(mut self, arg: Val) -> Result<State, usize> {
@@ -268,7 +268,7 @@ pub(crate) fn intern(strs: &mut Vec<String>, s: String) -> usize {
 
 impl Value {
     pub fn pretty(&self) -> String {
-        pretty(&self.val, &self.bytecode.strings)
+        pretty(&self.val, &self.bytecode.ctx.strs)
     }
 }
 

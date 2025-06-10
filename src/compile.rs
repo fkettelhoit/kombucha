@@ -5,7 +5,7 @@ use std::{
     vec::IntoIter,
 };
 
-use crate::bytecode::{BINDING, Bytecode, COMPOUND, LIST, NIL, Op, Reflect, VALUE};
+use crate::bytecode::{BINDING, Bytecode, COMPOUND, Ctx, LIST, NIL, Op, Reflect, VALUE};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tok {
@@ -254,12 +254,6 @@ pub fn app(f: Expr, arg: Expr) -> Expr {
     Expr::App(Box::new(f), Box::new(arg))
 }
 
-pub struct Ctx {
-    pub bindings: Vec<String>,
-    pub vars: Vec<String>,
-    pub strs: Vec<String>,
-}
-
 impl Ctx {
     pub fn new() -> Self {
         let mut ctx = Ctx { bindings: vec![], vars: vec![], strs: vec![String::new(); 5] };
@@ -443,7 +437,7 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<
     }
 }
 
-pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
+pub fn compile_expr(expr: Expr, ctx: Ctx) -> Bytecode {
     fn params(expr: &Expr) -> usize {
         match expr {
             Expr::String(_) => usize::MAX,
@@ -545,7 +539,7 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
     main.push(Op::Return);
     let start = bytecode.len();
     bytecode.extend(main);
-    Bytecode::new(strings, bytecode, start)
+    Bytecode::new(ctx, bytecode, start)
 }
 
 pub fn compile(code: &str) -> Result<Bytecode, String> {
@@ -553,5 +547,5 @@ pub fn compile(code: &str) -> Result<Bytecode, String> {
     let parsed = parse(&code)?;
     let mut ctx = Ctx::new();
     let expr = desugar(parsed, &code, &mut ctx)?;
-    Ok(compile_expr(expr, ctx.strs))
+    Ok(compile_expr(expr, ctx))
 }

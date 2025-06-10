@@ -92,12 +92,12 @@ impl<'a> Serializer<'a> {
 
 impl Bytecode {
     pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val> {
-        let mut serializer = Serializer::new(&mut self.strings);
+        let mut serializer = Serializer::new(&mut self.ctx.strs);
         value.serialize(&mut serializer)
     }
 
     pub fn deserialize<'a, T: Deserialize<'a>>(&'a self, value: &'a Val) -> Result<T> {
-        let mut deserializer = Deserializer::new(&self.strings, value);
+        let mut deserializer = Deserializer::new(&self.ctx.strs, value);
         T::deserialize(&mut deserializer)
     }
 }

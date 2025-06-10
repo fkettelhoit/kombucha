@@ -1,8 +1,8 @@
 use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use vorpal::{
-    bytecode::{Bytecode, NIL},
-    compile::{A, Ast, Call, Ctx, Expr, compile_expr, desugar, parse},
+    bytecode::{Bytecode, Ctx, NIL},
+    compile::{A, Ast, Call, Expr, compile_expr, desugar, parse},
     run::State,
 };
 
@@ -153,7 +153,7 @@ fn test_without_run(code: &str) -> (Vec<String>, Vec<Bytecode>) {
                 Err(e) => results.push(e),
                 Ok(expr) => {
                     results.push(pretty_expr(&expr, &ctx.strs));
-                    let bytecode = compile_expr(expr, ctx.strs);
+                    let bytecode = compile_expr(expr, ctx);
                     let bytes = bytecode.as_bytes().unwrap();
                     let bytecode = Bytecode::parse(&bytes).unwrap();
                     results.push(bytecode.pretty());

@@ -14,9 +14,28 @@ pub const LIST: &str = "List";
 
 #[derive(Debug, Clone, Default)]
 pub struct Bytecode {
-    pub strings: Vec<String>,
+    pub ctx: Ctx,
     pub ops: Vec<Op>,
     pub start: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct Ctx {
+    pub bindings: Vec<String>,
+    pub vars: Vec<String>,
+    pub strs: Vec<String>,
+}
+
+impl Default for Ctx {
+    fn default() -> Self {
+        let mut ctx = Ctx { bindings: vec![], vars: vec![], strs: vec![String::new(); 5] };
+        ctx.strs[Reflect::Nil as usize] = NIL.to_string();
+        ctx.strs[Reflect::Value as usize] = VALUE.to_string();
+        ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
+        ctx.strs[Reflect::Compound as usize] = COMPOUND.to_string();
+        ctx.strs[Reflect::List as usize] = LIST.to_string();
+        ctx
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -35,17 +54,21 @@ pub enum Op {
 }
 
 impl Bytecode {
-    pub fn new(strings: Vec<String>, ops: Vec<Op>, start: usize) -> Self {
-        Bytecode { strings, ops, start }
+    pub fn new(ctx: Ctx, ops: Vec<Op>, start: usize) -> Self {
+        Bytecode { ctx, ops, start }
     }
 
     pub fn as_bytes(&self) -> Result<Vec<u8>, String> {
         let mut buf = vec![];
-        buf.extend((self.strings.len() as u32).to_be_bytes());
+        buf.extend((self.ctx.bindings.len() as u32).to_be_bytes());
+        buf.extend((self.ctx.vars.len() as u32).to_be_bytes());
+        buf.extend((self.ctx.strs.len() as u32).to_be_bytes());
         buf.extend((self.start as u32).to_be_bytes());
-        for s in &self.strings {
-            buf.extend((s.len() as u32).to_be_bytes());
-            buf.extend(s.as_bytes());
+        for section in [&self.ctx.bindings, &self.ctx.vars, &self.ctx.strs] {
+            for s in section {
+                buf.extend((s.len() as u32).to_be_bytes());
+                buf.extend(s.as_bytes());
+            }
         }
         fn check_size(op: usize, v: usize, bits: usize) -> Result<(), String> {
             if v >= (1 << bits) {
@@ -95,27 +118,32 @@ impl Bytecode {
 
     pub fn parse(buf: &[u8]) -> Result<Self, String> {
         let mut i = 0;
-        if buf.len() < 8 {
-            return Err("Expected the bytecode to contain at least 8 bytes".into());
+        if buf.len() < 16 {
+            return Err("Expected the bytecode to contain at least 16 bytes".into());
         }
-        let str_count = u32::from_be_bytes([buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]);
-        i += 4;
-        let start_op = u32::from_be_bytes([buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]);
-        i += 4;
-        let mut strings = Vec::new();
-        for _ in 0..str_count {
-            if i + 4 > buf.len() {
-                return Err(format!("Expected 4 string length bytes at offset {i}"));
-            }
-            let len = u32::from_be_bytes([buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]) as usize;
+        let mut ctx = Ctx::default();
+        let mut strs = [0u32; 4];
+        for str in strs.iter_mut() {
+            *str = u32::from_be_bytes([buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]);
             i += 4;
-            if i + len > buf.len() {
-                return Err(format!("String at {i} is shorter than length {len}"));
+        }
+        let [b, v, s, start_op] = strs;
+        for (strings, count) in [(&mut ctx.bindings, b), (&mut ctx.vars, v), (&mut ctx.strs, s)] {
+            strings.clear();
+            for _ in 0..count {
+                if i + 4 > buf.len() {
+                    return Err(format!("Expected 4 string length bytes at offset {i}"));
+                }
+                let len = u32::from_be_bytes([buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]) as usize;
+                i += 4;
+                if i + len > buf.len() {
+                    return Err(format!("String at {i} is shorter than length {len}"));
+                }
+                let string = String::from_utf8(buf[i..i + len].to_vec())
+                    .map_err(|_| format!("Invalid UTF8 string at {i}"))?;
+                strings.push(string.into());
+                i += len;
             }
-            let string = String::from_utf8(buf[i..i + len].to_vec())
-                .map_err(|_| format!("Invalid UTF8 string at {i}"))?;
-            strings.push(string.into());
-            i += len;
         }
         fn check_bytes(bytes: &[u8], i: usize, needed: usize, op: &str) -> Result<(), String> {
             if i + needed > bytes.len() {
@@ -169,7 +197,7 @@ impl Bytecode {
             }
             i += 1;
         }
-        Ok(Bytecode { strings, ops, start: start_op as usize })
+        Ok(Bytecode { ctx, ops, start: start_op as usize })
     }
 
     pub fn pretty(&self) -> String {
@@ -177,11 +205,11 @@ impl Bytecode {
         for (i, op) in self.ops.iter().enumerate() {
             match op {
                 Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),
-                Op::LoadString(s) => match self.strings.get(*s) {
+                Op::LoadString(s) => match self.ctx.strs.get(*s) {
                     Some(s) => buf.push_str(&format!("{i:05}: PushString(\"{s}\")\n")),
                     None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
                 },
-                Op::LoadEffect(s) => match self.strings.get(*s) {
+                Op::LoadEffect(s) => match self.ctx.strs.get(*s) {
                     Some(s) => buf.push_str(&format!("{i:05}: PushEffect(\"{s}\")\n")),
                     None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
                 },
