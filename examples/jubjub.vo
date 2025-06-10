@@ -1,0 +1,89 @@
+// A simple html generator
+
+:escape = (:str => { str })
+
+:gen-inline = (:inline => {
+    match: inline with: [
+        Em(:content) -> { ["<em>", escape(content), "</em>"] }
+        Strong(:content) -> { ["<strong>", escape(content), "</strong>"] }
+        Code(:content) -> { ["<code>", escape(content), "</code>"] }
+        Link(:href, :content) -> { [#"<a href=""#, href, #"">"#, escape(content), "</a>"] }
+        :_ -> { [escape(inline)] }
+    ]
+})
+
+:gen-block = (:gen-block ~> { :block => {
+    match: block with: [
+        Paragraph(:inline) -> { [
+            flatten([
+                ["<p>"], flatten(map(gen-inline, inline)), ["</p>"]
+            ])
+        ] }
+        Subsection(:title, :blocks) -> { flatten([
+            [
+                ["<h3>", escape(title), "</h3>"]
+            ]
+            flatten(map(gen-block, blocks))
+        ]) }
+        Unordered(:blocks) -> {
+            :gen-item = (:item => { flatten([
+                [
+                    ["<li>"]
+                ]
+                gen-block(item)
+                [
+                    ["</li>"]
+                ]
+            ])})
+            flatten([
+                [
+                    ["<ul>"]
+                ]
+                flatten(map(gen-item, blocks))
+                [
+                    ["</ul>"]
+                ]
+            ])
+        }
+        Code(:code) -> { [
+            ["<pre><code>", escape(code), "</code></pre>"]
+        ] }
+    ]
+} })
+
+:gen-section = (:section => {
+    match: section with: [
+        Section(:title, :blocks) -> { flatten([
+            [
+                ["<h2>", escape(title), "</h2>"]
+            ]
+            flatten(map(gen-block, blocks))
+        ]) }
+    ]
+})
+
+:generate = (:page => {
+    match: page with: [
+        Page(:lang, :stylesheet, :title, :sections) -> { flatten([
+            [
+                ["<!DOCTYPE html>"]
+                [#"<html lang=""#, escape(lang), #"">"#]
+                ["<head>"]
+                [#"<meta charset="utf-8" />"#]
+                [#"<meta name="viewport" content="width=device-width, initial-scale=1" />"#]
+                [#"<link rel="stylesheet" href=""#, escape(stylesheet), #"" />"#]
+                ["<title>", escape(title), "</title>"]
+                ["</head>"]
+                ["<body>"]
+                ["<h1>", escape(title), "</h1>"]
+            ]
+            flatten(map(gen-section, sections))
+            [
+                ["</body>"]
+                ["</html>"]
+            ]
+        ]) }
+    ]
+})
+
+write!(generate(read!()))

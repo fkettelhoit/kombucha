@@ -2,7 +2,7 @@ use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use vorpal::{
     bytecode::{Bytecode, NIL},
-    compile::{A, Ast, Call, Expr, compile_expr, desugar, parse},
+    compile::{A, Ast, Call, Ctx, Expr, compile_expr, desugar, parse},
     run::State,
 };
 
@@ -148,11 +148,12 @@ fn test_without_run(code: &str) -> (Vec<String>, Vec<Bytecode>) {
         Err(e) => results.push(e),
         Ok(parsed) => {
             results.push(pretty_prg(&parsed));
-            match desugar(parsed.clone(), code) {
+            let mut ctx = Ctx::new();
+            match desugar(parsed.clone(), code, &mut ctx) {
                 Err(e) => results.push(e),
-                Ok((expr, strs)) => {
-                    results.push(pretty_expr(&expr, &strs));
-                    let bytecode = compile_expr(expr, strs.clone());
+                Ok(expr) => {
+                    results.push(pretty_expr(&expr, &ctx.strs));
+                    let bytecode = compile_expr(expr, ctx.strs);
                     let bytes = bytecode.as_bytes().unwrap();
                     let bytecode = Bytecode::parse(&bytes).unwrap();
                     results.push(bytecode.pretty());
@@ -323,12 +324,13 @@ fn test_with_print_effect(path: PathBuf) -> Result<(), String> {
             let mut result = vm.run();
             loop {
                 match result {
-                    Ok(State::Resumable(vm)) => {
+                    Ok(State::Resumable(mut vm)) => {
                         let arg = vm.arg_pretty();
                         match vm.effect() {
                             "print" => {
                                 printed.push(format!("\"{arg}\"\n"));
-                                result = vm.run(Bytecode::nil());
+                                let nil = vm.bytecode.serialize(&()).unwrap();
+                                result = vm.resume(nil);
                             }
                             name => break actual.push(format!("{name}!({arg})")),
                         }

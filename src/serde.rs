@@ -80,33 +80,37 @@ pub struct Serializer<'a> {
     items: Vec<Rc<Val>>,
 }
 
+fn nil() -> Val {
+    Val::String(Reflect::Nil as usize)
+}
+
 impl<'a> Serializer<'a> {
     fn new(strs: &'a mut InternedStrs) -> Self {
-        Self { strs, name: "", key: Bytecode::nil(), items: vec![] }
+        Self { strs, name: "", key: nil(), items: vec![] }
+    }
+}
+
+impl Bytecode {
+    pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val> {
+        let mut serializer = Serializer::new(&mut self.strings);
+        value.serialize(&mut serializer)
+    }
+
+    pub fn deserialize<'a, T: Deserialize<'a>>(&'a self, value: &'a Val) -> Result<T> {
+        let mut deserializer = Deserializer::new(&self.strings, value);
+        T::deserialize(&mut deserializer)
     }
 }
 
 impl Value {
-    pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val> {
-        let mut serializer = Serializer::new(self.strings());
-        value.serialize(&mut serializer)
-    }
-
     pub fn deserialize<'a, T: Deserialize<'a>>(&'a self) -> Result<T> {
-        let mut deserializer = Deserializer::new(&self.strings, &self.val);
-        T::deserialize(&mut deserializer)
+        self.bytecode.deserialize(&self.val)
     }
 }
 
 impl Resumable {
-    pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val> {
-        let mut serializer = Serializer::new(self.strings());
-        value.serialize(&mut serializer)
-    }
-
     pub fn deserialize<'a, T: Deserialize<'a>>(&'a self) -> Result<T> {
-        let mut deserializer = Deserializer::new(&self.bytecode.strings, &self.arg);
-        T::deserialize(&mut deserializer)
+        self.bytecode.deserialize(&self.arg)
     }
 }
 
@@ -192,7 +196,7 @@ impl<'a> ser::Serializer for &'a mut Serializer<'a> {
     }
 
     fn serialize_unit(self) -> Result<Val> {
-        Ok(Bytecode::nil())
+        Ok(nil())
     }
 
     fn serialize_unit_struct(self, _name: Str) -> Result<Val> {
@@ -318,7 +322,7 @@ impl<'a> ser::SerializeMap for &'a mut Serializer<'a> {
     }
 
     fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, v: &T) -> Result<()> {
-        let k = std::mem::replace(&mut self.key, Bytecode::nil());
+        let k = std::mem::replace(&mut self.key, nil());
         let v = v.serialize(&mut Serializer::new(self.strs))?;
         let item = Val::Record(Reflect::Nil as usize, vec![Rc::new(k), Rc::new(v)]);
         Ok(self.items.push(Rc::new(item)))

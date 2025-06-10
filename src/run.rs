@@ -2,10 +2,6 @@ use crate::bytecode::{Bytecode, NIL, Op, Reflect};
 use std::{borrow::Cow, rc::Rc};
 
 impl Bytecode {
-    pub fn nil() -> Val {
-        Val::String(Reflect::Nil as usize)
-    }
-
     pub fn run(self) -> Result<State, usize> {
         let mut vm = Vm::default();
         vm.ip = self.start;
@@ -30,16 +26,16 @@ pub enum State {
 
 #[derive(Debug)]
 pub struct Value {
-    pub(crate) strings: Vec<Cow<'static, str>>,
-    pub(crate) val: Val,
+    pub bytecode: Bytecode,
+    pub val: Val,
 }
 
 #[derive(Debug)]
 pub struct Resumable {
-    pub(crate) bytecode: Bytecode,
-    pub(crate) effect: usize,
-    pub(crate) arg: Val,
-    pub(crate) vm: Vm,
+    pub bytecode: Bytecode,
+    pub effect: usize,
+    pub arg: Val,
+    pub vm: Vm,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -225,25 +221,11 @@ impl Vm {
             }
         }
         let val = temps.pop().ok_or(ip)?;
-        Ok(State::Done(Value { val, strings: bytecode.strings }))
-    }
-}
-
-impl Value {
-    pub fn strings(&mut self) -> &mut Vec<Cow<'static, str>> {
-        &mut self.strings
-    }
-
-    pub fn value(&self) -> &Val {
-        &self.val
+        Ok(State::Done(Value { val, bytecode }))
     }
 }
 
 impl Resumable {
-    pub fn strings(&mut self) -> &mut Vec<Cow<'static, str>> {
-        &mut self.bytecode.strings
-    }
-
     pub fn effect(&self) -> &str {
         self.bytecode.strings.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
     }
@@ -260,7 +242,7 @@ impl Resumable {
         Val::String(intern(&mut self.bytecode.strings, format!("\"{}\"", s.as_ref())))
     }
 
-    pub fn run(mut self, arg: Val) -> Result<State, usize> {
+    pub fn resume(mut self, arg: Val) -> Result<State, usize> {
         self.vm.temps.push(arg);
         self.vm.run(self.bytecode)
     }
@@ -287,7 +269,7 @@ pub(crate) fn intern(strs: &mut Vec<Cow<'static, str>>, s: impl Into<Cow<'static
 
 impl Value {
     pub fn pretty(&self) -> String {
-        pretty(&self.val, &self.strings)
+        pretty(&self.val, &self.bytecode.strings)
     }
 }
 

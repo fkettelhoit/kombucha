@@ -254,19 +254,25 @@ pub fn app(f: Expr, arg: Expr) -> Expr {
     Expr::App(Box::new(f), Box::new(arg))
 }
 
-pub fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), String> {
-    struct Ctx<'c> {
-        bindings: Vec<&'c str>,
-        vars: Vec<&'c str>,
-        strs: Vec<String>,
-    }
-    let mut ctx = Ctx { bindings: vec![], vars: vec![], strs: vec![String::new(); 6] };
-    ctx.strs[Reflect::Nil as usize] = NIL.to_string();
-    ctx.strs[Reflect::Value as usize] = VALUE.to_string();
-    ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
-    ctx.strs[Reflect::Compound as usize] = COMPOUND.to_string();
-    ctx.strs[Reflect::List as usize] = LIST.to_string();
+pub struct Ctx<'c> {
+    pub bindings: Vec<&'c str>,
+    pub vars: Vec<&'c str>,
+    pub strs: Vec<String>,
+}
 
+impl Ctx<'_> {
+    pub fn new() -> Self {
+        let mut ctx = Ctx { bindings: vec![], vars: vec![], strs: vec![String::new(); 5] };
+        ctx.strs[Reflect::Nil as usize] = NIL.to_string();
+        ctx.strs[Reflect::Value as usize] = VALUE.to_string();
+        ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
+        ctx.strs[Reflect::Compound as usize] = COMPOUND.to_string();
+        ctx.strs[Reflect::List as usize] = LIST.to_string();
+        ctx
+    }
+}
+
+pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx<'c>) -> Result<Expr, String> {
     fn resolve_var(v: &str, ctx: &Ctx) -> Option<usize> {
         ctx.vars.iter().rev().position(|x| *x == v)
     }
@@ -430,9 +436,9 @@ pub fn desugar(block: Vec<Ast<'_>>, code: &str) -> Result<(Expr, Vec<String>), S
             }
         }
     }
-    match desug_val(Ast(0, A::Block(block)), &mut ctx) {
+    match desug_val(Ast(0, A::Block(block)), ctx) {
         Err((i, v)) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
-        Ok(Expr::Abs(body)) => Ok((*body, ctx.strs)),
+        Ok(Expr::Abs(body)) => Ok(*body),
         Ok(_) => unreachable!("Expected the main block to be desugared to an abstraction!"),
     }
 }
@@ -544,6 +550,7 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
 pub fn compile(code: &str) -> Result<Bytecode, String> {
     let code = include_str!("_prelude.vo").to_string() + "\n" + code;
     let parsed = parse(&code)?;
-    let (expr, strings) = desugar(parsed, &code)?;
-    Ok(compile_expr(expr, strings.clone()))
+    let mut ctx = Ctx::new();
+    let expr = desugar(parsed, &code, &mut ctx)?;
+    Ok(compile_expr(expr, ctx.strs))
 }
