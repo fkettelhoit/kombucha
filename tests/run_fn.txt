@@ -36,6 +36,7 @@
 00020: ApplyArgToFn
 00021: ApplyArgToFn
 00022: ApplyArgToFn
+00023:   Return
 
 Bar
 
@@ -79,6 +80,7 @@ Bar
 00020: ApplyArgToFn
 00021: ApplyArgToFn
 00022: ApplyArgToFn
+00023:   Return
 
 Foo
 
@@ -143,6 +145,7 @@ Foo
 00032: ApplyArgToFn
 00033: PushString("Bar")
 00034: ApplyFnToArg
+00035:   Return
 
 Foo
 
@@ -240,5 +243,6 @@ Foo
 00050: ApplyFnToArg
 00051: PushString("Baz")
 00052: ApplyFnToArg
+00053:   Return
 
 Vec(Baz, Foo, Baz)

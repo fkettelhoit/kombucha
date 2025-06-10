@@ -58,6 +58,7 @@ __compare(Foo, Bar, { True }, { False })
 00033: ApplyArgToFn
 00034: ApplyArgToFn
 00035: ApplyArgToFn
+00036:   Return
 
 False
 
@@ -171,6 +172,7 @@ False
 00061: ApplyArgToFn
 00062: ApplyArgToFn
 00063: ApplyArgToFn
+00064:   Return
 
 True
 
@@ -296,5 +298,6 @@ True
 00067: ApplyArgToFn
 00068: ApplyArgToFn
 00069: ApplyArgToFn
+00070:   Return
 
 Pair(True, False)

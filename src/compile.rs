@@ -542,6 +542,7 @@ pub fn compile_expr(expr: Expr, strings: Vec<String>) -> Bytecode {
         Op::Return,
     ];
     compile(0, expr, &mut main, &mut bytecode);
+    main.push(Op::Return);
     let start = bytecode.len();
     bytecode.extend(main);
     Bytecode::new(strings, bytecode, start)

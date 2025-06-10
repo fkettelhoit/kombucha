@@ -89,6 +89,7 @@ __unpack(Foo(Bar, Baz), :f => { :x => { x } }, { Error })
 00051: ApplyArgToFn
 00052: ApplyArgToFn
 00053: ApplyArgToFn
+00054:   Return
 
 Baz
 
@@ -177,6 +178,7 @@ __unpack(Foo, :f => { :x => { x } }, { Error })
 00047: ApplyArgToFn
 00048: ApplyArgToFn
 00049: ApplyArgToFn
+00050:   Return
 
 Error
 
@@ -273,6 +275,7 @@ __unpack(Foo(Bar, Baz), :f => { :x => { f } }, { Error })
 00051: ApplyArgToFn
 00052: ApplyArgToFn
 00053: ApplyArgToFn
+00054:   Return
 
 Foo(Bar)
 
@@ -365,5 +368,6 @@ __unpack(Foo(Bar), :f => { :x => { f } }, { Error })
 00049: ApplyArgToFn
 00050: ApplyArgToFn
 00051: ApplyArgToFn
+00052:   Return
 
 Foo

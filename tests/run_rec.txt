@@ -83,6 +83,7 @@
 00048: ApplyArgToFn
 00049: LoadFn { code: 00036, fvars: 00000 }
 00050: ApplyFnToArg
+00051:   Return
 
 Foo
 
@@ -177,6 +178,7 @@ Foo
 00050: ApplyArgToFn
 00051: LoadFn { code: 00038, fvars: 00000 }
 00052: ApplyFnToArg
+00053:   Return
 
 Foo(Bar)
 
@@ -345,5 +347,6 @@ Foo(Bar)
 00093: ApplyArgToFn
 00094: LoadFn { code: 00077, fvars: 00000 }
 00095: ApplyFnToArg
+00096:   Return
 
 Foo

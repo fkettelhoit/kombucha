@@ -77,6 +77,7 @@
 00044: ApplyArgToFn
 00045: ApplyArgToFn
 00046: ApplyArgToFn
+00047:   Return
 
 Pair(Foo, Bar)
 
@@ -151,5 +152,6 @@ Pair(Foo, Bar)
 00038: ApplyArgToFn
 00039: ApplyArgToFn
 00040: ApplyArgToFn
+00041:   Return
 
 Foo(Bar)

@@ -19,6 +19,7 @@ print!(Foo)
 00010: PushString("Foo")
 00011: PushEffect("print")
 00012: ApplyArgToFn
+00013:   Return
 
 "Foo"
 []
@@ -68,6 +69,7 @@ print!(Foo), print!(Bar), print!(FooBar)
 00022: ApplyArgToFn
 00023: LoadFn { code: 00014, fvars: 00000 }
 00024: ApplyArgToFn
+00025:   Return
 
 "Foo"
 "Bar"
@@ -247,6 +249,7 @@ __handle({ foo(Bar, Baz) }, pair!, :r => { :arg => { Pair(arg) } })
 00097: ApplyArgToFn
 00098: ApplyArgToFn
 00099: ApplyArgToFn
+00100:   Return
 
 Pair(Args(Bar, Baz))
 
@@ -337,6 +340,7 @@ __handle({ Foo }, unused!, :r => { : => { Error }})
 00049: ApplyArgToFn
 00050: ApplyArgToFn
 00051: ApplyArgToFn
+00052:   Return
 
 Foo
 
@@ -439,6 +443,7 @@ __handle({ effect!(Foo) }, effect!, :r => { :arg => { arg(r(Bar)) }})
 00055: ApplyArgToFn
 00056: ApplyArgToFn
 00057: ApplyArgToFn
+00058:   Return
 
 Foo(Bar)
 
@@ -556,6 +561,7 @@ __handle({
 00061: ApplyArgToFn
 00062: ApplyArgToFn
 00063: ApplyArgToFn
+00064:   Return
 
 Pair(Foo(Bar), Foo(Baz))
 
@@ -701,6 +707,7 @@ Pair(Foo(Bar), Foo(Baz))
 00079: ApplyArgToFn
 00080: ApplyArgToFn
 00081: ApplyArgToFn
+00082:   Return
 
 Twice(List(Foo, Foo), List(Baz))
 
@@ -823,6 +830,7 @@ Foo(__handle({
 00063: ApplyArgToFn
 00064: PushString("Foo")
 00065: ApplyArgToFn
+00066:   Return
 
 effect!([])
 
@@ -1015,6 +1023,7 @@ __handle({
 00102: ApplyArgToFn
 00103: ApplyArgToFn
 00104: ApplyArgToFn
+00105:   Return
 
 List(Foo, Bar)
 
@@ -1189,5 +1198,6 @@ __handle({
 00098: ApplyArgToFn
 00099: ApplyArgToFn
 00100: ApplyArgToFn
+00101:   Return
 
 []

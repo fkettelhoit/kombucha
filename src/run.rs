@@ -1,5 +1,5 @@
 use crate::bytecode::{Bytecode, NIL, Op, Reflect};
-use std::{borrow::Cow, rc::Rc};
+use std::{borrow::Cow, rc::Rc, usize};
 
 impl Bytecode {
     pub fn run(self) -> Result<State, usize> {
@@ -58,7 +58,8 @@ struct Handler {
 impl Vm {
     fn run(self, bytecode: Bytecode) -> Result<State, usize> {
         let Vm { mut ip, mut vars, mut temps, mut frames, mut handlers } = self;
-        while let Some(op) = bytecode.ops.get(ip).copied() {
+        loop {
+            let op = bytecode.ops.get(ip).copied().ok_or(ip)?;
             let i = ip;
             ip += 1;
             match op {
@@ -74,7 +75,7 @@ impl Vm {
                         vars.push(temps.pop().ok_or(ip)?);
                         ip = code;
                     }
-                    Op::Return => {
+                    Op::Return if !frames.is_empty() => {
                         let (_, ret) = *frames.last().ok_or(ip)?;
                         match bytecode.ops.get(ret).ok_or(ip)? {
                             Op::ApplyArgToFn => {
@@ -158,6 +159,10 @@ impl Vm {
                         }
                     }
                 }
+                Op::Return if frames.is_empty() => {
+                    let val = temps.pop().ok_or(ip)?;
+                    return Ok(State::Done(Value { val, bytecode }));
+                }
                 Op::Return => {
                     let (frame, ret) = frames.pop().ok_or(i)?;
                     vars.truncate(frame);
@@ -220,8 +225,6 @@ impl Vm {
                 }
             }
         }
-        let val = temps.pop().ok_or(ip)?;
-        Ok(State::Done(Value { val, bytecode }))
     }
 }
 

@@ -56,6 +56,7 @@
 00032: ApplyArgToFn
 00033: LoadFn { code: 00018, fvars: 00000 }
 00034: ApplyFnToArg
+00035:   Return
 
 Value(Foo)
 
@@ -119,6 +120,7 @@ Value(Foo)
 00032: ApplyArgToFn
 00033: LoadFn { code: 00018, fvars: 00000 }
 00034: ApplyFnToArg
+00035:   Return
 
 Binding("binding")
 
@@ -190,6 +192,7 @@ Binding("binding")
 00036: ApplyArgToFn
 00037: LoadFn { code: 00018, fvars: 00000 }
 00038: ApplyFnToArg
+00039:   Return
 
 Value(Foo(Bar, Baz))
 
@@ -273,6 +276,7 @@ Value(Foo(Bar, Baz))
 00044: ApplyArgToFn
 00045: LoadFn { code: 00018, fvars: 00000 }
 00046: ApplyFnToArg
+00047:   Return
 
 Compound(Value(Foo), [Value(Bar), Binding("baz")])
 
@@ -359,5 +363,6 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 00046: ApplyArgToFn
 00047: LoadFn { code: 00020, fvars: 00000 }
 00048: ApplyFnToArg
+00049:   Return
 
 Compound(Binding("foo"), [Value(Bar), Binding("baz")])

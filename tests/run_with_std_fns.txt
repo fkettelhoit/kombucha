@@ -236,6 +236,7 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00131: ApplyArgToFn
 00132: LoadFn { code: 00101, fvars: 00000 }
 00133: ApplyFnToArg
+00134:   Return
 
 [C, B, A]
 
@@ -530,6 +531,7 @@ rev([A, B, C])
 00159: ApplyArgToFn
 00160: LoadFn { code: 00139, fvars: 00000 }
 00161: ApplyFnToArg
+00162:   Return
 
 [C, B, A]
 
@@ -884,6 +886,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00193: ApplyArgToFn
 00194: LoadFn { code: 00169, fvars: 00000 }
 00195: ApplyFnToArg
+00196:   Return
 
 Triple(A, B, C)
 
@@ -1311,6 +1314,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00233: ApplyArgToFn
 00234: LoadFn { code: 00213, fvars: 00000 }
 00235: ApplyFnToArg
+00236:   Return
 
 [Foo(A), Foo(B), Foo(C)]
 
@@ -2083,6 +2087,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00424: ApplyArgToFn
 00425: LoadFn { code: 00404, fvars: 00000 }
 00426: ApplyFnToArg
+00427:   Return
 
 [[[A, X], [B, Y], [C, Z]], [], [], [], []]
 
@@ -2546,6 +2551,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00244: ApplyArgToFn
 00245: LoadFn { code: 00170, fvars: 00000 }
 00246: ApplyFnToArg
+00247:   Return
 
 [True, False, True, False, True, False, True, False]
 
@@ -2985,6 +2991,7 @@ flatten([[A, B], [C, D]])
 00239: ApplyArgToFn
 00240: LoadFn { code: 00219, fvars: 00000 }
 00241: ApplyFnToArg
+00242:   Return
 
 [A, B, C, D]
 
@@ -3186,6 +3193,7 @@ destructure(Foo(Bar, Baz, Qux))
 00107: ApplyArgToFn
 00108: LoadFn { code: 00087, fvars: 00000 }
 00109: ApplyFnToArg
+00110:   Return
 
 [Foo, [Bar, Baz, Qux]]
 
@@ -6525,6 +6533,7 @@ __handle({
 01852: ApplyArgToFn
 01853: LoadFn { code: 01828, fvars: 00000 }
 01854: ApplyFnToArg
+01855:   Return
 
 [Bar, Foo, Bar, Foo, Bar, Foo, Bar, Foo, NoMatch([["x", Foo], ["x", Bar]])]
 
@@ -9864,6 +9873,7 @@ __handle({
 01852: ApplyArgToFn
 01853: LoadFn { code: 01828, fvars: 00000 }
 01854: ApplyFnToArg
+01855:   Return
 
 [Bar, Foo, Bar, Foo, Bar, Foo, Bar, Foo, NoMatch([["x", Foo], ["x", Bar]])]
 
@@ -13451,5 +13461,6 @@ __handle({
 01993: ApplyArgToFn
 01994: LoadFn { code: 01969, fvars: 00000 }
 01995: ApplyFnToArg
+01996:   Return
 
 [Bar, NoMatch(Foo)]

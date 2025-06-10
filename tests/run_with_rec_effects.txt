@@ -122,6 +122,7 @@
 00067: ApplyArgToFn
 00068: ApplyArgToFn
 00069: ApplyArgToFn
+00070:   Return
 
 List(Foo)
 
@@ -404,5 +405,6 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00152: ApplyArgToFn
 00153: LoadFn { code: 00136, fvars: 00000 }
 00154: ApplyFnToArg
+00155:   Return
 
 List(True, False, True)
