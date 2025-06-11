@@ -3,7 +3,7 @@ use vorpal::{compile::compile, run::State};
 #[test]
 fn prelude_match_pair() -> Result<(), String> {
     let code = "
-match: Pair(Foo, Foo) with: [
+match (Pair(Foo, Foo)) with: [
     :_(:x, Bar) -> { Bar }
     Pair(:x, :x) -> { Twice(x) }
 ]
@@ -11,7 +11,7 @@ match: Pair(Foo, Foo) with: [
     let bytecode = compile(code).unwrap();
     match bytecode.run().unwrap() {
         State::Done(v) => assert_eq!(v.pretty(), "Twice(Foo)"),
-        State::Resumable(_) => panic!("Found a resumable!"),
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg_pretty()),
     }
     Ok(())
 }
@@ -28,7 +28,7 @@ fn prelude_generate_html() -> Result<(), String> {
                 include_str!("with_prelude_run_ssg.out.txt")
             )
         }
-        State::Resumable(_) => panic!("Found a resumable!"),
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg_pretty()),
     }
     Ok(())
 }

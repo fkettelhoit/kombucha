@@ -36,25 +36,6 @@
         [compound, acc]
     })
 } })([])
-:match-with = ([:value, :clauses] => {
-    :result = fold([:result, :clause] => {
-        __compare(result, [], {
-            __handle({
-                Match(clause(value))
-            }, no-match!, [:r, :arg] => {})
-        }, {
-            result
-        })
-    }, [], clauses)
-    __unpack(result, [:_, :result] => {
-        result
-    }, {
-        no-match!(value)
-    })
-})
-:try-catch-as = ([:body, :effect, :handler] => {
-    __handle(body, effect, handler)
-})
 :-> = ([:pattern, :body, :value] => {
     :== = (:== ~> { [:a, :b] => {
         __unpack(a, [:xs, :x] => {
@@ -89,26 +70,35 @@
     }, [])
     :unify = (:unify ~> { [:pattern, :value] => {
         __unpack(pattern, [:type, :pattern] => {
-            __unpack(type, [:type, :f] => {
-                __compare(type, Compound, {
-                    :v = destructure(value)
-                    :vf = first(v)
-                    :vargs = second(v)
-                    :zipped = reverse(zip(pattern(f), vargs(vf)))
+            __compare(type, Binding, {
+                [[pattern, value]]
+            }, {
+                __compare(type, List, {
+                    :zipped = zip(pattern, value)
                     __compare(zipped, [], {
-                        no-match!([type(f, pattern), value])
+                        no-match!([type(pattern), value])
                     }, {
                         join(flatten(map(apply(unify), zipped)))
                     })
                 }, {
-                    invalid!(type(f, pattern))
-                })
-            }, {
-                __compare(type, Binding, {
-                    [[pattern, value]]
-                }, {
-                    __compare(pattern == value, True, {}, {
-                        no-match!([pattern, value])
+                    __unpack(type, [:type, :f] => {
+                        __compare(type, Compound, {
+                            :v = destructure(value)
+                            :vf = first(v)
+                            :vargs = second(v)
+                            :zipped = reverse(zip(pattern(f), vargs(vf)))
+                            __compare(zipped, [], {
+                                no-match!([type(f, pattern), value])
+                            }, {
+                                join(flatten(map(apply(unify), zipped)))
+                            })
+                        }, {
+                            invalid!(type(f, pattern))
+                        })
+                    }, {
+                        __compare(pattern == value, True, {}, {
+                            no-match!([pattern, value])
+                        })
                     })
                 })
             })
@@ -126,4 +116,22 @@
     }, no-match!, [:_, :arg] => {
         no-match!(arg)
     })
+})
+:match = ([:value, :args] => {
+    ([["with", :clauses]] -> {
+        :result = fold([:result, :clause] => {
+            __compare(result, [], {
+                __handle({
+                    Match(clause(value))
+                }, no-match!, [:r, :arg] => {})
+            }, {
+                result
+            })
+        }, [], clauses)
+        __unpack(result, [:_, :result] => {
+            result
+        }, {
+            no-match!(value)
+        })
+    })(args)
 })

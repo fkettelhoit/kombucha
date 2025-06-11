@@ -3,7 +3,7 @@
 :escape = (:str => { str })
 
 :gen-inline = (:inline => {
-    match: inline with: [
+    match (inline) with: [
         Em(:content) -> { ["<em>", escape(content), "</em>"] }
         Strong(:content) -> { ["<strong>", escape(content), "</strong>"] }
         Code(:content) -> { ["<code>", escape(content), "</code>"] }
@@ -13,7 +13,7 @@
 })
 
 :gen-block = (:gen-block ~> { :block => {
-    match: block with: [
+    match (block) with: [
         Paragraph(:inline) -> { [
             flatten([
                 ["<p>"], flatten(map(gen-inline, inline)), ["</p>"]
@@ -52,7 +52,7 @@
 } })
 
 :gen-section = (:section => {
-    match: section with: [
+    match (section) with: [
         Section(:title, :blocks) -> { flatten([
             [
                 ["<h2>", escape(title), "</h2>"]
@@ -63,7 +63,7 @@
 })
 
 :generate = (:page => {
-    match: page with: [
+    match (page) with: [
         Page(:lang, :stylesheet, :title, :sections) -> { flatten([
             [
                 ["<!DOCTYPE html>"]

@@ -93,7 +93,7 @@ Foo()
 Foo([], Bar)
 
 (Foo
-  (  )
+  [  ]
   Bar)
 
 ( ( Foo
@@ -123,9 +123,9 @@ Foo([], Bar)
 
 [A, B, C]
 
-( A
+[ A
   B
-  C )
+  C ]
 
 ( ( ( []
       C )
@@ -157,7 +157,7 @@ Foo([], Bar)
 
 [](C)(B)(A)
 
-((((  )
+((([  ]
   C)
   B)
   A)
@@ -187,3 +187,40 @@ Foo([], Bar)
 00017:   Return
 
 [A, B, C]
+
+---
+
+Foo bar: Baz
+
+(Foo
+  [ [ "bar"
+      Baz ] ])
+
+( Foo
+  ( []
+    ( ( []
+        Baz )
+      "bar" ) ) )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: ApplyArgToFn
+00006: LoadVar(00001)
+00007: ApplyArgToFn
+00008: ApplyArgToFn
+00009:   Return
+00010: PushString(""bar"")
+00011: PushString("Baz")
+00012: PushString("")
+00013: ApplyArgToFn
+00014: ApplyArgToFn
+00015: PushString("")
+00016: ApplyArgToFn
+00017: PushString("Foo")
+00018: ApplyArgToFn
+00019:   Return
+
+Foo([["bar", Baz]])

@@ -6,11 +6,14 @@ use vorpal::{
     run::State,
 };
 
-fn pretty_prg<'c>(prg: &[Ast<'_>]) -> String {
+fn pretty_ast<'c>(prg: &[Ast<'_>]) -> String {
     fn pretty<'c>(ast: &Ast<'c>, lvl: usize, buf: &mut String) {
         let indent = "  ";
         match &ast.1 {
-            A::Var(s) | A::String(s) | A::Binding(s) => buf.push_str(s),
+            A::Var(s) => buf.push_str(s),
+            A::Atom(s) => buf.push_str(s),
+            A::String(s) => buf.push_str(&format!("\"{s}\"")),
+            A::Binding(s) => buf.push_str(&format!(":{s}")),
             A::Block(items) => {
                 buf.push_str("{ ");
                 for (i, item) in items.iter().enumerate() {
@@ -23,7 +26,7 @@ fn pretty_prg<'c>(prg: &[Ast<'_>]) -> String {
                 buf.push_str(" }")
             }
             A::List(items) => {
-                buf.push_str("( ");
+                buf.push_str("[ ");
                 for (i, item) in items.iter().enumerate() {
                     if i != 0 {
                         buf.push('\n');
@@ -31,7 +34,7 @@ fn pretty_prg<'c>(prg: &[Ast<'_>]) -> String {
                     }
                     pretty(&item, lvl + 1, buf);
                 }
-                buf.push_str(" )")
+                buf.push_str(" ]")
             }
             A::Call(call, args) => {
                 buf.push('(');
@@ -147,7 +150,7 @@ fn test_without_run(code: &str) -> (Vec<String>, Vec<Bytecode>) {
     match parse(code) {
         Err(e) => results.push(e),
         Ok(parsed) => {
-            results.push(pretty_prg(&parsed));
+            results.push(pretty_ast(&parsed));
             let mut ctx = Ctx::new();
             match desugar(parsed.clone(), code, &mut ctx) {
                 Err(e) => results.push(e),

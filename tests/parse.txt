@@ -65,29 +65,36 @@ f(x) foo g(y)
 
 ---
 
-if: x == y do: {
+if (x == y) do: {
     foo()
-} else: Bar
+} else: {
+  Bar
+}
 
-(if-do-else
+(if
   (==
     x
     y)
-  { (foo) }
-  Bar)
+  [ [ "do"
+      { (foo) } ]
+    [ "else"
+      { Bar } ] ])
 
 ---
 
-if: x == y do: (foo: Bar baz: Qux) else: Bar
+if (x == y) do: (foo [Bar] baz: Qux) else: Bar
 
-(if-do-else
+(if
   (==
     x
     y)
-  (foo-baz
-    Bar
-    Qux)
-  Bar)
+  [ [ "do"
+      (foo
+        [ Bar ]
+        [ [ "baz"
+            Qux ] ]) ]
+    [ "else"
+      Bar ] ])
 
 ---
 
@@ -112,57 +119,62 @@ foo = Foo
 ---
 
 :f(:x, :y) = {
-  match: Pair(x, y) with: Vec(
+  match (Pair(x, y)) with: [
     Pair(:x, :x) => { x }
     Pair(:x, :y) => { Mismatch }
-    : => { InvalidPair }
-  )
+    :x => { InvalidPair(x) }
+  ]
 }
 
 (=
   (:f
     :x
     :y)
-  { (match-with
+  { (match
       (Pair
         x
         y)
-      (Vec
-        (=>
-          (Pair
-            :x
-            :x)
-          { x })
-        (=>
-          (Pair
-            :x
-            :y)
-          { Mismatch })
-        (=>
-          :
-          { InvalidPair }))) })
+      [ [ "with"
+          [ (=>
+              (Pair
+                :x
+                :x)
+              { x })
+            (=>
+              (Pair
+                :x
+                :y)
+              { Mismatch })
+            (=>
+              :x
+              { (InvalidPair
+                  x) }) ] ] ]) })
 
 ---
 
-if: x == y do: { print(Equal) } else: { print(NotEqual) }
-if: x == Foo do: Pair(x, x) else: Error
+if (x == y) do: { print(Equal) } else: { print(NotEqual) }
+if (x == Foo) do: Pair(x, x) else: Error
 
-(if-do-else
+(if
   (==
     x
     y)
-  { (print
-      Equal) }
-  { (print
-      NotEqual) })
-(if-do-else
+  [ [ "do"
+      { (print
+          Equal) } ]
+    [ "else"
+      { (print
+          NotEqual) } ] ])
+(if
   (==
     x
     Foo)
-  (Pair
-    x
-    x)
-  Error)
+  [ [ "do"
+      (Pair
+        x
+        x) ]
+    [ "else"
+      Error ] ])
 
 ---
 
@@ -181,12 +193,6 @@ Foo("bar")
 
 (Foo
   "bar")
-
----
-
-"foo
-
-"foo
 
 ---
 

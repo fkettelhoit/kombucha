@@ -1,8 +1,8 @@
 ([:x, :_] => { x })(Foo, {})
 
 ((=>
-  ( :x
-    :_ )
+  [ :x
+    :_ ]
   { x })
   Foo
   {  })
@@ -65,8 +65,8 @@ Value(Foo)
 ([:x, :_] => { x })(:binding, {})
 
 ((=>
-  ( :x
-    :_ )
+  [ :x
+    :_ ]
   { x })
   :binding
   {  })
@@ -129,8 +129,8 @@ Binding("binding")
 ([:x, :_] => { x })(Foo(Bar, Baz), {})
 
 ((=>
-  ( :x
-    :_ )
+  [ :x
+    :_ ]
   { x })
   (Foo
     Bar
@@ -201,8 +201,8 @@ Value(Foo(Bar, Baz))
 ([:x, :_] => { x })(Foo(Bar, :baz), {})
 
 ((=>
-  ( :x
-    :_ )
+  [ :x
+    :_ ]
   { x })
   (Foo
     Bar
@@ -285,8 +285,8 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 ([:x, :_] => { x })(:foo(Bar, :baz), {})
 
 ((=>
-  ( :x
-    :_ )
+  [ :x
+    :_ ]
   { x })
   (:foo
     Bar
@@ -366,3 +366,100 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 00049:   Return
 
 Compound(Binding("foo"), [Value(Bar), Binding("baz")])
+
+---
+
+([:x, :_] => { x })([A, B, [C, :foo]], {})
+
+((=>
+  [ :x
+    :_ ]
+  { x })
+  [ A
+    B
+    [ C
+      :foo ] ]
+  {  })
+
+( ( ( ( =>
+          =>
+            0
+        ( ( []
+            "_" )
+          "x" ) )
+      =>
+        =>
+          1 )
+    ( List
+      ( ( ( []
+            ( List
+              ( ( []
+                  ( Binding
+                    "foo" ) )
+                ( Value
+                  C ) ) ) )
+          ( Value
+            B ) )
+        ( Value
+          A ) ) ) )
+  =>
+    [] )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: ApplyArgToFn
+00006: LoadVar(00001)
+00007: ApplyArgToFn
+00008: ApplyArgToFn
+00009:   Return
+00010: LoadVar(00001)
+00011:   Return
+00012: LoadFn { code: 00010, fvars: 00001 }
+00013:   Return
+00014: LoadVar(00000)
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: PushString("")
+00019:   Return
+00020: PushString("A")
+00021: PushString("Value")
+00022: ApplyArgToFn
+00023: PushString("B")
+00024: PushString("Value")
+00025: ApplyArgToFn
+00026: PushString("C")
+00027: PushString("Value")
+00028: ApplyArgToFn
+00029: PushString(""foo"")
+00030: PushString("Binding")
+00031: ApplyArgToFn
+00032: PushString("")
+00033: ApplyArgToFn
+00034: ApplyArgToFn
+00035: PushString("List")
+00036: ApplyArgToFn
+00037: PushString("")
+00038: ApplyArgToFn
+00039: ApplyArgToFn
+00040: ApplyArgToFn
+00041: PushString("List")
+00042: ApplyArgToFn
+00043: LoadFn { code: 00012, fvars: 00000 }
+00044: PushString(""x"")
+00045: PushString(""_"")
+00046: PushString("")
+00047: ApplyArgToFn
+00048: ApplyArgToFn
+00049: LoadFn { code: 00016, fvars: 00000 }
+00050: ApplyArgToFn
+00051: ApplyArgToFn
+00052: ApplyArgToFn
+00053: LoadFn { code: 00018, fvars: 00000 }
+00054: ApplyFnToArg
+00055:   Return
+
+List([Value(A), Value(B), List([Value(C), Binding("foo")])])

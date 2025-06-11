@@ -82,9 +82,15 @@ Expected an infix argument after the function '+' at line 1, col 3, but found 'k
 
 ---
 
-foo: bar:
+foo bar: baz:
 
-Expected an argument after the keyword 'foo:' at line 1, col 1, but found 'bar:' at line 1, col 6
+Expected an argument after the keyword 'bar:' at line 1, col 5, but found 'baz:' at line 1, col 10
+
+---
+
+foo bar:
+
+Expected an argument after the keyword 'bar:' at line 1, col 5, but the code just ended
 
 ---
 
@@ -103,3 +109,21 @@ Expected the '{' at line 1, col 5 to be closed with '}', but the code just ended
 a + {a, )
 
 Expected the '{' at line 1, col 5 to be closed with '}', but found ')' at line 1, col 9
+
+---
+
+[a, b
+
+Expected the '[' at line 1, col 1 to be closed with ']', but the code just ended
+
+---
+
+foo: bar
+
+Expected an expression, but found 'foo:' at line 1, col 1
+
+---
+
+f("foo)
+
+Unclosed token starting at line 1, col 3
