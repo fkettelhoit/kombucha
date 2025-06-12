@@ -5,7 +5,7 @@ use std::{
     vec::IntoIter,
 };
 
-use crate::bytecode::{BINDING, Bytecode, COMPOUND, Ctx, LIST, NIL, Op, Reflect, VALUE};
+use crate::bytecode::{Bytecode, Ctx, Op, Reflect};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tok<'code> {
@@ -271,18 +271,6 @@ pub fn app(f: Expr, arg: Expr) -> Expr {
     Expr::App(Box::new(f), Box::new(arg))
 }
 
-impl Ctx {
-    pub fn new() -> Self {
-        let mut ctx = Ctx { bindings: vec![], vars: vec![], strs: vec![String::new(); 5] };
-        ctx.strs[Reflect::Nil as usize] = NIL.to_string();
-        ctx.strs[Reflect::Value as usize] = VALUE.to_string();
-        ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
-        ctx.strs[Reflect::Compound as usize] = COMPOUND.to_string();
-        ctx.strs[Reflect::List as usize] = LIST.to_string();
-        ctx
-    }
-}
-
 pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr, String> {
     fn resolve_var(v: &str, ctx: &Ctx) -> Option<usize> {
         ctx.vars.iter().rev().position(|x| *x == v)
@@ -297,41 +285,29 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
         match ast {
             A::Binding(_) => true,
             A::Var(_) | A::Atom(_) | A::String(_) | A::Block(_) => false,
-            A::List(items) => {
+            A::Call(f, _) if contains_bindings(f) => true,
+            A::List(items) | A::Call(_, items) => {
                 let is_macro = items.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
                 !is_macro && items.iter().any(|arg| contains_bindings(arg))
-            }
-            A::Call(f, _) if contains_bindings(f) => true,
-            A::Call(_, args) => {
-                let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
-                !is_macro && args.iter().any(|arg| contains_bindings(arg))
             }
         }
     }
     fn desug_reflect(ast: Ast, ctx: &mut Ctx) -> Result<Expr, (usize, String)> {
-        let has_bindings = contains_bindings(&ast);
+        fn desug_all(xs: Vec<Ast>, ctx: &mut Ctx) -> Result<Vec<Expr>, (usize, String)> {
+            xs.into_iter().map(|x| desug_reflect(x, ctx)).collect()
+        }
         match ast.1 {
-            A::List(items) if has_bindings => {
-                let mut desugared_items = vec![];
-                for item in items.into_iter().rev() {
-                    desugared_items.push(desug_reflect(item, ctx)?);
-                }
-                let mut f = Expr::String(Reflect::Nil as usize);
-                for item in desugared_items {
-                    f = app(f, item)
-                }
-                Ok(app(Expr::String(Reflect::List as usize), f))
+            A::List(items) if contains_bindings(&ast) => {
+                let items = desug_all(items.into_iter().rev().collect(), ctx)?;
+                let nil = Expr::String(Reflect::Nil as usize);
+                let list = items.into_iter().fold(nil, |l, x| app(l, x));
+                Ok(app(Expr::String(Reflect::List as usize), list))
             }
-            A::Call(f, args) if has_bindings => {
-                let mut desugared_args = vec![];
-                for arg in args {
-                    desugared_args.push(desug_reflect(arg, ctx)?);
-                }
+            A::Call(f, args) if contains_bindings(&ast) => {
+                let args = desug_all(args, ctx)?;
+                let nil = Expr::String(Reflect::Nil as usize);
+                let list = args.into_iter().rev().fold(nil, |l, x| app(l, x));
                 let f = desug_reflect(*f, ctx)?;
-                let mut list = Expr::String(Reflect::Nil as usize);
-                for item in desugared_args.into_iter().rev() {
-                    list = app(list, item)
-                }
                 Ok(app(app(Expr::String(Reflect::Compound as usize), f), list))
             }
             A::Var(_) | A::Atom(_) | A::String(_) | A::List(_) | A::Call(_, _) => {
@@ -389,11 +365,10 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                     desugared.push((bindings, desug_val(ast, ctx)?));
                 }
                 let (mut bindings, mut expr) = desugared.pop().unwrap();
-                expr = (0..max(1, bindings)).fold(expr, |x, _| Expr::Abs(Box::new(x)));
+                expr = (0..max(1, bindings)).fold(expr, |x, _| abs(x));
                 for (prev_bindings, x) in desugared.into_iter().rev() {
                     let (f, arg) = if bindings == 0 { (expr, x) } else { (x, expr) };
-                    let app = Expr::App(Box::new(f), Box::new(arg));
-                    expr = (0..max(1, prev_bindings)).fold(app, |x, _| Expr::Abs(Box::new(x)));
+                    expr = (0..max(1, prev_bindings)).fold(app(f, arg), |x, _| abs(x));
                     ctx.vars.truncate(ctx.vars.len() - max(1, bindings));
                     bindings = prev_bindings;
                 }
@@ -416,15 +391,15 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
                 let mut f = desug_val(*f, ctx)?;
                 if args.is_empty() {
-                    f = Expr::App(Box::new(f), Box::new(Expr::String(Reflect::Nil as usize)))
+                    f = app(f, Expr::String(Reflect::Nil as usize));
                 }
                 let is_builtin = matches!(f, Expr::Abs(_));
                 let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
                 for arg in args {
                     if is_macro && !is_builtin {
-                        f = Expr::App(Box::new(f), Box::new(desug_reflect(arg, ctx)?));
+                        f = app(f, desug_reflect(arg, ctx)?);
                     } else {
-                        f = Expr::App(Box::new(f), Box::new(desug_val(arg, ctx)?));
+                        f = app(f, desug_val(arg, ctx)?);
                     }
                 }
                 ctx.bindings.splice(0..0, bindings);
@@ -548,7 +523,7 @@ pub fn codegen(expr: Expr, ctx: Ctx) -> Bytecode {
 pub fn compile(code: &str) -> Result<Bytecode, String> {
     let code = include_str!("_prelude.vo").to_string() + "\n" + code;
     let parsed = parse(&code)?;
-    let mut ctx = Ctx::new();
+    let mut ctx = Ctx::default();
     let expr = desugar(parsed, &code, &mut ctx)?;
     Ok(codegen(expr, ctx))
 }

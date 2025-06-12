@@ -1,3 +1,4 @@
+// The order mirrors their position in the bytecode header:
 pub enum Reflect {
     Nil = 0,
     Value = 1,
@@ -28,13 +29,8 @@ pub struct Ctx {
 
 impl Default for Ctx {
     fn default() -> Self {
-        let mut ctx = Ctx { bindings: vec![], vars: vec![], strs: vec![String::new(); 5] };
-        ctx.strs[Reflect::Nil as usize] = NIL.to_string();
-        ctx.strs[Reflect::Value as usize] = VALUE.to_string();
-        ctx.strs[Reflect::Binding as usize] = BINDING.to_string();
-        ctx.strs[Reflect::Compound as usize] = COMPOUND.to_string();
-        ctx.strs[Reflect::List as usize] = LIST.to_string();
-        ctx
+        let strs = [NIL, VALUE, BINDING, COMPOUND, LIST].map(|s| s.to_string()).to_vec();
+        Ctx { bindings: vec![], vars: vec![], strs }
     }
 }
 

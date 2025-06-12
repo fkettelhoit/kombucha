@@ -147,7 +147,7 @@ fn test_without_run(code: &str) -> (Vec<String>, Vec<Bytecode>) {
         Err(e) => results.push(e),
         Ok(parsed) => {
             results.push(pretty_ast(&parsed));
-            let mut ctx = Ctx::new();
+            let mut ctx = Ctx::default();
             match desugar(parsed.clone(), code, &mut ctx) {
                 Err(e) => results.push(e),
                 Ok(expr) => {
