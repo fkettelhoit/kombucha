@@ -260,7 +260,7 @@ pub enum Expr {
     App(Box<Expr>, Box<Expr>),
     Unpack(Box<Expr>, Box<Expr>, Box<Expr>),
     Handle(Box<Expr>, Box<Expr>, Box<Expr>),
-    Cmp(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
+    Compare(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
 }
 
 pub fn abs(body: Expr) -> Expr {
@@ -351,7 +351,7 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<
                 None if v == "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
                 None if v == "=>" => Ok(abs(abs(Expr::Var(0)))),
                 None if v == "~>" => Ok(abs(abs(Expr::Rec(Box::new(Expr::Var(0)))))),
-                None if v == "__compare" => Ok(abs(abs(abs(abs(Expr::Cmp(
+                None if v == "__compare" => Ok(abs(abs(abs(abs(Expr::Compare(
                     Box::new(Expr::Var(3)),
                     Box::new(Expr::Var(2)),
                     Box::new(Expr::Var(1)),
@@ -450,8 +450,8 @@ fn params(expr: &Expr) -> usize {
         Expr::Unpack(val, _, _) if params(val) == 0 => 0,
         Expr::Handle(_, eff, _) if params(eff) == 0 => 0,
         Expr::Handle(val, _, handler) => min(params(val), params(handler).saturating_sub(2)),
-        Expr::Cmp(a, b, _, _) if params(a) == 0 || params(b) == 0 => 0,
-        Expr::Unpack(_, if_t, if_f) | Expr::Cmp(_, _, if_t, if_f) => {
+        Expr::Compare(a, b, _, _) if params(a) == 0 || params(b) == 0 => 0,
+        Expr::Unpack(_, if_t, if_f) | Expr::Compare(_, _, if_t, if_f) => {
             min(params(if_t).saturating_sub(2), params(if_f).saturating_sub(1))
         }
     }
@@ -491,7 +491,7 @@ fn emit(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             ops.push(Op::LoadFn { code: 0, fvars: 0 }); // the built-in fixed-point combinator
             ops.push(Op::ApplyArgToFn);
         }
-        Expr::Cmp(a, b, if_t, if_f) => {
+        Expr::Compare(a, b, if_t, if_f) => {
             emit(0, *a, ops, fns);
             emit(0, *b, ops, fns);
             emit(args + 1, *if_t, ops, fns);

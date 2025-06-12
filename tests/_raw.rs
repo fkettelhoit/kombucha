@@ -71,7 +71,7 @@ fn eval_raw_if() {
     // if(Foo, Foo, { True }, { False })
     let t = abs(Expr::String(1));
     let f = abs(Expr::String(2));
-    let if_fn = abs(abs(abs(abs(Expr::Cmp(
+    let if_fn = abs(abs(abs(abs(Expr::Compare(
         Box::new(Expr::Var(3)),
         Box::new(Expr::Var(2)),
         Box::new(Expr::Var(1)),

@@ -100,7 +100,7 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
                 }
                 buf.push_str(" )");
             }
-            Expr::Cmp(a, b, t, f) => {
+            Expr::Compare(a, b, t, f) => {
                 buf.push_str("( if");
                 for expr in [a, b, t, f] {
                     buf.push('\n');
