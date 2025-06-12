@@ -6,8 +6,8 @@ use vorpal::{
     run::State,
 };
 
-fn pretty_ast<'c>(prg: &[Ast<'_>]) -> String {
-    fn pretty<'c>(ast: &Ast<'c>, lvl: usize, buf: &mut String) {
+fn pretty_ast<'c>(prg: &[Ast]) -> String {
+    fn pretty<'c>(ast: &Ast, lvl: usize, buf: &mut String) {
         let indent = "  ";
         match &ast.1 {
             A::Var(s) => buf.push_str(s),
