@@ -82,7 +82,7 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
                 pretty(arg, strs, lvl + 1, buf);
                 buf.push_str(" )");
             }
-            Expr::Unpack(v, t, f) => {
+            Expr::Unpack([v, t, f]) => {
                 buf.push_str("( pop");
                 for expr in [v, t, f] {
                     buf.push('\n');
@@ -91,7 +91,7 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
                 }
                 buf.push_str(" )");
             }
-            Expr::Handle(v, e, h) => {
+            Expr::Handle([v, e, h]) => {
                 buf.push_str("( try");
                 for expr in [v, e, h] {
                     buf.push('\n');
@@ -100,7 +100,7 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
                 }
                 buf.push_str(" )");
             }
-            Expr::Compare(a, b, t, f) => {
+            Expr::Compare([a, b, t, f]) => {
                 buf.push_str("( if");
                 for expr in [a, b, t, f] {
                     buf.push('\n');

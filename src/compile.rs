@@ -258,9 +258,9 @@ pub enum Expr {
     Abs(Box<Expr>),
     Rec(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
-    Unpack(Box<Expr>, Box<Expr>, Box<Expr>),
-    Handle(Box<Expr>, Box<Expr>, Box<Expr>),
-    Compare(Box<Expr>, Box<Expr>, Box<Expr>, Box<Expr>),
+    Unpack([Box<Expr>; 3]),
+    Handle([Box<Expr>; 3]),
+    Compare([Box<Expr>; 4]),
 }
 
 pub fn abs(body: Expr) -> Expr {
@@ -322,28 +322,21 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
             A::Var(v) if v.ends_with("!") => {
                 Ok(Expr::Effect(resolve_str(v[..v.len() - 1].to_string(), ctx)))
             }
-            A::Var(v) => match resolve_var(&v, ctx) {
-                Some(v) => Ok(Expr::Var(v)),
-                None if v == "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
-                None if v == "=>" => Ok(abs(abs(Expr::Var(0)))),
-                None if v == "~>" => Ok(abs(abs(Expr::Rec(Box::new(Expr::Var(0)))))),
-                None if v == "__compare" => Ok(abs(abs(abs(abs(Expr::Compare(
-                    Box::new(Expr::Var(3)),
-                    Box::new(Expr::Var(2)),
-                    Box::new(Expr::Var(1)),
-                    Box::new(Expr::Var(0)),
-                )))))),
-                None if v == "__unpack" => Ok(abs(abs(abs(Expr::Unpack(
-                    Box::new(Expr::Var(2)),
-                    Box::new(Expr::Var(1)),
-                    Box::new(Expr::Var(0)),
-                ))))),
-                None if v == "__handle" => Ok(abs(abs(abs(Expr::Handle(
-                    Box::new(Expr::Var(2)),
-                    Box::new(Expr::Var(1)),
-                    Box::new(Expr::Var(0)),
-                ))))),
-                None => Err((pos, v.to_string())),
+            A::Var(v) => match (resolve_var(&v, ctx), v.as_str()) {
+                (Some(v), _) => Ok(Expr::Var(v)),
+                (_, "=") => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
+                (_, "=>") => Ok(abs(abs(Expr::Var(0)))),
+                (_, "~>") => Ok(abs(abs(Expr::Rec(Box::new(Expr::Var(0)))))),
+                (_, "__compare") => {
+                    Ok(abs(abs(abs(abs(Expr::Compare([3, 2, 1, 0].map(|v| Expr::Var(v).into())))))))
+                }
+                (_, "__unpack") => {
+                    Ok(abs(abs(abs(Expr::Unpack([2, 1, 0].map(|v| Expr::Var(v).into()))))))
+                }
+                (_, "__handle") => {
+                    Ok(abs(abs(abs(Expr::Handle([2, 1, 0].map(|v| Expr::Var(v).into()))))))
+                }
+                _ => Err((pos, v.to_string())),
             },
             A::Atom(s) => Ok(Expr::String(resolve_str(s.to_string(), ctx))),
             A::String(s) => Ok(Expr::String(resolve_str(format!("\"{s}\""), ctx))),
@@ -422,11 +415,11 @@ fn params(expr: &Expr) -> usize {
         Expr::Rec(f) => params(f).saturating_sub(1),
         Expr::App(_, arg) if params(arg) == 0 => 0,
         Expr::App(f, _) => params(f).saturating_sub(1),
-        Expr::Unpack(val, _, _) if params(val) == 0 => 0,
-        Expr::Handle(_, eff, _) if params(eff) == 0 => 0,
-        Expr::Handle(val, _, handler) => min(params(val), params(handler).saturating_sub(2)),
-        Expr::Compare(a, b, _, _) if params(a) == 0 || params(b) == 0 => 0,
-        Expr::Unpack(_, if_t, if_f) | Expr::Compare(_, _, if_t, if_f) => {
+        Expr::Unpack([val, _, _]) if params(val) == 0 => 0,
+        Expr::Handle([_, eff, _]) if params(eff) == 0 => 0,
+        Expr::Handle([val, _, handler]) => min(params(val), params(handler).saturating_sub(2)),
+        Expr::Compare([a, b, _, _]) if params(a) == 0 || params(b) == 0 => 0,
+        Expr::Unpack([_, if_t, if_f]) | Expr::Compare([_, _, if_t, if_f]) => {
             min(params(if_t).saturating_sub(2), params(if_f).saturating_sub(1))
         }
     }
@@ -466,7 +459,7 @@ fn emit(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             ops.push(Op::LoadFn { code: 0, fvars: 0 }); // the built-in fixed-point combinator
             ops.push(Op::ApplyArgToFn);
         }
-        Expr::Compare(a, b, if_t, if_f) => {
+        Expr::Compare([a, b, if_t, if_f]) => {
             emit(0, *a, ops, fns);
             emit(0, *b, ops, fns);
             emit(args + 1, *if_t, ops, fns);
@@ -474,7 +467,7 @@ fn emit(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             ops.push(Op::Cmp);
             ops.push(Op::ApplyArgToFn);
         }
-        Expr::Unpack(val, if_t, if_f) => {
+        Expr::Unpack([val, if_t, if_f]) => {
             emit(0, *val, ops, fns);
             emit(args + 2, *if_t, ops, fns);
             emit(args + 1, *if_f, ops, fns);
@@ -482,7 +475,7 @@ fn emit(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             ops.push(Op::ApplyArgToFn);
             ops.push(Op::ApplyArgToFn);
         }
-        Expr::Handle(val, eff, handler) => {
+        Expr::Handle([val, eff, handler]) => {
             emit(args + 1, *val, ops, fns);
             emit(0, *eff, ops, fns);
             emit(0, *handler, ops, fns);

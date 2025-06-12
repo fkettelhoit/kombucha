@@ -71,12 +71,7 @@ fn eval_raw_if() {
     // if(Foo, Foo, { True }, { False })
     let t = abs(Expr::String(1));
     let f = abs(Expr::String(2));
-    let if_fn = abs(abs(abs(abs(Expr::Compare(
-        Box::new(Expr::Var(3)),
-        Box::new(Expr::Var(2)),
-        Box::new(Expr::Var(1)),
-        Box::new(Expr::Var(0)),
-    )))));
+    let if_fn = abs(abs(abs(abs(Expr::Compare([3, 2, 1, 0].map(|v| Box::new(Expr::Var(v))))))));
     let expr = app(app(app(app(if_fn, Expr::String(0)), Expr::String(0)), t), f);
     let strings = vec!["Foo", "True", "False"];
     assert_eq!(eval_expr(expr, strings).unwrap(), "True");
@@ -88,11 +83,7 @@ fn eval_raw_pop() {
     let foo_bar = app(Expr::String(0), Expr::String(1));
     let t = abs(abs(Expr::Var(0)));
     let f = abs(Expr::String(2));
-    let pop_fn = abs(abs(abs(Expr::Unpack(
-        Box::new(Expr::Var(2)),
-        Box::new(Expr::Var(1)),
-        Box::new(Expr::Var(0)),
-    ))));
+    let pop_fn = abs(abs(abs(Expr::Unpack([2, 1, 0].map(|v| Box::new(Expr::Var(v)))))));
     let expr = app(app(app(pop_fn, foo_bar), t), f);
     let strings = vec!["Foo", "Bar", "Error"];
     assert_eq!(eval_expr(expr, strings).unwrap(), "Bar");
