@@ -3,9 +3,10 @@ use vorpal::{compile::compile, run::State};
 #[test]
 fn prelude_match_pair() -> Result<(), String> {
     let code = "
-match (Pair(Foo, Foo)) with: [
-    :_(:x, Bar) -> { Bar }
-    Pair(:x, :x) -> { Twice(x) }
+match (Pair first: Foo second: Foo) with: [
+    Pair([[\"twice\", :x]]) -> { Twice(x) }
+    Pair([[\"first\", :x], [\"second\", :x]]) -> { Twice(x) }
+    Pair([[\"first\", :x], [\"second\", :y]]) -> { invalid-pair!() }
 ]
 ";
     let bytecode = compile(code)?;
@@ -24,7 +25,9 @@ fn prelude_generate_html2() -> Result<(), String> {
     loop {
         match result {
             State::Done(v) => {
-                let result: Vec<Vec<String>> = v.deserialize().unwrap();
+                let result: Vec<Vec<String>> = v.deserialize().unwrap_or_else(|e| {
+                    panic!("{e}. Value: {}", v.pretty());
+                });
                 assert_eq!(
                     result.iter().map(|l| l.join("")).collect::<Vec<_>>().join("\n"),
                     include_str!("../examples/gen_html.page.html")

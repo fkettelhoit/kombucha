@@ -7,26 +7,26 @@
         Em(:content) -> { ["<em>", escape(content), "</em>"] }
         Strong(:content) -> { ["<strong>", escape(content), "</strong>"] }
         Code(:content) -> { ["<code>", escape(content), "</code>"] }
-        Link(:href, :content) -> { [#"<a href=""#, href, #"">"#, escape(content), "</a>"] }
-        :_ -> { [escape(inline)] }
+        Link([["href", :href], ["text", :text]]) -> { [#"<a href=""#, href, #"">"#, escape(text), "</a>"] }
+        :string -> { [escape(string)] }
     ]
 })
 
 :gen-block = (:gen-block ~> { :block => {
     match (block) with: [
         Paragraph(:inline) -> { [
-            flatten([
+            flatten [
                 ["<p>"], flatten(map(gen-inline, inline)), ["</p>"]
-            ])
+            ]
         ] }
-        Subsection(:title, :blocks) -> { flatten([
+        Subsection([["title", :title], ["blocks", :blocks]]) -> { flatten [
             [
                 ["<h3>", escape(title), "</h3>"]
             ]
             flatten(map(gen-block, blocks))
-        ]) }
+        ] }
         Unordered(:blocks) -> {
-            :gen-item = (:item => { flatten([
+            :gen-item = (:item => { flatten [
                 [
                     ["<li>"]
                 ]
@@ -34,8 +34,8 @@
                 [
                     ["</li>"]
                 ]
-            ])})
-            flatten([
+            ]})
+            flatten [
                 [
                     ["<ul>"]
                 ]
@@ -43,7 +43,7 @@
                 [
                     ["</ul>"]
                 ]
-            ])
+            ]
         }
         Code(:code) -> { [
             ["<pre><code>", escape(code), "</code></pre>"]
@@ -53,18 +53,18 @@
 
 :gen-section = (:section => {
     match (section) with: [
-        Section(:title, :blocks) -> { flatten([
+        Section([["title", :title], ["blocks", :blocks]]) -> { flatten [
             [
                 ["<h2>", escape(title), "</h2>"]
             ]
             flatten(map(gen-block, blocks))
-        ]) }
+        ] }
     ]
 })
 
-:generate = (:page => {
+:gen-html = (:page => {
     match (page) with: [
-        Page(:lang, :stylesheet, :title, :sections) -> { flatten([
+        Html([["lang", :lang], ["stylesheet", :stylesheet], ["title", :title], ["sections", :sections]]) -> { flatten [
             [
                 ["<!DOCTYPE html>"]
                 [#"<html lang=""#, escape(lang), #"">"#]
@@ -82,8 +82,8 @@
                 ["</body>"]
                 ["</html>"]
             ]
-        ]) }
+        ] }
     ]
 })
 
-generate(read!())
+gen-html(read!())

@@ -74,7 +74,7 @@
                 [[pattern, value]]
             }, {
                 __compare(type, List, {
-                    :zipped = zip(pattern, value)
+                    :zipped = reverse(zip(pattern, value))
                     __compare(zipped, [], {
                         no-match!([type(pattern), value])
                     }, {

@@ -1,15 +1,15 @@
-Page("en", "styles/style.css", "Page Title", [
-    Section("Section Title", [
-        Paragraph([
+Html lang: "en" stylesheet: "styles/style.css" title: "Page Title" sections: [
+    Section title: "Section Title" blocks: [
+        Paragraph [
             "This is a ", Strong("paragraph"), " with inline ", Code("code"), "."
-        ])
-        Unordered([
-            Paragraph(["Another paragraph with a ", Link("http://www.example.com", "link"), "."])
-        ])
-        Subsection("Subsection Title", [
-            Paragraph(["Another paragraph."])
-            Paragraph(["Another paragraph."])
-        ])
+        ]
+        Unordered [
+            Paragraph ["Another paragraph with a ", Link href: "http://www.example.com" text: "link", "."]
+        ]
+        Subsection title: "Subsection Title" blocks: [
+            Paragraph ["Another paragraph."]
+            Paragraph ["Another paragraph."]
+        ]
         Code(#"["Foo", "Bar"]"#)
-    ])
-])
+    ]
+]
