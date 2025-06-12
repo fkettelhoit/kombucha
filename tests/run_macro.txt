@@ -26,10 +26,10 @@
 00002: LoadVar(00000)
 00003: LoadVar(00001)
 00004: LoadFn { code: 00000, fvars: 00000 }
-00005: ApplyArgToFn
+00005: AppArgToFn
 00006: LoadVar(00001)
-00007: ApplyArgToFn
-00008: ApplyArgToFn
+00007: AppArgToFn
+00008: AppArgToFn
 00009:   Return
 00010: LoadVar(00000)
 00011:   Return
@@ -44,18 +44,18 @@
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
 00022: PushString(""_"")
-00023: ApplyFnToArg
+00023: AppFnToArg
 00024: PushString(""x"")
-00025: ApplyFnToArg
-00026: ApplyFnToArg
+00025: AppFnToArg
+00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
-00028: ApplyFnToArg
+00028: AppFnToArg
 00029: PushString("Value")
 00030: PushString("Foo")
-00031: ApplyFnToArg
-00032: ApplyFnToArg
+00031: AppFnToArg
+00032: AppFnToArg
 00033: LoadFn { code: 00018, fvars: 00000 }
-00034: ApplyFnToArg
+00034: AppFnToArg
 00035:   Return
 
 Value(Foo)
@@ -90,10 +90,10 @@ Value(Foo)
 00002: LoadVar(00000)
 00003: LoadVar(00001)
 00004: LoadFn { code: 00000, fvars: 00000 }
-00005: ApplyArgToFn
+00005: AppArgToFn
 00006: LoadVar(00001)
-00007: ApplyArgToFn
-00008: ApplyArgToFn
+00007: AppArgToFn
+00008: AppArgToFn
 00009:   Return
 00010: LoadVar(00000)
 00011:   Return
@@ -108,18 +108,18 @@ Value(Foo)
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
 00022: PushString(""_"")
-00023: ApplyFnToArg
+00023: AppFnToArg
 00024: PushString(""x"")
-00025: ApplyFnToArg
-00026: ApplyFnToArg
+00025: AppFnToArg
+00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
-00028: ApplyFnToArg
+00028: AppFnToArg
 00029: PushString("Binding")
 00030: PushString(""binding"")
-00031: ApplyFnToArg
-00032: ApplyFnToArg
+00031: AppFnToArg
+00032: AppFnToArg
 00033: LoadFn { code: 00018, fvars: 00000 }
-00034: ApplyFnToArg
+00034: AppFnToArg
 00035:   Return
 
 Binding("binding")
@@ -158,10 +158,10 @@ Binding("binding")
 00002: LoadVar(00000)
 00003: LoadVar(00001)
 00004: LoadFn { code: 00000, fvars: 00000 }
-00005: ApplyArgToFn
+00005: AppArgToFn
 00006: LoadVar(00001)
-00007: ApplyArgToFn
-00008: ApplyArgToFn
+00007: AppArgToFn
+00008: AppArgToFn
 00009:   Return
 00010: LoadVar(00000)
 00011:   Return
@@ -176,22 +176,22 @@ Binding("binding")
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
 00022: PushString(""_"")
-00023: ApplyFnToArg
+00023: AppFnToArg
 00024: PushString(""x"")
-00025: ApplyFnToArg
-00026: ApplyFnToArg
+00025: AppFnToArg
+00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
-00028: ApplyFnToArg
+00028: AppFnToArg
 00029: PushString("Value")
 00030: PushString("Foo")
 00031: PushString("Bar")
-00032: ApplyFnToArg
+00032: AppFnToArg
 00033: PushString("Baz")
-00034: ApplyFnToArg
-00035: ApplyFnToArg
-00036: ApplyFnToArg
+00034: AppFnToArg
+00035: AppFnToArg
+00036: AppFnToArg
 00037: LoadFn { code: 00018, fvars: 00000 }
-00038: ApplyFnToArg
+00038: AppFnToArg
 00039:   Return
 
 Value(Foo(Bar, Baz))
@@ -234,10 +234,10 @@ Value(Foo(Bar, Baz))
 00002: LoadVar(00000)
 00003: LoadVar(00001)
 00004: LoadFn { code: 00000, fvars: 00000 }
-00005: ApplyArgToFn
+00005: AppArgToFn
 00006: LoadVar(00001)
-00007: ApplyArgToFn
-00008: ApplyArgToFn
+00007: AppArgToFn
+00008: AppArgToFn
 00009:   Return
 00010: LoadVar(00000)
 00011:   Return
@@ -252,30 +252,30 @@ Value(Foo(Bar, Baz))
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
 00022: PushString(""_"")
-00023: ApplyFnToArg
+00023: AppFnToArg
 00024: PushString(""x"")
-00025: ApplyFnToArg
-00026: ApplyFnToArg
+00025: AppFnToArg
+00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
-00028: ApplyFnToArg
+00028: AppFnToArg
 00029: PushString("Compound")
 00030: PushString("Value")
 00031: PushString("Foo")
-00032: ApplyFnToArg
-00033: ApplyFnToArg
+00032: AppFnToArg
+00033: AppFnToArg
 00034: PushString("")
 00035: PushString("Binding")
 00036: PushString(""baz"")
-00037: ApplyFnToArg
-00038: ApplyFnToArg
+00037: AppFnToArg
+00038: AppFnToArg
 00039: PushString("Value")
 00040: PushString("Bar")
-00041: ApplyFnToArg
-00042: ApplyFnToArg
-00043: ApplyFnToArg
-00044: ApplyFnToArg
+00041: AppFnToArg
+00042: AppFnToArg
+00043: AppFnToArg
+00044: AppFnToArg
 00045: LoadFn { code: 00018, fvars: 00000 }
-00046: ApplyFnToArg
+00046: AppFnToArg
 00047:   Return
 
 Compound(Value(Foo), [Value(Bar), Binding("baz")])
@@ -319,10 +319,10 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 00002: LoadVar(00000)
 00003: LoadVar(00001)
 00004: LoadFn { code: 00000, fvars: 00000 }
-00005: ApplyArgToFn
+00005: AppArgToFn
 00006: LoadVar(00001)
-00007: ApplyArgToFn
-00008: ApplyArgToFn
+00007: AppArgToFn
+00008: AppArgToFn
 00009:   Return
 00010: LoadVar(00000)
 00011:   Return
@@ -339,30 +339,30 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 00022: LoadFn { code: 00012, fvars: 00000 }
 00023: PushString("")
 00024: PushString(""_"")
-00025: ApplyFnToArg
+00025: AppFnToArg
 00026: PushString(""x"")
-00027: ApplyFnToArg
-00028: ApplyFnToArg
+00027: AppFnToArg
+00028: AppFnToArg
 00029: LoadFn { code: 00016, fvars: 00000 }
-00030: ApplyFnToArg
+00030: AppFnToArg
 00031: PushString("Compound")
 00032: PushString("Binding")
 00033: PushString(""foo"")
-00034: ApplyFnToArg
-00035: ApplyFnToArg
+00034: AppFnToArg
+00035: AppFnToArg
 00036: PushString("")
 00037: PushString("Binding")
 00038: PushString(""baz"")
-00039: ApplyFnToArg
-00040: ApplyFnToArg
+00039: AppFnToArg
+00040: AppFnToArg
 00041: PushString("Value")
 00042: PushString("Bar")
-00043: ApplyFnToArg
-00044: ApplyFnToArg
-00045: ApplyFnToArg
-00046: ApplyFnToArg
+00043: AppFnToArg
+00044: AppFnToArg
+00045: AppFnToArg
+00046: AppFnToArg
 00047: LoadFn { code: 00020, fvars: 00000 }
-00048: ApplyFnToArg
+00048: AppFnToArg
 00049:   Return
 
 Compound(Binding("foo"), [Value(Bar), Binding("baz")])
@@ -410,10 +410,10 @@ Compound(Binding("foo"), [Value(Bar), Binding("baz")])
 00002: LoadVar(00000)
 00003: LoadVar(00001)
 00004: LoadFn { code: 00000, fvars: 00000 }
-00005: ApplyArgToFn
+00005: AppArgToFn
 00006: LoadVar(00001)
-00007: ApplyArgToFn
-00008: ApplyArgToFn
+00007: AppArgToFn
+00008: AppArgToFn
 00009:   Return
 00010: LoadVar(00000)
 00011:   Return
@@ -428,38 +428,38 @@ Compound(Binding("foo"), [Value(Bar), Binding("baz")])
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
 00022: PushString(""_"")
-00023: ApplyFnToArg
+00023: AppFnToArg
 00024: PushString(""x"")
-00025: ApplyFnToArg
-00026: ApplyFnToArg
+00025: AppFnToArg
+00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
-00028: ApplyFnToArg
+00028: AppFnToArg
 00029: PushString("List")
 00030: PushString("")
 00031: PushString("List")
 00032: PushString("")
 00033: PushString("Binding")
 00034: PushString(""foo"")
-00035: ApplyFnToArg
-00036: ApplyFnToArg
+00035: AppFnToArg
+00036: AppFnToArg
 00037: PushString("Value")
 00038: PushString("C")
-00039: ApplyFnToArg
-00040: ApplyFnToArg
-00041: ApplyFnToArg
-00042: ApplyFnToArg
+00039: AppFnToArg
+00040: AppFnToArg
+00041: AppFnToArg
+00042: AppFnToArg
 00043: PushString("Value")
 00044: PushString("B")
-00045: ApplyFnToArg
-00046: ApplyFnToArg
+00045: AppFnToArg
+00046: AppFnToArg
 00047: PushString("Value")
 00048: PushString("A")
-00049: ApplyFnToArg
-00050: ApplyFnToArg
-00051: ApplyFnToArg
-00052: ApplyFnToArg
+00049: AppFnToArg
+00050: AppFnToArg
+00051: AppFnToArg
+00052: AppFnToArg
 00053: LoadFn { code: 00018, fvars: 00000 }
-00054: ApplyFnToArg
+00054: AppFnToArg
 00055:   Return
 
 List([Value(A), Value(B), List([Value(C), Binding("foo")])])

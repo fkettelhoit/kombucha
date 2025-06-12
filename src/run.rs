@@ -73,9 +73,9 @@ impl Vm {
                     let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
                     temps.push(Val::Closure(code, captured))
                 }
-                Op::ApplyFnToArg | Op::ApplyArgToFn => {
+                Op::AppFnToArg | Op::AppArgToFn => {
                     let (arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
-                        (Op::ApplyFnToArg, b, a) => (b, a),
+                        (Op::AppFnToArg, b, a) => (b, a),
                         (_, b, a) => (a, b),
                     };
                     match (f, arg) {

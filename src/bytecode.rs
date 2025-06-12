@@ -40,8 +40,8 @@ pub enum Op {
     LoadString(usize),
     LoadEffect(usize),
     LoadVar(usize),
-    ApplyFnToArg,
-    ApplyArgToFn,
+    AppFnToArg,
+    AppArgToFn,
     Return,
     Cmp,
     Unpack,
@@ -100,8 +100,8 @@ impl Bytecode {
                     buf.push(4 << tag_shift | ((v >> 8 & 0x0F) as u8));
                     buf.push((v & 0xFF) as u8);
                 }
-                Op::ApplyFnToArg => buf.push(5 << tag_shift),
-                Op::ApplyArgToFn => buf.push(6 << tag_shift),
+                Op::AppFnToArg => buf.push(5 << tag_shift),
+                Op::AppArgToFn => buf.push(6 << tag_shift),
                 Op::Return => buf.push(7 << tag_shift),
                 Op::Cmp => buf.push(8 << tag_shift),
                 Op::Unpack => buf.push(9 << tag_shift),
@@ -182,8 +182,8 @@ impl Bytecode {
                     ops.push(Op::LoadVar(v));
                     i += 1;
                 }
-                5 => ops.push(Op::ApplyFnToArg),
-                6 => ops.push(Op::ApplyArgToFn),
+                5 => ops.push(Op::AppFnToArg),
+                6 => ops.push(Op::AppArgToFn),
                 7 => ops.push(Op::Return),
                 8 => ops.push(Op::Cmp),
                 9 => ops.push(Op::Unpack),
