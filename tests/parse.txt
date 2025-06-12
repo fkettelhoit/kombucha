@@ -200,3 +200,13 @@ Foo(##"foo"bar"##)
 
 (Foo
   "foo"bar")
+
+---
+
+X + Y + Z
+
+(+
+  (+
+    X
+    Y)
+  Z)

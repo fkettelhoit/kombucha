@@ -138,23 +138,22 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
             (Ast(pos, value), _) => Ok(Ast(pos, A::Call(Box::new(Ast(pos, value)), trailing))),
         }
     }
-    fn _infix<'c>(toks: &mut Toks<'c>, expr: Ast) -> Result<Ast, E<'c>> {
+    fn _infix<'c>(toks: &mut Toks<'c>, mut x: Ast) -> Result<Ast, E<'c>> {
         let Some((Tok::Ident(f), i, _)) = toks.peek().copied() else {
-            return Ok(expr);
+            return Ok(x);
         };
-        let mut args = vec![expr];
         while let Some((Tok::Ident(s), j, _)) = toks.peek().copied() {
             toks.next();
             if f != s {
                 return Err(E(i, Some((j, s)), _E::InfixFn(f)));
             }
             match _prefix(toks) {
-                Ok(arg) => args.push(arg),
+                Ok(y) => x = Ast(j, A::Call(Box::new(Ast(j, A::Var(f.to_string()))), vec![x, y])),
                 Err(E(_, tok, _E::Value)) => return Err(E(j, tok, _E::InfixArg(s))),
                 Err(e) => return Err(e),
             }
         }
-        Ok(Ast(i, A::Call(Box::new(Ast(i, A::Var(f.to_string()))), args)))
+        Ok(x)
     }
     fn _prefix<'c>(toks: &mut Toks<'c>) -> Result<Ast, E<'c>> {
         let mut expr = _value(toks)?;
