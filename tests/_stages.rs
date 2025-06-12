@@ -2,7 +2,7 @@ use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use common::{pretty_res, pretty_v};
 use vorpal::{
-    bytecode::{Bytecode, Ctx, NIL},
+    bytecode::{Bytecode, Ctx, NIL, Op},
     compile::{A, Ast, Expr, codegen, desugar, parse},
     run::State,
 };
@@ -119,6 +119,25 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
     buf
 }
 
+fn pretty_bytecode(bytecode: &Bytecode) -> String {
+    let mut buf = String::new();
+    for (i, op) in bytecode.ops.iter().enumerate() {
+        match op {
+            Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),
+            Op::LoadString(s) => match bytecode.ctx.strs.get(*s) {
+                Some(s) => buf.push_str(&format!("{i:05}: PushString(\"{s}\")\n")),
+                None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+            },
+            Op::LoadEffect(s) => match bytecode.ctx.strs.get(*s) {
+                Some(s) => buf.push_str(&format!("{i:05}: PushEffect(\"{s}\")\n")),
+                None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+            },
+            _ => buf.push_str(&format!("{i:05}: {op:05?}\n")),
+        }
+    }
+    buf
+}
+
 #[derive(Debug, Clone)]
 struct Failure {
     code: String,
@@ -158,7 +177,7 @@ fn test_without_run(code: &str) -> (Vec<String>, Vec<Bytecode>) {
                     let bytecode = codegen(expr, ctx);
                     let bytes = bytecode.as_bytes().unwrap();
                     let bytecode = Bytecode::parse(&bytes).unwrap();
-                    results.push(bytecode.pretty());
+                    results.push(pretty_bytecode(&bytecode));
                     compiled.push(bytecode);
                 }
             }

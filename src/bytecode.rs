@@ -8,10 +8,6 @@ pub enum Reflect {
 }
 
 pub const NIL: &str = "";
-pub const VALUE: &str = "Value";
-pub const BINDING: &str = "Binding";
-pub const COMPOUND: &str = "Compound";
-pub const LIST: &str = "List";
 
 #[derive(Debug, Clone, Default)]
 pub struct Bytecode {
@@ -29,7 +25,7 @@ pub struct Ctx {
 
 impl Default for Ctx {
     fn default() -> Self {
-        let strs = [NIL, VALUE, BINDING, COMPOUND, LIST].map(|s| s.to_string()).to_vec();
+        let strs = [NIL, "Value", "Binding", "Compound", "List"].map(|s| s.to_string()).to_vec();
         Ctx { bindings: vec![], vars: vec![], strs }
     }
 }
@@ -194,24 +190,5 @@ impl Bytecode {
             i += 1;
         }
         Ok(Bytecode { ctx, ops, start: start_op as usize })
-    }
-
-    pub fn pretty(&self) -> String {
-        let mut buf = String::new();
-        for (i, op) in self.ops.iter().enumerate() {
-            match op {
-                Op::Return => buf.push_str(&format!("{i:05}:   Return\n")),
-                Op::LoadString(s) => match self.ctx.strs.get(*s) {
-                    Some(s) => buf.push_str(&format!("{i:05}: PushString(\"{s}\")\n")),
-                    None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
-                },
-                Op::LoadEffect(s) => match self.ctx.strs.get(*s) {
-                    Some(s) => buf.push_str(&format!("{i:05}: PushEffect(\"{s}\")\n")),
-                    None => buf.push_str(&format!("{i:05}: {op:05?}\n")),
-                },
-                _ => buf.push_str(&format!("{i:05}: {op:05?}\n")),
-            }
-        }
-        buf
     }
 }
