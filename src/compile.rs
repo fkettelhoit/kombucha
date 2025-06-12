@@ -1,9 +1,4 @@
-use std::{
-    cmp::{max, min},
-    iter::{Peekable, once},
-    mem, usize,
-    vec::IntoIter,
-};
+use std::{cmp::max, iter, mem, usize, vec::IntoIter};
 
 use crate::bytecode::{Bytecode, Ctx, Op, Reflect};
 
@@ -26,7 +21,7 @@ enum Tok<'code> {
 fn scan(code: &str) -> Result<Vec<(Tok, usize, &str)>, usize> {
     let mut toks = vec![];
     let mut i = 0;
-    let mut chars = code.char_indices().chain(once((code.len(), ' ')));
+    let mut chars = code.char_indices().chain(iter::once((code.len(), ' ')));
     while let Some((j, c)) = chars.next() {
         let tok = match c {
             '(' => Some(Tok::LParen),
@@ -111,7 +106,7 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
         InfixArg(&'c str),
         KeywordArg(&'c str),
     }
-    type Toks<'c> = Peekable<IntoIter<(Tok<'c>, usize, &'c str)>>;
+    type Toks<'c> = iter::Peekable<IntoIter<(Tok<'c>, usize, &'c str)>>;
     fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast, E<'c>> {
         let Some((Tok::Ident(_) | Tok::Atom(_), _, _)) = toks.peek().copied() else {
             let expr = _prefix(toks)?;
@@ -399,83 +394,53 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
     }
 }
 
-fn params(expr: &Expr) -> usize {
-    match expr {
-        Expr::String(_) => usize::MAX,
-        Expr::Var(_) | Expr::Effect(_) => 1,
-        Expr::Abs(body) => params(body).saturating_add(1),
-        Expr::Rec(f) => params(f).saturating_sub(1),
-        Expr::App(_, arg) if params(arg) == 0 => 0,
-        Expr::App(f, _) => params(f).saturating_sub(1),
-        Expr::Unpack([val, _, _]) if params(val) == 0 => 0,
-        Expr::Handle([_, eff, _]) if params(eff) == 0 => 0,
-        Expr::Handle([val, _, handler]) => min(params(val), params(handler).saturating_sub(2)),
-        Expr::Compare([a, b, _, _]) if params(a) == 0 || params(b) == 0 => 0,
-        Expr::Unpack([_, if_t, if_f]) | Expr::Compare([_, _, if_t, if_f]) => {
-            min(params(if_t).saturating_sub(2), params(if_f).saturating_sub(1))
-        }
-    }
-}
-
-fn emit(args: isize, expr: Expr, ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
-    match expr {
-        Expr::Var(v) => ops.push(Op::LoadVar(v)),
-        Expr::String(s) => ops.push(Op::LoadString(s)),
-        Expr::Effect(e) => ops.push(Op::LoadEffect(e)),
-        Expr::Abs(body) => {
-            let mut f = vec![];
-            emit(args, *body, &mut f, fns);
-            f.push(Op::Return);
-            let fvars = f.iter().fold(0, |captured, op| match *op {
-                Op::LoadVar(v) if v > captured => v,
-                Op::LoadFn { fvars, .. } if fvars > captured => fvars - 1,
-                _ => captured,
-            });
-            let code = fns.len();
-            ops.push(Op::LoadFn { code, fvars });
-            fns.extend(f);
-        }
-        Expr::App(f, arg) => {
-            if params(&f) > 0 {
-                emit(0, *arg, ops, fns);
-                emit(args + 1, *f, ops, fns);
-                ops.push(Op::ApplyArgToFn);
-            } else {
-                emit(args + 1, *f, ops, fns);
-                emit(0, *arg, ops, fns);
+fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
+    for expr in exprs.into_iter() {
+        match expr {
+            Expr::Var(v) => ops.push(Op::LoadVar(*v)),
+            Expr::String(s) => ops.push(Op::LoadString(*s)),
+            Expr::Effect(e) => ops.push(Op::LoadEffect(*e)),
+            Expr::Abs(body) => {
+                let mut f = vec![];
+                emit(&[body], &mut f, fns);
+                f.push(Op::Return);
+                let fvars = f.iter().fold(0, |captured, op| match *op {
+                    Op::LoadVar(v) if v > captured => v,
+                    Op::LoadFn { fvars, .. } if fvars > captured => fvars - 1,
+                    _ => captured,
+                });
+                let code = fns.len();
+                ops.push(Op::LoadFn { code, fvars });
+                fns.extend(f);
+            }
+            Expr::App(f, arg) => {
+                emit(&[f, arg], ops, fns);
                 ops.push(Op::ApplyFnToArg);
             }
-        }
-        Expr::Rec(body) => {
-            emit(args + 1, *body, ops, fns);
-            ops.push(Op::LoadFn { code: 0, fvars: 0 }); // the built-in fixed-point combinator
-            ops.push(Op::ApplyArgToFn);
-        }
-        Expr::Compare([a, b, if_t, if_f]) => {
-            emit(0, *a, ops, fns);
-            emit(0, *b, ops, fns);
-            emit(args + 1, *if_t, ops, fns);
-            emit(args + 1, *if_f, ops, fns);
-            ops.push(Op::Cmp);
-            ops.push(Op::ApplyArgToFn);
-        }
-        Expr::Unpack([val, if_t, if_f]) => {
-            emit(0, *val, ops, fns);
-            emit(args + 2, *if_t, ops, fns);
-            emit(args + 1, *if_f, ops, fns);
-            ops.push(Op::Unpack);
-            ops.push(Op::ApplyArgToFn);
-            ops.push(Op::ApplyArgToFn);
-        }
-        Expr::Handle([val, eff, handler]) => {
-            emit(args + 1, *val, ops, fns);
-            emit(0, *eff, ops, fns);
-            emit(0, *handler, ops, fns);
-            ops.push(Op::Try);
-            ops.push(Op::ApplyArgToFn);
-            ops.push(Op::Unwind);
-            ops.push(Op::ApplyArgToFn);
-            ops.push(Op::ApplyArgToFn);
+            Expr::Rec(body) => {
+                emit(&[body], ops, fns);
+                ops.push(Op::LoadFn { code: 0, fvars: 0 }); // the built-in fixed-point combinator
+                ops.push(Op::ApplyArgToFn);
+            }
+            Expr::Compare([a, b, if_t, if_f]) => {
+                emit(&[a, b, if_t, if_f], ops, fns);
+                ops.push(Op::Cmp);
+                ops.push(Op::ApplyArgToFn);
+            }
+            Expr::Unpack([val, if_t, if_f]) => {
+                emit(&[val, if_t, if_f], ops, fns);
+                ops.push(Op::Unpack);
+                ops.push(Op::ApplyArgToFn);
+                ops.push(Op::ApplyArgToFn);
+            }
+            Expr::Handle([val, eff, handler]) => {
+                emit(&[val, eff, handler], ops, fns);
+                ops.push(Op::Try);
+                ops.push(Op::ApplyArgToFn);
+                ops.push(Op::Unwind);
+                ops.push(Op::ApplyArgToFn);
+                ops.push(Op::ApplyArgToFn);
+            }
         }
     }
 }
@@ -498,7 +463,7 @@ pub fn codegen(expr: Expr, ctx: Ctx) -> Bytecode {
         Op::ApplyArgToFn,                 // f(fix(f))(x)
         Op::Return,
     ];
-    emit(0, expr, &mut main, &mut bytecode);
+    emit(&[&expr], &mut main, &mut bytecode);
     main.push(Op::Return);
     let start = bytecode.len();
     bytecode.extend(main);
@@ -518,7 +483,7 @@ impl Bytecode {
         let parsed = parse(&code)?;
         let expr = desugar(parsed, &code, &mut self.ctx)?;
         let mut main = vec![];
-        emit(0, expr, &mut main, &mut self.ops);
+        emit(&[&expr], &mut main, &mut self.ops);
         main.push(Op::Return);
         let start = self.ops.len();
         self.ops.extend(main);

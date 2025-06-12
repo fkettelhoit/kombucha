@@ -18,11 +18,11 @@ Foo(Bar, Baz)
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("Baz")
+00010: PushString("Foo")
 00011: PushString("Bar")
-00012: PushString("Foo")
-00013: ApplyArgToFn
-00014: ApplyArgToFn
+00012: ApplyFnToArg
+00013: PushString("Baz")
+00014: ApplyFnToArg
 00015:   Return
 
 Foo(Bar, Baz)
@@ -51,13 +51,13 @@ Foo(Bar, Baz(Qux))
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("Qux")
-00011: PushString("Baz")
-00012: ApplyArgToFn
-00013: PushString("Bar")
-00014: PushString("Foo")
-00015: ApplyArgToFn
-00016: ApplyArgToFn
+00010: PushString("Foo")
+00011: PushString("Bar")
+00012: ApplyFnToArg
+00013: PushString("Baz")
+00014: PushString("Qux")
+00015: ApplyFnToArg
+00016: ApplyFnToArg
 00017:   Return
 
 Foo(Bar, Baz(Qux))
@@ -81,9 +81,9 @@ Foo()
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("")
-00011: PushString("Foo")
-00012: ApplyArgToFn
+00010: PushString("Foo")
+00011: PushString("")
+00012: ApplyFnToArg
 00013:   Return
 
 Foo()
@@ -110,11 +110,11 @@ Foo([], Bar)
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("Bar")
+00010: PushString("Foo")
 00011: PushString("")
-00012: PushString("Foo")
-00013: ApplyArgToFn
-00014: ApplyArgToFn
+00012: ApplyFnToArg
+00013: PushString("Bar")
+00014: ApplyFnToArg
 00015:   Return
 
 Foo([], Bar)
@@ -142,13 +142,13 @@ Foo([], Bar)
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("A")
-00011: PushString("B")
-00012: PushString("C")
-00013: PushString("")
-00014: ApplyArgToFn
-00015: ApplyArgToFn
-00016: ApplyArgToFn
+00010: PushString("")
+00011: PushString("C")
+00012: ApplyFnToArg
+00013: PushString("B")
+00014: ApplyFnToArg
+00015: PushString("A")
+00016: ApplyFnToArg
 00017:   Return
 
 [A, B, C]
@@ -177,13 +177,13 @@ Foo([], Bar)
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("A")
-00011: PushString("B")
-00012: PushString("C")
-00013: PushString("")
-00014: ApplyArgToFn
-00015: ApplyArgToFn
-00016: ApplyArgToFn
+00010: PushString("")
+00011: PushString("C")
+00012: ApplyFnToArg
+00013: PushString("B")
+00014: ApplyFnToArg
+00015: PushString("A")
+00016: ApplyFnToArg
 00017:   Return
 
 [A, B, C]
@@ -212,15 +212,15 @@ Foo bar: Baz
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString(""bar"")
-00011: PushString("Baz")
+00010: PushString("Foo")
+00011: PushString("")
 00012: PushString("")
-00013: ApplyArgToFn
-00014: ApplyArgToFn
-00015: PushString("")
-00016: ApplyArgToFn
-00017: PushString("Foo")
-00018: ApplyArgToFn
+00013: PushString("Baz")
+00014: ApplyFnToArg
+00015: PushString(""bar"")
+00016: ApplyFnToArg
+00017: ApplyFnToArg
+00018: ApplyFnToArg
 00019:   Return
 
 Foo([["bar", Baz]])

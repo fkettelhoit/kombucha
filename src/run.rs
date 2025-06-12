@@ -69,33 +69,10 @@ impl Vm {
                 }
                 Op::LoadString(s) => temps.push(Val::String(s)),
                 Op::LoadEffect(eff) => temps.push(Val::Effect(eff)),
-                Op::LoadFn { code, fvars } => match bytecode.ops.get(i + 1).ok_or(i)? {
-                    Op::ApplyArgToFn => {
-                        frames.push((vars.len(), ip + 1));
-                        vars.push(temps.pop().ok_or(ip)?);
-                        ip = code;
-                    }
-                    Op::Return if !frames.is_empty() => {
-                        let (_, ret) = *frames.last().ok_or(ip)?;
-                        match bytecode.ops.get(ret).ok_or(ip)? {
-                            Op::ApplyArgToFn => {
-                                let (frame, ret) = frames.pop().ok_or(ip)?;
-                                let arg = temps.pop().ok_or(ip + 1)?;
-                                frames.push((frame, ret + 1));
-                                vars.push(arg);
-                                ip = code;
-                            }
-                            _ => {
-                                let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                                temps.push(Val::Closure(code, captured))
-                            }
-                        }
-                    }
-                    _ => {
-                        let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                        temps.push(Val::Closure(code, captured))
-                    }
-                },
+                Op::LoadFn { code, fvars } => {
+                    let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
+                    temps.push(Val::Closure(code, captured))
+                }
                 Op::ApplyFnToArg | Op::ApplyArgToFn => {
                     let (arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
                         (Op::ApplyFnToArg, b, a) => (b, a),

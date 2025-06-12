@@ -42,45 +42,45 @@
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("Foo")
-00011:   Return
-00012: LoadVar(00000)
+00010: LoadVar(00000)
+00011: LoadVar(00001)
+00012: ApplyFnToArg
 00013:   Return
-00014: LoadFn { code: 00012, fvars: 00000 }
+00014: LoadFn { code: 00010, fvars: 00001 }
 00015:   Return
-00016: LoadFn { code: 00010, fvars: 00000 }
-00017: PushString(""_"")
-00018: LoadFn { code: 00014, fvars: 00000 }
-00019: ApplyArgToFn
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00000)
+00019: LoadFn { code: 00000, fvars: 00000 }
 00020: ApplyArgToFn
 00021:   Return
-00022: LoadVar(00000)
-00023: LoadFn { code: 00000, fvars: 00000 }
-00024: ApplyArgToFn
+00022: LoadFn { code: 00018, fvars: 00000 }
+00023:   Return
+00024: LoadVar(00000)
 00025:   Return
-00026: LoadFn { code: 00022, fvars: 00000 }
+00026: LoadFn { code: 00024, fvars: 00000 }
 00027:   Return
-00028: LoadVar(00001)
-00029: LoadVar(00000)
-00030: ApplyArgToFn
-00031:   Return
-00032: LoadFn { code: 00028, fvars: 00001 }
-00033:   Return
-00034: LoadFn { code: 00032, fvars: 00000 }
+00028: PushString("Foo")
+00029:   Return
+00030: LoadFn { code: 00026, fvars: 00000 }
+00031: PushString(""_"")
+00032: ApplyFnToArg
+00033: LoadFn { code: 00028, fvars: 00000 }
+00034: ApplyFnToArg
 00035:   Return
-00036: PushString("Bar")
-00037: LoadVar(00000)
-00038: ApplyArgToFn
+00036: LoadVar(00000)
+00037: PushString("Bar")
+00038: ApplyFnToArg
 00039:   Return
 00040: LoadFn { code: 00016, fvars: 00000 }
 00041: PushString(""f"")
-00042: LoadFn { code: 00026, fvars: 00000 }
-00043: ApplyArgToFn
-00044: ApplyArgToFn
-00045: PushString(""f"")
-00046: LoadFn { code: 00034, fvars: 00000 }
-00047: ApplyArgToFn
-00048: ApplyArgToFn
+00042: ApplyFnToArg
+00043: LoadFn { code: 00022, fvars: 00000 }
+00044: PushString(""f"")
+00045: ApplyFnToArg
+00046: LoadFn { code: 00030, fvars: 00000 }
+00047: ApplyFnToArg
+00048: ApplyFnToArg
 00049: LoadFn { code: 00036, fvars: 00000 }
 00050: ApplyFnToArg
 00051:   Return
@@ -136,46 +136,46 @@ Foo
 00008: ApplyArgToFn
 00009:   Return
 00010: LoadVar(00000)
-00011: PushString("Foo")
-00012: ApplyArgToFn
+00011: LoadVar(00001)
+00012: ApplyFnToArg
 00013:   Return
-00014: LoadVar(00000)
+00014: LoadFn { code: 00010, fvars: 00001 }
 00015:   Return
 00016: LoadFn { code: 00014, fvars: 00000 }
 00017:   Return
-00018: LoadFn { code: 00010, fvars: 00000 }
-00019: PushString(""x"")
-00020: LoadFn { code: 00016, fvars: 00000 }
-00021: ApplyArgToFn
-00022: ApplyArgToFn
+00018: LoadVar(00000)
+00019: LoadFn { code: 00000, fvars: 00000 }
+00020: ApplyArgToFn
+00021:   Return
+00022: LoadFn { code: 00018, fvars: 00000 }
 00023:   Return
 00024: LoadVar(00000)
-00025: LoadFn { code: 00000, fvars: 00000 }
-00026: ApplyArgToFn
+00025:   Return
+00026: LoadFn { code: 00024, fvars: 00000 }
 00027:   Return
-00028: LoadFn { code: 00024, fvars: 00000 }
-00029:   Return
-00030: LoadVar(00001)
-00031: LoadVar(00000)
-00032: ApplyArgToFn
-00033:   Return
-00034: LoadFn { code: 00030, fvars: 00001 }
-00035:   Return
-00036: LoadFn { code: 00034, fvars: 00000 }
+00028: PushString("Foo")
+00029: LoadVar(00000)
+00030: ApplyFnToArg
+00031:   Return
+00032: LoadFn { code: 00026, fvars: 00000 }
+00033: PushString(""x"")
+00034: ApplyFnToArg
+00035: LoadFn { code: 00028, fvars: 00000 }
+00036: ApplyFnToArg
 00037:   Return
-00038: PushString("Bar")
-00039: LoadVar(00000)
-00040: ApplyArgToFn
+00038: LoadVar(00000)
+00039: PushString("Bar")
+00040: ApplyFnToArg
 00041:   Return
-00042: LoadFn { code: 00018, fvars: 00000 }
+00042: LoadFn { code: 00016, fvars: 00000 }
 00043: PushString(""f"")
-00044: LoadFn { code: 00028, fvars: 00000 }
-00045: ApplyArgToFn
-00046: ApplyArgToFn
-00047: PushString(""f"")
-00048: LoadFn { code: 00036, fvars: 00000 }
-00049: ApplyArgToFn
-00050: ApplyArgToFn
+00044: ApplyFnToArg
+00045: LoadFn { code: 00022, fvars: 00000 }
+00046: PushString(""f"")
+00047: ApplyFnToArg
+00048: LoadFn { code: 00032, fvars: 00000 }
+00049: ApplyFnToArg
+00050: ApplyFnToArg
 00051: LoadFn { code: 00038, fvars: 00000 }
 00052: ApplyFnToArg
 00053:   Return
@@ -261,90 +261,90 @@ Foo(Bar)
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: LoadVar(00001)
-00011:   Return
-00012: LoadVar(00001)
-00013: LoadVar(00003)
-00014: ApplyArgToFn
+00010: LoadVar(00000)
+00011: LoadVar(00001)
+00012: ApplyFnToArg
+00013:   Return
+00014: LoadFn { code: 00010, fvars: 00001 }
 00015:   Return
-00016: LoadVar(00000)
+00016: LoadFn { code: 00014, fvars: 00000 }
 00017:   Return
-00018: LoadFn { code: 00016, fvars: 00000 }
-00019:   Return
-00020: LoadFn { code: 00012, fvars: 00003 }
-00021: PushString(""_"")
+00018: LoadVar(00000)
+00019: LoadFn { code: 00000, fvars: 00000 }
+00020: ApplyArgToFn
+00021:   Return
 00022: LoadFn { code: 00018, fvars: 00000 }
-00023: ApplyArgToFn
-00024: ApplyArgToFn
+00023:   Return
+00024: LoadVar(00000)
 00025:   Return
-00026: LoadVar(00000)
+00026: LoadFn { code: 00024, fvars: 00000 }
 00027:   Return
-00028: LoadFn { code: 00026, fvars: 00000 }
-00029:   Return
-00030: LoadVar(00002)
-00031: LoadVar(00001)
-00032: LoadVar(00000)
-00033: Unpack
-00034: ApplyArgToFn
-00035: ApplyArgToFn
+00028: LoadVar(00002)
+00029: LoadVar(00001)
+00030: LoadVar(00000)
+00031: Unpack
+00032: ApplyArgToFn
+00033: ApplyArgToFn
+00034:   Return
+00035: LoadFn { code: 00028, fvars: 00002 }
 00036:   Return
-00037: LoadFn { code: 00030, fvars: 00002 }
+00037: LoadFn { code: 00035, fvars: 00001 }
 00038:   Return
-00039: LoadFn { code: 00037, fvars: 00001 }
+00039: LoadVar(00000)
 00040:   Return
-00041: LoadFn { code: 00010, fvars: 00001 }
-00042: LoadFn { code: 00020, fvars: 00002 }
-00043: PushString(""xs"")
-00044: LoadFn { code: 00028, fvars: 00000 }
-00045: ApplyArgToFn
-00046: ApplyArgToFn
-00047: LoadVar(00000)
-00048: LoadFn { code: 00039, fvars: 00000 }
-00049: ApplyArgToFn
-00050: ApplyArgToFn
-00051: ApplyArgToFn
-00052:   Return
-00053: LoadVar(00000)
-00054:   Return
-00055: LoadFn { code: 00053, fvars: 00000 }
+00041: LoadFn { code: 00039, fvars: 00000 }
+00042:   Return
+00043: LoadVar(00000)
+00044:   Return
+00045: LoadFn { code: 00043, fvars: 00000 }
+00046:   Return
+00047: LoadVar(00003)
+00048: LoadVar(00001)
+00049: ApplyFnToArg
+00050:   Return
+00051: LoadFn { code: 00045, fvars: 00000 }
+00052: PushString(""_"")
+00053: ApplyFnToArg
+00054: LoadFn { code: 00047, fvars: 00003 }
+00055: ApplyFnToArg
 00056:   Return
-00057: LoadFn { code: 00041, fvars: 00001 }
-00058: PushString(""xs"")
-00059: LoadFn { code: 00055, fvars: 00000 }
-00060: ApplyArgToFn
-00061: ApplyArgToFn
-00062:   Return
-00063: LoadVar(00000)
-00064: LoadFn { code: 00000, fvars: 00000 }
-00065: ApplyArgToFn
-00066:   Return
-00067: LoadFn { code: 00063, fvars: 00000 }
-00068:   Return
-00069: LoadVar(00001)
-00070: LoadVar(00000)
-00071: ApplyArgToFn
-00072:   Return
-00073: LoadFn { code: 00069, fvars: 00001 }
-00074:   Return
-00075: LoadFn { code: 00073, fvars: 00000 }
+00057: LoadVar(00001)
+00058:   Return
+00059: LoadFn { code: 00037, fvars: 00000 }
+00060: LoadVar(00000)
+00061: ApplyFnToArg
+00062: LoadFn { code: 00041, fvars: 00000 }
+00063: PushString(""xs"")
+00064: ApplyFnToArg
+00065: LoadFn { code: 00051, fvars: 00002 }
+00066: ApplyFnToArg
+00067: ApplyFnToArg
+00068: LoadFn { code: 00057, fvars: 00001 }
+00069: ApplyFnToArg
+00070:   Return
+00071: LoadFn { code: 00026, fvars: 00000 }
+00072: PushString(""xs"")
+00073: ApplyFnToArg
+00074: LoadFn { code: 00059, fvars: 00001 }
+00075: ApplyFnToArg
 00076:   Return
-00077: PushString("Baz")
-00078: PushString("Bar")
-00079: PushString("Foo")
-00080: ApplyArgToFn
-00081: ApplyArgToFn
-00082: LoadVar(00000)
-00083: ApplyArgToFn
+00077: LoadVar(00000)
+00078: PushString("Foo")
+00079: PushString("Bar")
+00080: ApplyFnToArg
+00081: PushString("Baz")
+00082: ApplyFnToArg
+00083: ApplyFnToArg
 00084:   Return
-00085: LoadFn { code: 00057, fvars: 00000 }
+00085: LoadFn { code: 00016, fvars: 00000 }
 00086: PushString(""f"")
-00087: LoadFn { code: 00067, fvars: 00000 }
-00088: ApplyArgToFn
-00089: ApplyArgToFn
-00090: PushString(""f"")
-00091: LoadFn { code: 00075, fvars: 00000 }
-00092: ApplyArgToFn
-00093: ApplyArgToFn
+00087: ApplyFnToArg
+00088: LoadFn { code: 00022, fvars: 00000 }
+00089: PushString(""f"")
+00090: ApplyFnToArg
+00091: LoadFn { code: 00071, fvars: 00000 }
+00092: ApplyFnToArg
+00093: ApplyFnToArg
 00094: LoadFn { code: 00077, fvars: 00000 }
 00095: ApplyFnToArg
 00096:   Return

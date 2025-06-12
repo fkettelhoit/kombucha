@@ -45,50 +45,50 @@ __unpack(Foo(Bar, Baz), :f => { :x => { x } }, { Error })
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("Error")
-00011:   Return
+00010: LoadVar(00002)
+00011: LoadVar(00001)
 00012: LoadVar(00000)
-00013:   Return
-00014: LoadVar(00000)
-00015:   Return
-00016: LoadFn { code: 00014, fvars: 00000 }
-00017:   Return
-00018: LoadFn { code: 00012, fvars: 00000 }
-00019: PushString(""x"")
-00020: LoadFn { code: 00016, fvars: 00000 }
-00021: ApplyArgToFn
-00022: ApplyArgToFn
-00023:   Return
-00024: LoadVar(00000)
-00025:   Return
-00026: LoadFn { code: 00024, fvars: 00000 }
-00027:   Return
-00028: LoadVar(00002)
-00029: LoadVar(00001)
-00030: LoadVar(00000)
-00031: Unpack
-00032: ApplyArgToFn
-00033: ApplyArgToFn
-00034:   Return
-00035: LoadFn { code: 00028, fvars: 00002 }
+00013: Unpack
+00014: ApplyArgToFn
+00015: ApplyArgToFn
+00016:   Return
+00017: LoadFn { code: 00010, fvars: 00002 }
+00018:   Return
+00019: LoadFn { code: 00017, fvars: 00001 }
+00020:   Return
+00021: LoadVar(00000)
+00022:   Return
+00023: LoadFn { code: 00021, fvars: 00000 }
+00024:   Return
+00025: LoadVar(00000)
+00026:   Return
+00027: LoadFn { code: 00025, fvars: 00000 }
+00028:   Return
+00029: LoadVar(00000)
+00030:   Return
+00031: LoadFn { code: 00027, fvars: 00000 }
+00032: PushString(""x"")
+00033: ApplyFnToArg
+00034: LoadFn { code: 00029, fvars: 00000 }
+00035: ApplyFnToArg
 00036:   Return
-00037: LoadFn { code: 00035, fvars: 00001 }
+00037: PushString("Error")
 00038:   Return
-00039: LoadFn { code: 00010, fvars: 00000 }
-00040: LoadFn { code: 00018, fvars: 00000 }
-00041: PushString(""f"")
-00042: LoadFn { code: 00026, fvars: 00000 }
-00043: ApplyArgToFn
-00044: ApplyArgToFn
-00045: PushString("Baz")
-00046: PushString("Bar")
-00047: PushString("Foo")
-00048: ApplyArgToFn
-00049: ApplyArgToFn
-00050: LoadFn { code: 00037, fvars: 00000 }
-00051: ApplyArgToFn
-00052: ApplyArgToFn
-00053: ApplyArgToFn
+00039: LoadFn { code: 00019, fvars: 00000 }
+00040: PushString("Foo")
+00041: PushString("Bar")
+00042: ApplyFnToArg
+00043: PushString("Baz")
+00044: ApplyFnToArg
+00045: ApplyFnToArg
+00046: LoadFn { code: 00023, fvars: 00000 }
+00047: PushString(""f"")
+00048: ApplyFnToArg
+00049: LoadFn { code: 00031, fvars: 00000 }
+00050: ApplyFnToArg
+00051: ApplyFnToArg
+00052: LoadFn { code: 00037, fvars: 00000 }
+00053: ApplyFnToArg
 00054:   Return
 
 Baz
@@ -138,46 +138,46 @@ __unpack(Foo, :f => { :x => { x } }, { Error })
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("Error")
-00011:   Return
+00010: LoadVar(00002)
+00011: LoadVar(00001)
 00012: LoadVar(00000)
-00013:   Return
-00014: LoadVar(00000)
-00015:   Return
-00016: LoadFn { code: 00014, fvars: 00000 }
-00017:   Return
-00018: LoadFn { code: 00012, fvars: 00000 }
-00019: PushString(""x"")
-00020: LoadFn { code: 00016, fvars: 00000 }
-00021: ApplyArgToFn
-00022: ApplyArgToFn
-00023:   Return
-00024: LoadVar(00000)
-00025:   Return
-00026: LoadFn { code: 00024, fvars: 00000 }
-00027:   Return
-00028: LoadVar(00002)
-00029: LoadVar(00001)
-00030: LoadVar(00000)
-00031: Unpack
-00032: ApplyArgToFn
-00033: ApplyArgToFn
-00034:   Return
-00035: LoadFn { code: 00028, fvars: 00002 }
+00013: Unpack
+00014: ApplyArgToFn
+00015: ApplyArgToFn
+00016:   Return
+00017: LoadFn { code: 00010, fvars: 00002 }
+00018:   Return
+00019: LoadFn { code: 00017, fvars: 00001 }
+00020:   Return
+00021: LoadVar(00000)
+00022:   Return
+00023: LoadFn { code: 00021, fvars: 00000 }
+00024:   Return
+00025: LoadVar(00000)
+00026:   Return
+00027: LoadFn { code: 00025, fvars: 00000 }
+00028:   Return
+00029: LoadVar(00000)
+00030:   Return
+00031: LoadFn { code: 00027, fvars: 00000 }
+00032: PushString(""x"")
+00033: ApplyFnToArg
+00034: LoadFn { code: 00029, fvars: 00000 }
+00035: ApplyFnToArg
 00036:   Return
-00037: LoadFn { code: 00035, fvars: 00001 }
+00037: PushString("Error")
 00038:   Return
-00039: LoadFn { code: 00010, fvars: 00000 }
-00040: LoadFn { code: 00018, fvars: 00000 }
-00041: PushString(""f"")
-00042: LoadFn { code: 00026, fvars: 00000 }
-00043: ApplyArgToFn
-00044: ApplyArgToFn
-00045: PushString("Foo")
-00046: LoadFn { code: 00037, fvars: 00000 }
-00047: ApplyArgToFn
-00048: ApplyArgToFn
-00049: ApplyArgToFn
+00039: LoadFn { code: 00019, fvars: 00000 }
+00040: PushString("Foo")
+00041: ApplyFnToArg
+00042: LoadFn { code: 00023, fvars: 00000 }
+00043: PushString(""f"")
+00044: ApplyFnToArg
+00045: LoadFn { code: 00031, fvars: 00000 }
+00046: ApplyFnToArg
+00047: ApplyFnToArg
+00048: LoadFn { code: 00037, fvars: 00000 }
+00049: ApplyFnToArg
 00050:   Return
 
 Error
@@ -231,50 +231,50 @@ __unpack(Foo(Bar, Baz), :f => { :x => { f } }, { Error })
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("Error")
-00011:   Return
-00012: LoadVar(00001)
-00013:   Return
-00014: LoadVar(00000)
-00015:   Return
-00016: LoadFn { code: 00014, fvars: 00000 }
-00017:   Return
-00018: LoadFn { code: 00012, fvars: 00001 }
-00019: PushString(""x"")
-00020: LoadFn { code: 00016, fvars: 00000 }
-00021: ApplyArgToFn
-00022: ApplyArgToFn
-00023:   Return
-00024: LoadVar(00000)
-00025:   Return
-00026: LoadFn { code: 00024, fvars: 00000 }
-00027:   Return
-00028: LoadVar(00002)
+00010: LoadVar(00002)
+00011: LoadVar(00001)
+00012: LoadVar(00000)
+00013: Unpack
+00014: ApplyArgToFn
+00015: ApplyArgToFn
+00016:   Return
+00017: LoadFn { code: 00010, fvars: 00002 }
+00018:   Return
+00019: LoadFn { code: 00017, fvars: 00001 }
+00020:   Return
+00021: LoadVar(00000)
+00022:   Return
+00023: LoadFn { code: 00021, fvars: 00000 }
+00024:   Return
+00025: LoadVar(00000)
+00026:   Return
+00027: LoadFn { code: 00025, fvars: 00000 }
+00028:   Return
 00029: LoadVar(00001)
-00030: LoadVar(00000)
-00031: Unpack
-00032: ApplyArgToFn
-00033: ApplyArgToFn
-00034:   Return
-00035: LoadFn { code: 00028, fvars: 00002 }
+00030:   Return
+00031: LoadFn { code: 00027, fvars: 00000 }
+00032: PushString(""x"")
+00033: ApplyFnToArg
+00034: LoadFn { code: 00029, fvars: 00001 }
+00035: ApplyFnToArg
 00036:   Return
-00037: LoadFn { code: 00035, fvars: 00001 }
+00037: PushString("Error")
 00038:   Return
-00039: LoadFn { code: 00010, fvars: 00000 }
-00040: LoadFn { code: 00018, fvars: 00000 }
-00041: PushString(""f"")
-00042: LoadFn { code: 00026, fvars: 00000 }
-00043: ApplyArgToFn
-00044: ApplyArgToFn
-00045: PushString("Baz")
-00046: PushString("Bar")
-00047: PushString("Foo")
-00048: ApplyArgToFn
-00049: ApplyArgToFn
-00050: LoadFn { code: 00037, fvars: 00000 }
-00051: ApplyArgToFn
-00052: ApplyArgToFn
-00053: ApplyArgToFn
+00039: LoadFn { code: 00019, fvars: 00000 }
+00040: PushString("Foo")
+00041: PushString("Bar")
+00042: ApplyFnToArg
+00043: PushString("Baz")
+00044: ApplyFnToArg
+00045: ApplyFnToArg
+00046: LoadFn { code: 00023, fvars: 00000 }
+00047: PushString(""f"")
+00048: ApplyFnToArg
+00049: LoadFn { code: 00031, fvars: 00000 }
+00050: ApplyFnToArg
+00051: ApplyFnToArg
+00052: LoadFn { code: 00037, fvars: 00000 }
+00053: ApplyFnToArg
 00054:   Return
 
 Foo(Bar)
@@ -326,48 +326,48 @@ __unpack(Foo(Bar), :f => { :x => { f } }, { Error })
 00007: ApplyArgToFn
 00008: ApplyArgToFn
 00009:   Return
-00010: PushString("Error")
-00011:   Return
-00012: LoadVar(00001)
-00013:   Return
-00014: LoadVar(00000)
-00015:   Return
-00016: LoadFn { code: 00014, fvars: 00000 }
-00017:   Return
-00018: LoadFn { code: 00012, fvars: 00001 }
-00019: PushString(""x"")
-00020: LoadFn { code: 00016, fvars: 00000 }
-00021: ApplyArgToFn
-00022: ApplyArgToFn
-00023:   Return
-00024: LoadVar(00000)
-00025:   Return
-00026: LoadFn { code: 00024, fvars: 00000 }
-00027:   Return
-00028: LoadVar(00002)
+00010: LoadVar(00002)
+00011: LoadVar(00001)
+00012: LoadVar(00000)
+00013: Unpack
+00014: ApplyArgToFn
+00015: ApplyArgToFn
+00016:   Return
+00017: LoadFn { code: 00010, fvars: 00002 }
+00018:   Return
+00019: LoadFn { code: 00017, fvars: 00001 }
+00020:   Return
+00021: LoadVar(00000)
+00022:   Return
+00023: LoadFn { code: 00021, fvars: 00000 }
+00024:   Return
+00025: LoadVar(00000)
+00026:   Return
+00027: LoadFn { code: 00025, fvars: 00000 }
+00028:   Return
 00029: LoadVar(00001)
-00030: LoadVar(00000)
-00031: Unpack
-00032: ApplyArgToFn
-00033: ApplyArgToFn
-00034:   Return
-00035: LoadFn { code: 00028, fvars: 00002 }
+00030:   Return
+00031: LoadFn { code: 00027, fvars: 00000 }
+00032: PushString(""x"")
+00033: ApplyFnToArg
+00034: LoadFn { code: 00029, fvars: 00001 }
+00035: ApplyFnToArg
 00036:   Return
-00037: LoadFn { code: 00035, fvars: 00001 }
+00037: PushString("Error")
 00038:   Return
-00039: LoadFn { code: 00010, fvars: 00000 }
-00040: LoadFn { code: 00018, fvars: 00000 }
-00041: PushString(""f"")
-00042: LoadFn { code: 00026, fvars: 00000 }
-00043: ApplyArgToFn
-00044: ApplyArgToFn
-00045: PushString("Bar")
-00046: PushString("Foo")
-00047: ApplyArgToFn
-00048: LoadFn { code: 00037, fvars: 00000 }
-00049: ApplyArgToFn
-00050: ApplyArgToFn
-00051: ApplyArgToFn
+00039: LoadFn { code: 00019, fvars: 00000 }
+00040: PushString("Foo")
+00041: PushString("Bar")
+00042: ApplyFnToArg
+00043: ApplyFnToArg
+00044: LoadFn { code: 00023, fvars: 00000 }
+00045: PushString(""f"")
+00046: ApplyFnToArg
+00047: LoadFn { code: 00031, fvars: 00000 }
+00048: ApplyFnToArg
+00049: ApplyFnToArg
+00050: LoadFn { code: 00037, fvars: 00000 }
+00051: ApplyFnToArg
 00052:   Return
 
 Foo
