@@ -1,8 +1,11 @@
+use common::pretty_v;
 use vorpal::{
     bytecode::Ctx,
     compile::{Expr, abs, app, codegen},
     run::State,
 };
+
+mod common;
 
 #[test]
 fn eval_raw_app1() {
@@ -94,8 +97,8 @@ fn eval_expr(expr: Expr, strings: Vec<&str>) -> Result<String, String> {
     ctx.strs = strings.into_iter().map(|s| s.to_string()).collect();
     let bytecode = codegen(expr, ctx);
     match bytecode.run() {
-        Ok(State::Done(v)) => Ok(v.pretty()),
-        Ok(State::Resumable(vm)) => Err(format!("{}!({})", vm.effect(), vm.arg_pretty())),
+        Ok(State::Done(v)) => Ok(pretty_v(&v)),
+        Ok(State::Resumable(vm)) => Err(format!("{}!(...)", vm.effect())),
         Err(e) => Err(format!("Error at op {e}")),
     }
 }

@@ -1,4 +1,7 @@
+use common::pretty_v;
 use vorpal::{compile::compile, run::State};
+
+mod common;
 
 #[test]
 fn prelude_match_pair() -> Result<(), String> {
@@ -11,8 +14,8 @@ match (Pair first: Foo second: Foo) with: [
 ";
     let bytecode = compile(code)?;
     match bytecode.run().unwrap() {
-        State::Done(v) => assert_eq!(v.pretty(), "Twice(Foo)"),
-        State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg_pretty()),
+        State::Done(v) => assert_eq!(pretty_v(&v), "Twice(Foo)"),
+        State::Resumable(vm) => panic!("{}!(...)", vm.effect()),
     }
     Ok(())
 }
@@ -25,9 +28,7 @@ fn prelude_generate_html2() -> Result<(), String> {
     loop {
         match result {
             State::Done(v) => {
-                let result: Vec<Vec<String>> = v.deserialize().unwrap_or_else(|e| {
-                    panic!("{e}. Value: {}", v.pretty());
-                });
+                let result: Vec<Vec<String>> = v.deserialize().unwrap();
                 assert_eq!(
                     result.iter().map(|l| l.join("")).collect::<Vec<_>>().join("\n"),
                     include_str!("../examples/gen_html.page.html")
@@ -39,7 +40,7 @@ fn prelude_generate_html2() -> Result<(), String> {
                     let start = vm.bytecode.load(include_str!("../examples/gen_html.page.vo"))?;
                     result = vm.resume_at(start).unwrap();
                 }
-                eff => panic!("{eff}!({})", vm.arg_pretty()),
+                eff => panic!("{eff}!(...)"),
             },
         }
     }

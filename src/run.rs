@@ -1,4 +1,4 @@
-use crate::bytecode::{Bytecode, NIL, Op, Reflect};
+use crate::bytecode::{Bytecode, Op, Reflect};
 use std::{rc::Rc, usize};
 
 impl Bytecode {
@@ -210,10 +210,6 @@ impl Resumable {
         self.bytecode.ctx.strs.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
     }
 
-    pub fn arg_pretty(&self) -> String {
-        pretty(&self.arg, &self.bytecode.ctx.strs)
-    }
-
     pub fn intern_atom(&mut self, s: String) -> Val {
         Val::String(intern(&mut self.bytecode.ctx.strs, s))
     }
@@ -247,41 +243,4 @@ pub(crate) fn intern(strs: &mut Vec<String>, s: String) -> usize {
         strs.push(s);
         strs.len() - 1
     })
-}
-
-impl Value {
-    pub fn pretty(&self) -> String {
-        pretty(&self.val, &self.bytecode.ctx.strs)
-    }
-}
-
-fn pretty(v: &Val, strs: &Vec<String>) -> String {
-    match v {
-        Val::String(s) if strs[*s] == NIL => "[]".to_string(),
-        Val::String(s) => strs[*s].to_string(),
-        Val::Effect(eff) => format!("{}!", strs[*eff]),
-        Val::Closure(c, vs) => {
-            let closed = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-            format!("{c} [{}]", closed.join(", "))
-        }
-        Val::Record(s, vs) if strs[*s] == NIL => {
-            let items = vs.iter().rev().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-            format!("[{}]", items.join(", "))
-        }
-        Val::Record(s, vs) => {
-            if vs.len() == 1 {
-                match *vs[0] {
-                    Val::String(v) if strs[v] == NIL => {
-                        return format!("{}()", pretty(&Val::String(*s), strs));
-                    }
-                    _ => {}
-                }
-            }
-            let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-            format!("{}({})", strs[*s].to_string(), items.join(", "))
-        }
-        Val::Resumable(_, _) => {
-            format!("resumable")
-        }
-    }
 }

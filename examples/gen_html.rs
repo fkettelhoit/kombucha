@@ -46,7 +46,7 @@ fn main() -> ExitCode {
                             },
                         },
                         eff => {
-                            eprintln!("{eff}!({})", vm.arg_pretty());
+                            eprintln!("{eff}!(...)");
                             return ExitCode::FAILURE;
                         }
                     },
