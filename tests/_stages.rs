@@ -41,7 +41,6 @@ fn pretty_ast<'c>(prg: &[Ast<'_>]) -> String {
                 match call {
                     Call::Prefix(f) => pretty(&f, lvl, buf),
                     Call::Infix(f) => buf.push_str(f),
-                    Call::Keyword(f) => buf.push_str(&f.join("-")),
                 }
                 for arg in args {
                     buf.push('\n');

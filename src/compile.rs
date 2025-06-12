@@ -91,7 +91,6 @@ pub enum A<'code> {
 pub enum Call<'code> {
     Infix(&'code str),
     Prefix(Box<Ast<'code>>),
-    Keyword(Vec<&'code str>),
 }
 
 fn pos_at(i: usize, code: &str) -> String {
@@ -342,10 +341,6 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<
                 let f = match call {
                     Call::Infix(f) => desug_reflect(Ast(ast.0, A::Var(f)), ctx)?,
                     Call::Prefix(f) => desug_reflect(*f, ctx)?,
-                    Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
-                        Some(v) => app(Expr::String(Reflect::Value as usize), Expr::Var(v)),
-                        None => return Err((ast.0, keywords.join("-"))),
-                    },
                 };
                 let mut list = Expr::String(Reflect::Nil as usize);
                 for item in desugared_args.into_iter().rev() {
@@ -436,10 +431,6 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<
                 let mut f = match call {
                     Call::Infix(f) => desug_val(Ast(pos, A::Var(f)), ctx)?,
                     Call::Prefix(f) => desug_val(*f, ctx)?,
-                    Call::Keyword(keywords) => match resolve_var(&keywords.join("-"), ctx) {
-                        Some(v) => Expr::Var(v),
-                        None => return Err((pos, keywords.join("-"))),
-                    },
                 };
                 if args.is_empty() {
                     f = Expr::App(Box::new(f), Box::new(Expr::String(Reflect::Nil as usize)))
