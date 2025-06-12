@@ -84,13 +84,7 @@ pub enum A<'code> {
     Binding(String),
     Block(Vec<Ast<'code>>),
     List(Vec<Ast<'code>>),
-    Call(Call<'code>, Vec<Ast<'code>>),
-}
-
-#[derive(Debug, Clone)]
-pub enum Call<'code> {
-    Infix(&'code str),
-    Prefix(Box<Ast<'code>>),
+    Call(Box<Ast<'code>>, Vec<Ast<'code>>),
 }
 
 fn pos_at(i: usize, code: &str) -> String {
@@ -124,9 +118,9 @@ pub fn parse(code: &str) -> Result<Vec<Ast<'_>>, String> {
             return _infix(toks, expr);
         };
         let expr = _prefix(toks)?;
-        let mut trailing_args = vec![];
+        let mut trailing = vec![];
         while let Some((Tok::LBracket | Tok::LBrace, _, _)) = toks.peek().copied() {
-            trailing_args.push(_value(toks)?);
+            trailing.push(_value(toks)?);
         }
         let mut keyword_args = vec![];
         while let Some((Tok::Keyword(s), i, tok_s)) = toks.peek().copied() {
@@ -139,17 +133,14 @@ pub fn parse(code: &str) -> Result<Vec<Ast<'_>>, String> {
             }
         }
         if let Some(Ast(i, _)) = keyword_args.first() {
-            trailing_args.push(Ast(*i, A::List(keyword_args)));
+            trailing.push(Ast(*i, A::List(keyword_args)));
         }
-        match (expr, trailing_args.len()) {
+        match (expr, trailing.len()) {
             (expr, 0) => _infix(toks, expr),
-            (Ast(pos, A::Call(Call::Prefix(f), mut args)), _) => {
-                args.extend(trailing_args);
-                Ok(Ast(pos, A::Call(Call::Prefix(f), args)))
+            (Ast(pos, A::Call(f, args)), _) => {
+                Ok(Ast(pos, A::Call(f, args.into_iter().chain(trailing).collect())))
             }
-            (Ast(pos, value), _) => {
-                Ok(Ast(pos, A::Call(Call::Prefix(Box::new(Ast(pos, value))), trailing_args)))
-            }
+            (Ast(pos, value), _) => Ok(Ast(pos, A::Call(Box::new(Ast(pos, value)), trailing))),
         }
     }
     fn _infix<'c>(toks: &mut Toks<'c>, expr: Ast<'c>) -> Result<Ast<'c>, E<'c>> {
@@ -168,7 +159,7 @@ pub fn parse(code: &str) -> Result<Vec<Ast<'_>>, String> {
                 Err(e) => return Err(e),
             }
         }
-        Ok(Ast(i, A::Call(Call::Infix(f), args)))
+        Ok(Ast(i, A::Call(Box::new(Ast(i, A::Var(f))), args)))
     }
     fn _prefix<'c>(toks: &mut Toks<'c>) -> Result<Ast<'c>, E<'c>> {
         let mut expr = _value(toks)?;
@@ -176,7 +167,7 @@ pub fn parse(code: &str) -> Result<Vec<Ast<'_>>, String> {
         while let Some((Tok::LParen, i, _)) = toks.peek().copied() {
             toks.next();
             let args = _exprs(toks, i, Some(Tok::RParen))?;
-            expr = Ast(pos, A::Call(Call::Prefix(Box::new(expr)), args));
+            expr = Ast(pos, A::Call(Box::new(expr), args));
         }
         Ok(expr)
     }
@@ -310,13 +301,11 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<
                 let is_macro = items.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
                 !is_macro && items.iter().any(|arg| contains_bindings(arg))
             }
-            A::Call(call, args) => match call {
-                Call::Prefix(f) if contains_bindings(f) => true,
-                _ => {
-                    let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
-                    !is_macro && args.iter().any(|arg| contains_bindings(arg))
-                }
-            },
+            A::Call(f, _) if contains_bindings(f) => true,
+            A::Call(_, args) => {
+                let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
+                !is_macro && args.iter().any(|arg| contains_bindings(arg))
+            }
         }
     }
     fn desug_reflect(ast: Ast<'_>, ctx: &mut Ctx) -> Result<Expr, (usize, String)> {
@@ -333,15 +322,12 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<
                 }
                 Ok(app(Expr::String(Reflect::List as usize), f))
             }
-            A::Call(call, args) if has_bindings => {
+            A::Call(f, args) if has_bindings => {
                 let mut desugared_args = vec![];
                 for arg in args {
                     desugared_args.push(desug_reflect(arg, ctx)?);
                 }
-                let f = match call {
-                    Call::Infix(f) => desug_reflect(Ast(ast.0, A::Var(f)), ctx)?,
-                    Call::Prefix(f) => desug_reflect(*f, ctx)?,
-                };
+                let f = desug_reflect(*f, ctx)?;
                 let mut list = Expr::String(Reflect::Nil as usize);
                 for item in desugared_args.into_iter().rev() {
                     list = app(list, item)
@@ -426,12 +412,9 @@ pub fn desugar<'c>(block: Vec<Ast<'c>>, code: &'c str, ctx: &mut Ctx) -> Result<
                 }
                 Ok(list)
             }
-            A::Call(call, args) => {
+            A::Call(f, args) => {
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
-                let mut f = match call {
-                    Call::Infix(f) => desug_val(Ast(pos, A::Var(f)), ctx)?,
-                    Call::Prefix(f) => desug_val(*f, ctx)?,
-                };
+                let mut f = desug_val(*f, ctx)?;
                 if args.is_empty() {
                     f = Expr::App(Box::new(f), Box::new(Expr::String(Reflect::Nil as usize)))
                 }

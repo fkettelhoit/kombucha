@@ -2,7 +2,7 @@ use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use vorpal::{
     bytecode::{Bytecode, Ctx, NIL},
-    compile::{A, Ast, Call, Expr, codegen, desugar, parse},
+    compile::{A, Ast, Expr, codegen, desugar, parse},
     run::State,
 };
 
@@ -36,12 +36,9 @@ fn pretty_ast<'c>(prg: &[Ast<'_>]) -> String {
                 }
                 buf.push_str(" ]")
             }
-            A::Call(call, args) => {
+            A::Call(f, args) => {
                 buf.push('(');
-                match call {
-                    Call::Prefix(f) => pretty(&f, lvl, buf),
-                    Call::Infix(f) => buf.push_str(f),
-                }
+                pretty(&f, lvl, buf);
                 for arg in args {
                     buf.push('\n');
                     buf.push_str(&indent.repeat(lvl + 1));
