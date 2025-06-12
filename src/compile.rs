@@ -271,6 +271,10 @@ pub fn app(f: Expr, arg: Expr) -> Expr {
     Expr::App(Box::new(f), Box::new(arg))
 }
 
+pub fn nil() -> Expr {
+    Expr::String(Reflect::Nil as usize)
+}
+
 pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr, String> {
     fn resolve_var(v: &str, ctx: &Ctx) -> Option<usize> {
         ctx.vars.iter().rev().position(|x| *x == v)
@@ -299,14 +303,12 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
         match ast.1 {
             A::List(items) if contains_bindings(&ast) => {
                 let items = desug_all(items.into_iter().rev().collect(), ctx)?;
-                let nil = Expr::String(Reflect::Nil as usize);
-                let list = items.into_iter().fold(nil, |l, x| app(l, x));
+                let list = items.into_iter().fold(nil(), |l, x| app(l, x));
                 Ok(app(Expr::String(Reflect::List as usize), list))
             }
             A::Call(f, args) if contains_bindings(&ast) => {
                 let args = desug_all(args, ctx)?;
-                let nil = Expr::String(Reflect::Nil as usize);
-                let list = args.into_iter().rev().fold(nil, |l, x| app(l, x));
+                let list = args.into_iter().rev().fold(nil(), |l, x| app(l, x));
                 let f = desug_reflect(*f, ctx)?;
                 Ok(app(app(Expr::String(Reflect::Compound as usize), f), list))
             }
@@ -370,30 +372,20 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                 Ok(expr)
             }
             A::List(items) => {
-                let mut list = Expr::String(Reflect::Nil as usize);
-                let mut desugared = vec![];
-                for item in items {
-                    desugared.push(desug_val(item, ctx)?);
-                }
-                for item in desugared.into_iter().rev() {
-                    list = app(list, item)
-                }
-                Ok(list)
+                let items: Vec<_> =
+                    items.into_iter().map(|x| desug_val(x, ctx)).collect::<Result<_, _>>()?;
+                Ok(items.into_iter().rev().fold(nil(), |l, x| app(l, x)))
             }
             A::Call(f, args) => {
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
                 let mut f = desug_val(*f, ctx)?;
-                if args.is_empty() {
-                    f = app(f, Expr::String(Reflect::Nil as usize));
-                }
                 let is_builtin = matches!(f, Expr::Abs(_));
-                let is_macro = args.iter().any(|Ast(_, arg)| matches!(arg, A::Block(_)));
-                for arg in args {
-                    if is_macro && !is_builtin {
-                        f = app(f, desug_reflect(arg, ctx)?);
-                    } else {
-                        f = app(f, desug_val(arg, ctx)?);
-                    }
+                let is_macro = !is_builtin && args.iter().any(|x| matches!(x, Ast(_, A::Block(_))));
+                if args.is_empty() {
+                    f = app(f, nil());
+                }
+                for x in args {
+                    f = app(f, if is_macro { desug_reflect(x, ctx)? } else { desug_val(x, ctx)? })
                 }
                 ctx.bindings.splice(0..0, bindings);
                 Ok(f)
