@@ -13,19 +13,17 @@
 })
 
 :gen-block = (:gen-block ~> { :block => {
+    :p = (:inline -> {
+        [flatten [["<p>"], inline |> map(gen-inline) |> flatten, ["</p>"]]]
+    })
     match (block) with: [
-        Paragraph(:inline) -> { [
-            flatten [
-                ["<p>"], inline |> map(gen-inline) |> flatten, ["</p>"]
-            ]
-        ] }
         Subsection([["title", :title], ["blocks", :blocks]]) -> { flatten [
             [
                 ["<h3>", escape(title), "</h3>"]
             ]
             blocks |> map(gen-block) |> flatten
         ] }
-        Unordered(:blocks) -> {
+        List(:blocks) -> {
             :gen-item = (:item => { flatten [
                 [
                     ["<li>"]
@@ -48,11 +46,19 @@
         Code(:code) -> { [
             ["<pre><code>", escape(code), "</code></pre>"]
         ] }
+        P(:inline) -> { p(inline) }
+        :inline -> { [inline |> map(gen-inline) |> flatten] }
     ]
 } })
 
-:gen-section = (:section => {
+:gen-section = ([:title, :section] => {
     match (section) with: [
+        Note([["date", [:yy, :mm, :dd]]]) -> {
+            [
+                [#"<p><a href="..#notes">Notes</a><br />"#, yy, "/", mm, "/", dd, "</p>"]
+                ["<h1>", escape(title), "</h1>"]
+            ]
+        }
         Section([["title", :title], ["blocks", :blocks]]) -> { flatten [
             [
                 ["<h2>", escape(title), "</h2>"]
@@ -75,9 +81,8 @@
                 ["<title>", escape(title), "</title>"]
                 ["</head>"]
                 ["<body>"]
-                ["<h1>", escape(title), "</h1>"]
             ]
-            sections |> map(gen-section) |> flatten
+            sections |> map(gen-section(title)) |> flatten
             [
                 ["</body>"]
                 ["</html>"]
