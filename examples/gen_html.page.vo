@@ -11,4 +11,7 @@ Html lang: "en" stylesheet: "styles/style.css" title: "Page Title" sections: [
         ]
         Code(#"["Foo", "Bar"]"#)
     ]
+    Section title: "Section 2" id: "sec2" blocks: [
+        ["Not much here."]
+    ]
 ]

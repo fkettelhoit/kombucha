@@ -36,6 +36,10 @@
             "<h2>", escape(title), "</h2>"
             blocks |> map(gen-block("<p>", "</p>"))
         ] }
+        Section([["title", :title], ["id", :id], ["blocks", :blocks]]) -> { [
+            #"<h2 id=""#, id, #"">"#, escape(title), "</h2>"
+            blocks |> map(gen-block("<p>", "</p>"))
+        ] }
     ]
 })
 
