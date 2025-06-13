@@ -12,81 +12,48 @@
     ]
 })
 
-:gen-block = (:gen-block ~> { :block => {
-    :p = (:inline -> {
-        [flatten [["<p>"], inline |> map(gen-inline) |> flatten, ["</p>"]]]
-    })
+:gen-block = (:gen-block ~> { [:pre, :post, :block] => {
     match (block) with: [
-        Subsection([["title", :title], ["blocks", :blocks]]) -> { flatten [
-            [
-                ["<h3>", escape(title), "</h3>"]
-            ]
-            blocks |> map(gen-block) |> flatten
+        Subsection([["title", :title], ["blocks", :blocks]]) -> { [
+            "<h3>", escape(title), "</h3>"
+            blocks |> map(gen-block(pre, post))
         ] }
-        List(:blocks) -> {
-            :gen-item = (:item => { flatten [
-                [
-                    ["<li>"]
-                ]
-                gen-block(item)
-                [
-                    ["</li>"]
-                ]
-            ]})
-            flatten [
-                [
-                    ["<ul>"]
-                ]
-                blocks |> map(gen-item) |> flatten
-                [
-                    ["</ul>"]
-                ]
-            ]
-        }
-        Code(:code) -> { [
-            ["<pre><code>", escape(code), "</code></pre>"]
+        List(:blocks) -> { [
+                "<ul>", blocks |> map(:item => { ["<li>", gen-block("", "", item), "</li>"] }), "</ul>"
         ] }
-        P(:inline) -> { p(inline) }
-        :inline -> { [inline |> map(gen-inline) |> flatten] }
+        Code(:code) -> { ["<pre><code>", escape(code), "</code></pre>"] }
+        :inline -> { [pre, inline |> map(gen-inline), post] }
     ]
 } })
 
 :gen-section = ([:title, :section] => {
     match (section) with: [
-        Note([["date", [:yy, :mm, :dd]]]) -> {
-            [
-                [#"<p><a href="..#notes">Notes</a><br />"#, yy, "/", mm, "/", dd, "</p>"]
-                ["<h1>", escape(title), "</h1>"]
-            ]
-        }
-        Section([["title", :title], ["blocks", :blocks]]) -> { flatten [
-            [
-                ["<h2>", escape(title), "</h2>"]
-            ]
-            blocks |> map(gen-block) |> flatten
+        Note([["date", [:yy, :mm, :dd]]]) -> { [
+            #"<p><a href="..#notes">Notes</a><br />"#, yy, "/", mm, "/", dd, "</p>"
+            "<h1>", escape(title), "</h1>"
+        ] }
+        Section([["title", :title], ["blocks", :blocks]]) -> { [
+            "<h2>", escape(title), "</h2>"
+            blocks |> map(gen-block("<p>", "</p>"))
         ] }
     ]
 })
 
 :gen-html = (:page => {
     match (page) with: [
-        Html([["lang", :lang], ["stylesheet", :stylesheet], ["title", :title], ["sections", :sections]]) -> { flatten [
-            [
-                ["<!DOCTYPE html>"]
-                [#"<html lang=""#, escape(lang), #"">"#]
-                ["<head>"]
-                [#"<meta charset="utf-8" />"#]
-                [#"<meta name="viewport" content="width=device-width, initial-scale=1" />"#]
-                [#"<link rel="stylesheet" href=""#, escape(stylesheet), #"" />"#]
-                ["<title>", escape(title), "</title>"]
-                ["</head>"]
-                ["<body>"]
-            ]
-            sections |> map(gen-section(title)) |> flatten
-            [
-                ["</body>"]
-                ["</html>"]
-            ]
+        Html([["lang", :lang], ["stylesheet", :stylesheet], ["title", :title], ["sections", :sections]]) -> { [
+            "<!DOCTYPE html>"
+            #"<html lang=""#, escape(lang), #"">"#
+            "<head>"
+            #"<meta charset="utf-8" />"#
+            #"<meta name="viewport" content="width=device-width, initial-scale=1" />"#
+            #"<link rel="stylesheet" href=""#, escape(stylesheet), #"" />"#
+            "<title>", escape(title), "</title>"
+            "</head>"
+            "<body>"
+            sections |> map(gen-section(title))
+            "</body>"
+            "</html>"
         ] }
     ]
 })

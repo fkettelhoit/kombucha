@@ -1,15 +1,13 @@
 Html lang: "en" stylesheet: "styles/style.css" title: "Page Title" sections: [
     Note date: ["2025", "06", "12"]
     Section title: "Section Title" blocks: [
-        P [
-            "This is a ", Strong("paragraph"), " with ", Em("inline"), " ", Code("code"), "."
-        ]
+        ["This is a ", Strong("paragraph"), " with ", Em("inline"), " ", Code("code"), "."]
         List [
             ["An item with a ", Link href: "http://www.example.com" text: "link", "."]
         ]
         Subsection title: "Subsection Title" blocks: [
-            P ["Another paragraph."]
-            P ["Another paragraph."]
+            ["Another paragraph."]
+            ["Another paragraph."]
         ]
         Code(#"["Foo", "Bar"]"#)
     ]
