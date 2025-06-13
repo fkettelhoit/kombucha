@@ -51,12 +51,8 @@ fn main() -> ExitCode {
                         }
                     },
                     Ok(State::Done(v)) => {
-                        let result: Vec<Vec<String>> = v
-                            .deserialize()
-                            .expect("Expected a Vec<Vec<String>> as the program result");
-                        let joined =
-                            result.iter().map(|l| l.join("")).collect::<Vec<_>>().join("\n");
-                        match fs::write(&output_file, joined) {
+                        let result: Vec<String> = v.deserialize().expect("Expected a Vec<String>");
+                        match fs::write(&output_file, result.join("")) {
                             Ok(_) => return ExitCode::SUCCESS,
                             Err(e) => {
                                 eprintln!("Could not write to file {output_file}: {e}");

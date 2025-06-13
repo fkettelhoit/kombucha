@@ -21,6 +21,17 @@ match (Pair first: Foo second: Foo) with: [
 }
 
 #[test]
+fn prelude_deep_flatten() -> Result<(), String> {
+    let code = "deep-flatten([[[A, B, C]], [D, E, [F, G]]])";
+    let bytecode = compile(code)?;
+    match bytecode.run().unwrap() {
+        State::Done(v) => assert_eq!(pretty_v(&v), "[A, B, C, D, E, F, G]"),
+        State::Resumable(vm) => panic!("{}!(...)", vm.effect()),
+    }
+    Ok(())
+}
+
+#[test]
 fn prelude_generate_html2() -> Result<(), String> {
     let code = include_str!("../examples/gen_html.vo");
     let bytecode = compile(code)?;
@@ -28,11 +39,8 @@ fn prelude_generate_html2() -> Result<(), String> {
     loop {
         match result {
             State::Done(v) => {
-                let result: Vec<Vec<String>> = v.deserialize().unwrap();
-                assert_eq!(
-                    result.iter().map(|l| l.join("")).collect::<Vec<_>>().join("\n"),
-                    include_str!("../examples/gen_html.page.html")
-                );
+                let result: Vec<String> = v.deserialize().unwrap();
+                assert_eq!(result.join(""), include_str!("../examples/gen_html.page.html"));
                 return Ok(());
             }
             State::Resumable(mut vm) => match vm.effect() {

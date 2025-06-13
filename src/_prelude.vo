@@ -138,3 +138,15 @@
 :|> = ([:x, :f] => {
     f(x)
 })
+:deep-flatten = (:deep-flatten ~> { [:acc, :xs] => {
+    __unpack(xs, [:xs, :x] => {
+        deep-flatten(deep-flatten(acc, x), xs)
+    }, {
+        __compare(xs, [], {
+            acc
+        }, {
+            acc(xs)
+        })
+    })
+}})
+:deep-flatten = (:xs => { xs |> deep-flatten([]) |> reverse })

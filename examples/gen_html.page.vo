@@ -5,7 +5,7 @@ Html lang: "en" stylesheet: "styles/style.css" title: "Page Title" sections: [
             "This is a ", Strong("paragraph"), " with ", Em("inline"), " ", Code("code"), "."
         ]
         List [
-            P ["Another paragraph with a ", Link href: "http://www.example.com" text: "link", "."]
+            ["An item with a ", Link href: "http://www.example.com" text: "link", "."]
         ]
         Subsection title: "Subsection Title" blocks: [
             P ["Another paragraph."]

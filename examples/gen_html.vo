@@ -91,4 +91,4 @@
     ]
 })
 
-gen-html(read!())
+read!() |> gen-html |> deep-flatten
