@@ -7,7 +7,7 @@ use serde::{
 };
 
 use crate::{
-    bytecode::{Bytecode, NIL, Reflect},
+    bytecode::{Bytecode, NIL, Syn},
     run::{Resumable, Val, Value, intern, intern_atom, intern_string},
 };
 
@@ -81,7 +81,7 @@ pub struct Serializer<'a> {
 }
 
 fn nil() -> Val {
-    Val::String(Reflect::Nil as usize)
+    Val::String(Syn::Nil as usize)
 }
 
 impl<'a> Serializer<'a> {
@@ -265,7 +265,7 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> Result<Val> {
-        Ok(Val::Record(Reflect::Nil as usize, self.items.drain(..).collect()))
+        Ok(Val::Record(Syn::Nil as usize, self.items.drain(..).collect()))
     }
 }
 
@@ -279,7 +279,7 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
-        Ok(Val::Record(Reflect::Nil as usize, self.items.drain(..).collect()))
+        Ok(Val::Record(Syn::Nil as usize, self.items.drain(..).collect()))
     }
 }
 
@@ -324,12 +324,12 @@ impl<'a> ser::SerializeMap for &'a mut Serializer<'a> {
     fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, v: &T) -> Result<()> {
         let k = std::mem::replace(&mut self.key, nil());
         let v = v.serialize(&mut Serializer::new(self.strs))?;
-        let item = Val::Record(Reflect::Nil as usize, vec![Rc::new(k), Rc::new(v)]);
+        let item = Val::Record(Syn::Nil as usize, vec![Rc::new(k), Rc::new(v)]);
         Ok(self.items.push(Rc::new(item)))
     }
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
-        Ok(Val::Record(Reflect::Nil as usize, self.items.drain(..).collect()))
+        Ok(Val::Record(Syn::Nil as usize, self.items.drain(..).collect()))
     }
 }
 
@@ -340,7 +340,7 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer<'a> {
     fn serialize_field<T: ?Sized + ser::Serialize>(&mut self, k: Str, v: &T) -> Result<()> {
         let k = k.serialize(&mut Serializer::new(self.strs))?;
         let v = v.serialize(&mut Serializer::new(self.strs))?;
-        let item = Val::Record(Reflect::Nil as usize, vec![Rc::new(k), Rc::new(v)]);
+        let item = Val::Record(Syn::Nil as usize, vec![Rc::new(k), Rc::new(v)]);
         Ok(self.items.push(Rc::new(item)))
     }
 
@@ -357,7 +357,7 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer<'a> {
     fn serialize_field<T: ?Sized + ser::Serialize>(&mut self, k: Str, v: &T) -> Result<()> {
         let k = k.serialize(&mut Serializer::new(self.strs))?;
         let v = v.serialize(&mut Serializer::new(self.strs))?;
-        let item = Val::Record(Reflect::Nil as usize, vec![Rc::new(k), Rc::new(v)]);
+        let item = Val::Record(Syn::Nil as usize, vec![Rc::new(k), Rc::new(v)]);
         Ok(self.items.push(Rc::new(item)))
     }
 
@@ -515,14 +515,14 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_option<V: de::Visitor<'de>>(self, v: V) -> Result<V::Value> {
         match self.current_input() {
-            Val::String(s) if *s == Reflect::Nil as usize => v.visit_none(),
+            Val::String(s) if *s == Syn::Nil as usize => v.visit_none(),
             _ => v.visit_some(self),
         }
     }
 
     fn deserialize_unit<V: de::Visitor<'de>>(self, v: V) -> Result<V::Value> {
         match self.current_input() {
-            Val::String(s) if *s == Reflect::Nil as usize => v.visit_unit(),
+            Val::String(s) if *s == Syn::Nil as usize => v.visit_unit(),
             _ => Err(Error::InvalidUnit),
         }
     }
@@ -543,7 +543,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_seq<V: de::Visitor<'de>>(self, v: V) -> Result<V::Value> {
         match self.current_input() {
-            Val::Record(s, items) if *s == Reflect::Nil as usize => {
+            Val::Record(s, items) if *s == Syn::Nil as usize => {
                 let seq = SeqDeserializer::new(self, items, true);
                 v.visit_seq(seq)
             }

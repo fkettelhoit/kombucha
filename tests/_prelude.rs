@@ -1,4 +1,4 @@
-use common::pretty_v;
+use common::{pretty_res, pretty_v};
 use vorpal::{compile::compile, run::State};
 
 mod common;
@@ -15,7 +15,7 @@ match (Pair first: Foo second: Foo) with: [
     let bytecode = compile(code)?;
     match bytecode.run().unwrap() {
         State::Done(v) => assert_eq!(pretty_v(&v), "Twice(Foo)"),
-        State::Resumable(vm) => panic!("{}!(...)", vm.effect()),
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), pretty_res(&vm)),
     }
     Ok(())
 }
@@ -26,7 +26,18 @@ fn prelude_deep_flatten() -> Result<(), String> {
     let bytecode = compile(code)?;
     match bytecode.run().unwrap() {
         State::Done(v) => assert_eq!(pretty_v(&v), "[A, B, C, D, E, F, G]"),
-        State::Resumable(vm) => panic!("{}!(...)", vm.effect()),
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), pretty_res(&vm)),
+    }
+    Ok(())
+}
+
+#[test]
+fn prelude_fn_def() -> Result<(), String> {
+    let code = "::foo(:x, :y) = { Foo(x, y) }, :bar = Bar, foo(bar, Baz)";
+    let bytecode = compile(code)?;
+    match bytecode.run().unwrap() {
+        State::Done(v) => assert_eq!(pretty_v(&v), "Foo(Bar, Baz)"),
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), pretty_res(&vm)),
     }
     Ok(())
 }
@@ -48,7 +59,7 @@ fn prelude_generate_html2() -> Result<(), String> {
                     let start = vm.bytecode.load(include_str!("../examples/gen_html.page.vo"))?;
                     result = vm.resume_at(start).unwrap();
                 }
-                eff => panic!("{eff}!(...)"),
+                eff => panic!("{eff}!({})", pretty_res(&vm)),
             },
         }
     }

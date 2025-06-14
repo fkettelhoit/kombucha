@@ -463,3 +463,1471 @@ Compound(Binding("foo"), [Value(Bar), Binding("baz")])
 00055:   Return
 
 List([Value(A), Value(B), List([Value(C), Binding("foo")])])
+
+---
+
+([:x, :_] => { x })(::binding, {})
+
+((=>
+  [ :x
+    :_ ]
+  { x })
+  ::binding
+  {  })
+
+( ( ( ( =>
+          =>
+            0
+        ( ( []
+            "_" )
+          "x" ) )
+      =>
+        =>
+          1 )
+    ( Binding
+      "binding" ) )
+  =>
+    [] )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: AppArgToFn
+00006: LoadVar(00001)
+00007: AppArgToFn
+00008: AppArgToFn
+00009:   Return
+00010: LoadVar(00000)
+00011:   Return
+00012: LoadFn { code: 00010, fvars: 00000 }
+00013:   Return
+00014: LoadVar(00001)
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00001 }
+00017:   Return
+00018: PushString("")
+00019:   Return
+00020: LoadFn { code: 00012, fvars: 00000 }
+00021: PushString("")
+00022: PushString(""_"")
+00023: AppFnToArg
+00024: PushString(""x"")
+00025: AppFnToArg
+00026: AppFnToArg
+00027: LoadFn { code: 00016, fvars: 00000 }
+00028: AppFnToArg
+00029: PushString("Binding")
+00030: PushString(""binding"")
+00031: AppFnToArg
+00032: AppFnToArg
+00033: LoadFn { code: 00018, fvars: 00000 }
+00034: AppFnToArg
+00035:   Return
+
+Binding("binding")
+
+---
+
+::x = { Foo }
+x(Bar)
+
+(=
+  ::x
+  { Foo })
+(x
+  Bar)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "x" )
+    =>
+      Foo )
+  =>
+    ( 0
+      Bar ) )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: AppArgToFn
+00006: LoadVar(00001)
+00007: AppArgToFn
+00008: AppArgToFn
+00009:   Return
+00010: LoadVar(00000)
+00011: LoadVar(00001)
+00012: AppFnToArg
+00013:   Return
+00014: LoadFn { code: 00010, fvars: 00001 }
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: PushString("Foo")
+00019:   Return
+00020: LoadVar(00000)
+00021: PushString("Bar")
+00022: AppFnToArg
+00023:   Return
+00024: LoadFn { code: 00016, fvars: 00000 }
+00025: PushString(""x"")
+00026: AppFnToArg
+00027: LoadFn { code: 00018, fvars: 00000 }
+00028: AppFnToArg
+00029: LoadFn { code: 00020, fvars: 00000 }
+00030: AppFnToArg
+00031:   Return
+
+Foo
+
+---
+
+:= = ([:binding, :value, :block] => {
+  block(value([]))
+})
+::foo(:x, :y) = { Foo(x, y) }
+foo(Bar, Baz)
+
+(=
+  :=
+  (=>
+    [ :binding
+      :value
+      :block ]
+    { (block
+        (value
+          [  ])) }))
+(=
+  (::foo
+    :x
+    :y)
+  { (Foo
+      x
+      y) })
+(foo
+  Bar
+  Baz)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "=" )
+    ( ( =>
+          =>
+            0
+        ( ( ( []
+              "block" )
+            "value" )
+          "binding" ) )
+      =>
+        =>
+          =>
+            ( 0
+              ( 1
+                [] ) ) ) )
+  =>
+    ( ( ( 0
+          ( ( Compound
+              ( Binding
+                "foo" ) )
+            ( ( []
+                ( Binding
+                  "y" ) )
+              ( Binding
+                "x" ) ) ) )
+        =>
+          =>
+            =>
+              ( ( Foo
+                  1 )
+                0 ) )
+      =>
+        ( ( 0
+            Bar )
+          Baz ) ) )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: AppArgToFn
+00006: LoadVar(00001)
+00007: AppArgToFn
+00008: AppArgToFn
+00009:   Return
+00010: LoadVar(00000)
+00011: LoadVar(00001)
+00012: AppFnToArg
+00013:   Return
+00014: LoadFn { code: 00010, fvars: 00001 }
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00000)
+00019:   Return
+00020: LoadFn { code: 00018, fvars: 00000 }
+00021:   Return
+00022: LoadVar(00000)
+00023: LoadVar(00001)
+00024: PushString("")
+00025: AppFnToArg
+00026: AppFnToArg
+00027:   Return
+00028: LoadFn { code: 00022, fvars: 00001 }
+00029:   Return
+00030: LoadFn { code: 00028, fvars: 00000 }
+00031:   Return
+00032: PushString("Foo")
+00033: LoadVar(00001)
+00034: AppFnToArg
+00035: LoadVar(00000)
+00036: AppFnToArg
+00037:   Return
+00038: LoadFn { code: 00032, fvars: 00001 }
+00039:   Return
+00040: LoadFn { code: 00038, fvars: 00000 }
+00041:   Return
+00042: LoadVar(00000)
+00043: PushString("Bar")
+00044: AppFnToArg
+00045: PushString("Baz")
+00046: AppFnToArg
+00047:   Return
+00048: LoadVar(00000)
+00049: PushString("Compound")
+00050: PushString("Binding")
+00051: PushString(""foo"")
+00052: AppFnToArg
+00053: AppFnToArg
+00054: PushString("")
+00055: PushString("Binding")
+00056: PushString(""y"")
+00057: AppFnToArg
+00058: AppFnToArg
+00059: PushString("Binding")
+00060: PushString(""x"")
+00061: AppFnToArg
+00062: AppFnToArg
+00063: AppFnToArg
+00064: AppFnToArg
+00065: LoadFn { code: 00040, fvars: 00000 }
+00066: AppFnToArg
+00067: LoadFn { code: 00042, fvars: 00000 }
+00068: AppFnToArg
+00069:   Return
+00070: LoadFn { code: 00016, fvars: 00000 }
+00071: PushString(""="")
+00072: AppFnToArg
+00073: LoadFn { code: 00020, fvars: 00000 }
+00074: PushString("")
+00075: PushString(""block"")
+00076: AppFnToArg
+00077: PushString(""value"")
+00078: AppFnToArg
+00079: PushString(""binding"")
+00080: AppFnToArg
+00081: AppFnToArg
+00082: LoadFn { code: 00030, fvars: 00000 }
+00083: AppFnToArg
+00084: AppFnToArg
+00085: LoadFn { code: 00048, fvars: 00000 }
+00086: AppFnToArg
+00087:   Return
+
+Foo(Bar, Baz)
+
+---
+
+:= = ([:binding, :value, :block] => {
+  __unpack(binding, [:type, :arg] => {
+    __unpack(type, [:type, :f] => {
+      block([] ~> value)
+    }, {
+      block(value)
+    })
+  }, {
+    must-be-called-as-macro!()
+  })
+})
+::foo(:x, :y) = { Foo(x, y) }
+foo(Bar, Baz)
+
+(=
+  :=
+  (=>
+    [ :binding
+      :value
+      :block ]
+    { (__unpack
+        binding
+        (=>
+          [ :type
+            :arg ]
+          { (__unpack
+              type
+              (=>
+                [ :type
+                  :f ]
+                { (block
+                    (~>
+                      [  ]
+                      value)) })
+              { (block
+                  value) }) })
+        { (must-be-called-as-macro!) }) }))
+(=
+  (::foo
+    :x
+    :y)
+  { (Foo
+      x
+      y) })
+(foo
+  Bar
+  Baz)
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "=" )
+    ( ( =>
+          =>
+            0
+        ( ( ( []
+              "block" )
+            "value" )
+          "binding" ) )
+      =>
+        =>
+          =>
+            ( ( ( =>
+                    =>
+                      =>
+                        ( pop
+                          2
+                          1
+                          0 )
+                  2 )
+                ( ( =>
+                      =>
+                        0
+                    ( ( []
+                        "arg" )
+                      "type" ) )
+                  =>
+                    =>
+                      ( ( ( =>
+                              =>
+                                =>
+                                  ( pop
+                                    2
+                                    1
+                                    0 )
+                            1 )
+                          ( ( =>
+                                =>
+                                  0
+                              ( ( []
+                                  "f" )
+                                "type" ) )
+                            =>
+                              =>
+                                ( 4
+                                  ( ( =>
+                                        =>
+                                          ~>
+                                            0
+                                      [] )
+                                    5 ) ) ) )
+                        =>
+                          ( 3
+                            4 ) ) ) )
+              =>
+                ( must-be-called-as-macro!
+                  [] ) ) ) )
+  =>
+    ( ( ( 0
+          ( ( Compound
+              ( Binding
+                "foo" ) )
+            ( ( []
+                ( Binding
+                  "y" ) )
+              ( Binding
+                "x" ) ) ) )
+        =>
+          =>
+            =>
+              ( ( Foo
+                  1 )
+                0 ) )
+      =>
+        ( ( 0
+            Bar )
+          Baz ) ) )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: AppArgToFn
+00006: LoadVar(00001)
+00007: AppArgToFn
+00008: AppArgToFn
+00009:   Return
+00010: LoadVar(00000)
+00011: LoadVar(00001)
+00012: AppFnToArg
+00013:   Return
+00014: LoadFn { code: 00010, fvars: 00001 }
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00000)
+00019:   Return
+00020: LoadFn { code: 00018, fvars: 00000 }
+00021:   Return
+00022: LoadVar(00002)
+00023: LoadVar(00001)
+00024: LoadVar(00000)
+00025: Unpack
+00026: AppArgToFn
+00027: AppArgToFn
+00028:   Return
+00029: LoadFn { code: 00022, fvars: 00002 }
+00030:   Return
+00031: LoadFn { code: 00029, fvars: 00001 }
+00032:   Return
+00033: LoadVar(00000)
+00034:   Return
+00035: LoadFn { code: 00033, fvars: 00000 }
+00036:   Return
+00037: LoadVar(00002)
+00038: LoadVar(00001)
+00039: LoadVar(00000)
+00040: Unpack
+00041: AppArgToFn
+00042: AppArgToFn
+00043:   Return
+00044: LoadFn { code: 00037, fvars: 00002 }
+00045:   Return
+00046: LoadFn { code: 00044, fvars: 00001 }
+00047:   Return
+00048: LoadVar(00000)
+00049:   Return
+00050: LoadFn { code: 00048, fvars: 00000 }
+00051:   Return
+00052: LoadVar(00000)
+00053: LoadFn { code: 00000, fvars: 00000 }
+00054: AppArgToFn
+00055:   Return
+00056: LoadFn { code: 00052, fvars: 00000 }
+00057:   Return
+00058: LoadVar(00004)
+00059: LoadFn { code: 00056, fvars: 00000 }
+00060: PushString("")
+00061: AppFnToArg
+00062: LoadVar(00005)
+00063: AppFnToArg
+00064: AppFnToArg
+00065:   Return
+00066: LoadFn { code: 00058, fvars: 00005 }
+00067:   Return
+00068: LoadVar(00003)
+00069: LoadVar(00004)
+00070: AppFnToArg
+00071:   Return
+00072: LoadFn { code: 00046, fvars: 00000 }
+00073: LoadVar(00001)
+00074: AppFnToArg
+00075: LoadFn { code: 00050, fvars: 00000 }
+00076: PushString("")
+00077: PushString(""f"")
+00078: AppFnToArg
+00079: PushString(""type"")
+00080: AppFnToArg
+00081: AppFnToArg
+00082: LoadFn { code: 00066, fvars: 00004 }
+00083: AppFnToArg
+00084: AppFnToArg
+00085: LoadFn { code: 00068, fvars: 00004 }
+00086: AppFnToArg
+00087:   Return
+00088: LoadFn { code: 00072, fvars: 00003 }
+00089:   Return
+00090: PushEffect("must-be-called-as-macro")
+00091: PushString("")
+00092: AppFnToArg
+00093:   Return
+00094: LoadFn { code: 00031, fvars: 00000 }
+00095: LoadVar(00002)
+00096: AppFnToArg
+00097: LoadFn { code: 00035, fvars: 00000 }
+00098: PushString("")
+00099: PushString(""arg"")
+00100: AppFnToArg
+00101: PushString(""type"")
+00102: AppFnToArg
+00103: AppFnToArg
+00104: LoadFn { code: 00088, fvars: 00002 }
+00105: AppFnToArg
+00106: AppFnToArg
+00107: LoadFn { code: 00090, fvars: 00000 }
+00108: AppFnToArg
+00109:   Return
+00110: LoadFn { code: 00094, fvars: 00002 }
+00111:   Return
+00112: LoadFn { code: 00110, fvars: 00001 }
+00113:   Return
+00114: PushString("Foo")
+00115: LoadVar(00001)
+00116: AppFnToArg
+00117: LoadVar(00000)
+00118: AppFnToArg
+00119:   Return
+00120: LoadFn { code: 00114, fvars: 00001 }
+00121:   Return
+00122: LoadFn { code: 00120, fvars: 00000 }
+00123:   Return
+00124: LoadVar(00000)
+00125: PushString("Bar")
+00126: AppFnToArg
+00127: PushString("Baz")
+00128: AppFnToArg
+00129:   Return
+00130: LoadVar(00000)
+00131: PushString("Compound")
+00132: PushString("Binding")
+00133: PushString(""foo"")
+00134: AppFnToArg
+00135: AppFnToArg
+00136: PushString("")
+00137: PushString("Binding")
+00138: PushString(""y"")
+00139: AppFnToArg
+00140: AppFnToArg
+00141: PushString("Binding")
+00142: PushString(""x"")
+00143: AppFnToArg
+00144: AppFnToArg
+00145: AppFnToArg
+00146: AppFnToArg
+00147: LoadFn { code: 00122, fvars: 00000 }
+00148: AppFnToArg
+00149: LoadFn { code: 00124, fvars: 00000 }
+00150: AppFnToArg
+00151:   Return
+00152: LoadFn { code: 00016, fvars: 00000 }
+00153: PushString(""="")
+00154: AppFnToArg
+00155: LoadFn { code: 00020, fvars: 00000 }
+00156: PushString("")
+00157: PushString(""block"")
+00158: AppFnToArg
+00159: PushString(""value"")
+00160: AppFnToArg
+00161: PushString(""binding"")
+00162: AppFnToArg
+00163: AppFnToArg
+00164: LoadFn { code: 00112, fvars: 00000 }
+00165: AppFnToArg
+00166: AppFnToArg
+00167: LoadFn { code: 00130, fvars: 00000 }
+00168: AppFnToArg
+00169:   Return
+
+Foo(Bar, Baz)
+
+---
+
+:= = ([:binding, :value, :block] => {
+  __unpack(binding, [:type, :arg] => {
+    __unpack(type, [:type, :f] => {
+      block([] ~> value)
+    }, {
+      block(value)
+    })
+  }, {
+    must-be-called-as-macro!()
+  })
+})
+::fold(:f, :acc, :xs) = {
+    __unpack(xs, [:xs, :x] => {
+        fold(f, f(acc, x), xs)
+    }, {
+        acc
+    })
+}
+fold([:acc, :x] => { acc(x) }, [], [A, B, C])
+
+(=
+  :=
+  (=>
+    [ :binding
+      :value
+      :block ]
+    { (__unpack
+        binding
+        (=>
+          [ :type
+            :arg ]
+          { (__unpack
+              type
+              (=>
+                [ :type
+                  :f ]
+                { (block
+                    (~>
+                      [  ]
+                      value)) })
+              { (block
+                  value) }) })
+        { (must-be-called-as-macro!) }) }))
+(=
+  (::fold
+    :f
+    :acc
+    :xs)
+  { (__unpack
+      xs
+      (=>
+        [ :xs
+          :x ]
+        { (fold
+            f
+            (f
+              acc
+              x)
+            xs) })
+      { acc }) })
+(fold
+  (=>
+    [ :acc
+      :x ]
+    { (acc
+        x) })
+  [  ]
+  [ A
+    B
+    C ])
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "=" )
+    ( ( =>
+          =>
+            0
+        ( ( ( []
+              "block" )
+            "value" )
+          "binding" ) )
+      =>
+        =>
+          =>
+            ( ( ( =>
+                    =>
+                      =>
+                        ( pop
+                          2
+                          1
+                          0 )
+                  2 )
+                ( ( =>
+                      =>
+                        0
+                    ( ( []
+                        "arg" )
+                      "type" ) )
+                  =>
+                    =>
+                      ( ( ( =>
+                              =>
+                                =>
+                                  ( pop
+                                    2
+                                    1
+                                    0 )
+                            1 )
+                          ( ( =>
+                                =>
+                                  0
+                              ( ( []
+                                  "f" )
+                                "type" ) )
+                            =>
+                              =>
+                                ( 4
+                                  ( ( =>
+                                        =>
+                                          ~>
+                                            0
+                                      [] )
+                                    5 ) ) ) )
+                        =>
+                          ( 3
+                            4 ) ) ) )
+              =>
+                ( must-be-called-as-macro!
+                  [] ) ) ) )
+  =>
+    ( ( ( 0
+          ( ( Compound
+              ( Binding
+                "fold" ) )
+            ( ( ( []
+                  ( Binding
+                    "xs" ) )
+                ( Binding
+                  "acc" ) )
+              ( Binding
+                "f" ) ) ) )
+        =>
+          =>
+            =>
+              =>
+                ( ( ( =>
+                        =>
+                          =>
+                            ( pop
+                              2
+                              1
+                              0 )
+                      0 )
+                    ( ( =>
+                          =>
+                            0
+                        ( ( []
+                            "x" )
+                          "xs" ) )
+                      =>
+                        =>
+                          ( ( ( 5
+                                4 )
+                              ( ( 4
+                                  3 )
+                                0 ) )
+                            1 ) ) )
+                  =>
+                    2 ) )
+      =>
+        ( ( ( 0
+              ( ( =>
+                    =>
+                      0
+                  ( ( []
+                      "x" )
+                    "acc" ) )
+                =>
+                  =>
+                    ( 1
+                      0 ) ) )
+            [] )
+          ( ( ( []
+                C )
+              B )
+            A ) ) ) )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: AppArgToFn
+00006: LoadVar(00001)
+00007: AppArgToFn
+00008: AppArgToFn
+00009:   Return
+00010: LoadVar(00000)
+00011: LoadVar(00001)
+00012: AppFnToArg
+00013:   Return
+00014: LoadFn { code: 00010, fvars: 00001 }
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00000)
+00019:   Return
+00020: LoadFn { code: 00018, fvars: 00000 }
+00021:   Return
+00022: LoadVar(00002)
+00023: LoadVar(00001)
+00024: LoadVar(00000)
+00025: Unpack
+00026: AppArgToFn
+00027: AppArgToFn
+00028:   Return
+00029: LoadFn { code: 00022, fvars: 00002 }
+00030:   Return
+00031: LoadFn { code: 00029, fvars: 00001 }
+00032:   Return
+00033: LoadVar(00000)
+00034:   Return
+00035: LoadFn { code: 00033, fvars: 00000 }
+00036:   Return
+00037: LoadVar(00002)
+00038: LoadVar(00001)
+00039: LoadVar(00000)
+00040: Unpack
+00041: AppArgToFn
+00042: AppArgToFn
+00043:   Return
+00044: LoadFn { code: 00037, fvars: 00002 }
+00045:   Return
+00046: LoadFn { code: 00044, fvars: 00001 }
+00047:   Return
+00048: LoadVar(00000)
+00049:   Return
+00050: LoadFn { code: 00048, fvars: 00000 }
+00051:   Return
+00052: LoadVar(00000)
+00053: LoadFn { code: 00000, fvars: 00000 }
+00054: AppArgToFn
+00055:   Return
+00056: LoadFn { code: 00052, fvars: 00000 }
+00057:   Return
+00058: LoadVar(00004)
+00059: LoadFn { code: 00056, fvars: 00000 }
+00060: PushString("")
+00061: AppFnToArg
+00062: LoadVar(00005)
+00063: AppFnToArg
+00064: AppFnToArg
+00065:   Return
+00066: LoadFn { code: 00058, fvars: 00005 }
+00067:   Return
+00068: LoadVar(00003)
+00069: LoadVar(00004)
+00070: AppFnToArg
+00071:   Return
+00072: LoadFn { code: 00046, fvars: 00000 }
+00073: LoadVar(00001)
+00074: AppFnToArg
+00075: LoadFn { code: 00050, fvars: 00000 }
+00076: PushString("")
+00077: PushString(""f"")
+00078: AppFnToArg
+00079: PushString(""type"")
+00080: AppFnToArg
+00081: AppFnToArg
+00082: LoadFn { code: 00066, fvars: 00004 }
+00083: AppFnToArg
+00084: AppFnToArg
+00085: LoadFn { code: 00068, fvars: 00004 }
+00086: AppFnToArg
+00087:   Return
+00088: LoadFn { code: 00072, fvars: 00003 }
+00089:   Return
+00090: PushEffect("must-be-called-as-macro")
+00091: PushString("")
+00092: AppFnToArg
+00093:   Return
+00094: LoadFn { code: 00031, fvars: 00000 }
+00095: LoadVar(00002)
+00096: AppFnToArg
+00097: LoadFn { code: 00035, fvars: 00000 }
+00098: PushString("")
+00099: PushString(""arg"")
+00100: AppFnToArg
+00101: PushString(""type"")
+00102: AppFnToArg
+00103: AppFnToArg
+00104: LoadFn { code: 00088, fvars: 00002 }
+00105: AppFnToArg
+00106: AppFnToArg
+00107: LoadFn { code: 00090, fvars: 00000 }
+00108: AppFnToArg
+00109:   Return
+00110: LoadFn { code: 00094, fvars: 00002 }
+00111:   Return
+00112: LoadFn { code: 00110, fvars: 00001 }
+00113:   Return
+00114: LoadVar(00002)
+00115: LoadVar(00001)
+00116: LoadVar(00000)
+00117: Unpack
+00118: AppArgToFn
+00119: AppArgToFn
+00120:   Return
+00121: LoadFn { code: 00114, fvars: 00002 }
+00122:   Return
+00123: LoadFn { code: 00121, fvars: 00001 }
+00124:   Return
+00125: LoadVar(00000)
+00126:   Return
+00127: LoadFn { code: 00125, fvars: 00000 }
+00128:   Return
+00129: LoadVar(00005)
+00130: LoadVar(00004)
+00131: AppFnToArg
+00132: LoadVar(00004)
+00133: LoadVar(00003)
+00134: AppFnToArg
+00135: LoadVar(00000)
+00136: AppFnToArg
+00137: AppFnToArg
+00138: LoadVar(00001)
+00139: AppFnToArg
+00140:   Return
+00141: LoadFn { code: 00129, fvars: 00005 }
+00142:   Return
+00143: LoadVar(00002)
+00144:   Return
+00145: LoadFn { code: 00123, fvars: 00000 }
+00146: LoadVar(00000)
+00147: AppFnToArg
+00148: LoadFn { code: 00127, fvars: 00000 }
+00149: PushString("")
+00150: PushString(""x"")
+00151: AppFnToArg
+00152: PushString(""xs"")
+00153: AppFnToArg
+00154: AppFnToArg
+00155: LoadFn { code: 00141, fvars: 00004 }
+00156: AppFnToArg
+00157: AppFnToArg
+00158: LoadFn { code: 00143, fvars: 00002 }
+00159: AppFnToArg
+00160:   Return
+00161: LoadFn { code: 00145, fvars: 00003 }
+00162:   Return
+00163: LoadFn { code: 00161, fvars: 00002 }
+00164:   Return
+00165: LoadFn { code: 00163, fvars: 00001 }
+00166:   Return
+00167: LoadVar(00000)
+00168:   Return
+00169: LoadFn { code: 00167, fvars: 00000 }
+00170:   Return
+00171: LoadVar(00001)
+00172: LoadVar(00000)
+00173: AppFnToArg
+00174:   Return
+00175: LoadFn { code: 00171, fvars: 00001 }
+00176:   Return
+00177: LoadVar(00000)
+00178: LoadFn { code: 00169, fvars: 00000 }
+00179: PushString("")
+00180: PushString(""x"")
+00181: AppFnToArg
+00182: PushString(""acc"")
+00183: AppFnToArg
+00184: AppFnToArg
+00185: LoadFn { code: 00175, fvars: 00000 }
+00186: AppFnToArg
+00187: AppFnToArg
+00188: PushString("")
+00189: AppFnToArg
+00190: PushString("")
+00191: PushString("C")
+00192: AppFnToArg
+00193: PushString("B")
+00194: AppFnToArg
+00195: PushString("A")
+00196: AppFnToArg
+00197: AppFnToArg
+00198:   Return
+00199: LoadVar(00000)
+00200: PushString("Compound")
+00201: PushString("Binding")
+00202: PushString(""fold"")
+00203: AppFnToArg
+00204: AppFnToArg
+00205: PushString("")
+00206: PushString("Binding")
+00207: PushString(""xs"")
+00208: AppFnToArg
+00209: AppFnToArg
+00210: PushString("Binding")
+00211: PushString(""acc"")
+00212: AppFnToArg
+00213: AppFnToArg
+00214: PushString("Binding")
+00215: PushString(""f"")
+00216: AppFnToArg
+00217: AppFnToArg
+00218: AppFnToArg
+00219: AppFnToArg
+00220: LoadFn { code: 00165, fvars: 00000 }
+00221: AppFnToArg
+00222: LoadFn { code: 00177, fvars: 00000 }
+00223: AppFnToArg
+00224:   Return
+00225: LoadFn { code: 00016, fvars: 00000 }
+00226: PushString(""="")
+00227: AppFnToArg
+00228: LoadFn { code: 00020, fvars: 00000 }
+00229: PushString("")
+00230: PushString(""block"")
+00231: AppFnToArg
+00232: PushString(""value"")
+00233: AppFnToArg
+00234: PushString(""binding"")
+00235: AppFnToArg
+00236: AppFnToArg
+00237: LoadFn { code: 00112, fvars: 00000 }
+00238: AppFnToArg
+00239: AppFnToArg
+00240: LoadFn { code: 00199, fvars: 00000 }
+00241: AppFnToArg
+00242:   Return
+
+[C, B, A]
+
+---
+
+([:x, :_] => { x })(:x)
+x
+
+((=>
+  [ :x
+    :_ ]
+  { x })
+  :x)
+x
+
+( ( ( ( =>
+          =>
+            0
+        ( ( []
+            "_" )
+          "x" ) )
+      =>
+        =>
+          1 )
+    ( Binding
+      "x" ) )
+  =>
+    0 )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: AppArgToFn
+00006: LoadVar(00001)
+00007: AppArgToFn
+00008: AppArgToFn
+00009:   Return
+00010: LoadVar(00000)
+00011:   Return
+00012: LoadFn { code: 00010, fvars: 00000 }
+00013:   Return
+00014: LoadVar(00001)
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00001 }
+00017:   Return
+00018: LoadVar(00000)
+00019:   Return
+00020: LoadFn { code: 00012, fvars: 00000 }
+00021: PushString("")
+00022: PushString(""_"")
+00023: AppFnToArg
+00024: PushString(""x"")
+00025: AppFnToArg
+00026: AppFnToArg
+00027: LoadFn { code: 00016, fvars: 00000 }
+00028: AppFnToArg
+00029: PushString("Binding")
+00030: PushString(""x"")
+00031: AppFnToArg
+00032: AppFnToArg
+00033: LoadFn { code: 00018, fvars: 00000 }
+00034: AppFnToArg
+00035:   Return
+
+Binding("x")
+
+---
+
+:= = ([:binding, :value, :block] => {
+  __unpack(binding, [:type, :arg] => {
+    __unpack(type, [:type, :f] => {
+      block([] ~> value)
+    }, {
+      __unpack(value, [:type, :arg] => {
+        __compare(type, Value, {
+          block(arg)
+        }, {
+          todo!()
+        })
+      }, {
+        todo!()
+      })
+    })
+  }, {
+    must-be-called-as-macro!()
+  })
+})
+:foo = Foo
+foo
+
+(=
+  :=
+  (=>
+    [ :binding
+      :value
+      :block ]
+    { (__unpack
+        binding
+        (=>
+          [ :type
+            :arg ]
+          { (__unpack
+              type
+              (=>
+                [ :type
+                  :f ]
+                { (block
+                    (~>
+                      [  ]
+                      value)) })
+              { (__unpack
+                  value
+                  (=>
+                    [ :type
+                      :arg ]
+                    { (__compare
+                        type
+                        Value
+                        { (block
+                            arg) }
+                        { (todo!) }) })
+                  { (todo!) }) }) })
+        { (must-be-called-as-macro!) }) }))
+(=
+  :foo
+  Foo)
+foo
+
+( ( ( =>
+        =>
+          =>
+            ( 0
+              1 )
+      "=" )
+    ( ( =>
+          =>
+            0
+        ( ( ( []
+              "block" )
+            "value" )
+          "binding" ) )
+      =>
+        =>
+          =>
+            ( ( ( =>
+                    =>
+                      =>
+                        ( pop
+                          2
+                          1
+                          0 )
+                  2 )
+                ( ( =>
+                      =>
+                        0
+                    ( ( []
+                        "arg" )
+                      "type" ) )
+                  =>
+                    =>
+                      ( ( ( =>
+                              =>
+                                =>
+                                  ( pop
+                                    2
+                                    1
+                                    0 )
+                            1 )
+                          ( ( =>
+                                =>
+                                  0
+                              ( ( []
+                                  "f" )
+                                "type" ) )
+                            =>
+                              =>
+                                ( 4
+                                  ( ( =>
+                                        =>
+                                          ~>
+                                            0
+                                      [] )
+                                    5 ) ) ) )
+                        =>
+                          ( ( ( =>
+                                  =>
+                                    =>
+                                      ( pop
+                                        2
+                                        1
+                                        0 )
+                                4 )
+                              ( ( =>
+                                    =>
+                                      0
+                                  ( ( []
+                                      "arg" )
+                                    "type" ) )
+                                =>
+                                  =>
+                                    ( ( ( ( =>
+                                              =>
+                                                =>
+                                                  =>
+                                                    ( if
+                                                      3
+                                                      2
+                                                      1
+                                                      0 )
+                                            1 )
+                                          Value )
+                                        =>
+                                          ( 6
+                                            1 ) )
+                                      =>
+                                        ( todo!
+                                          [] ) ) ) )
+                            =>
+                              ( todo!
+                                [] ) ) ) ) )
+              =>
+                ( must-be-called-as-macro!
+                  [] ) ) ) )
+  =>
+    ( ( ( 0
+          ( Binding
+            "foo" ) )
+        ( Value
+          Foo ) )
+      =>
+        0 ) )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: AppArgToFn
+00006: LoadVar(00001)
+00007: AppArgToFn
+00008: AppArgToFn
+00009:   Return
+00010: LoadVar(00000)
+00011: LoadVar(00001)
+00012: AppFnToArg
+00013:   Return
+00014: LoadFn { code: 00010, fvars: 00001 }
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00000)
+00019:   Return
+00020: LoadFn { code: 00018, fvars: 00000 }
+00021:   Return
+00022: LoadVar(00002)
+00023: LoadVar(00001)
+00024: LoadVar(00000)
+00025: Unpack
+00026: AppArgToFn
+00027: AppArgToFn
+00028:   Return
+00029: LoadFn { code: 00022, fvars: 00002 }
+00030:   Return
+00031: LoadFn { code: 00029, fvars: 00001 }
+00032:   Return
+00033: LoadVar(00000)
+00034:   Return
+00035: LoadFn { code: 00033, fvars: 00000 }
+00036:   Return
+00037: LoadVar(00002)
+00038: LoadVar(00001)
+00039: LoadVar(00000)
+00040: Unpack
+00041: AppArgToFn
+00042: AppArgToFn
+00043:   Return
+00044: LoadFn { code: 00037, fvars: 00002 }
+00045:   Return
+00046: LoadFn { code: 00044, fvars: 00001 }
+00047:   Return
+00048: LoadVar(00000)
+00049:   Return
+00050: LoadFn { code: 00048, fvars: 00000 }
+00051:   Return
+00052: LoadVar(00000)
+00053: LoadFn { code: 00000, fvars: 00000 }
+00054: AppArgToFn
+00055:   Return
+00056: LoadFn { code: 00052, fvars: 00000 }
+00057:   Return
+00058: LoadVar(00004)
+00059: LoadFn { code: 00056, fvars: 00000 }
+00060: PushString("")
+00061: AppFnToArg
+00062: LoadVar(00005)
+00063: AppFnToArg
+00064: AppFnToArg
+00065:   Return
+00066: LoadFn { code: 00058, fvars: 00005 }
+00067:   Return
+00068: LoadVar(00002)
+00069: LoadVar(00001)
+00070: LoadVar(00000)
+00071: Unpack
+00072: AppArgToFn
+00073: AppArgToFn
+00074:   Return
+00075: LoadFn { code: 00068, fvars: 00002 }
+00076:   Return
+00077: LoadFn { code: 00075, fvars: 00001 }
+00078:   Return
+00079: LoadVar(00000)
+00080:   Return
+00081: LoadFn { code: 00079, fvars: 00000 }
+00082:   Return
+00083: LoadVar(00003)
+00084: LoadVar(00002)
+00085: LoadVar(00001)
+00086: LoadVar(00000)
+00087: Cmp
+00088: AppArgToFn
+00089:   Return
+00090: LoadFn { code: 00083, fvars: 00003 }
+00091:   Return
+00092: LoadFn { code: 00090, fvars: 00002 }
+00093:   Return
+00094: LoadFn { code: 00092, fvars: 00001 }
+00095:   Return
+00096: LoadVar(00006)
+00097: LoadVar(00001)
+00098: AppFnToArg
+00099:   Return
+00100: PushEffect("todo")
+00101: PushString("")
+00102: AppFnToArg
+00103:   Return
+00104: LoadFn { code: 00094, fvars: 00000 }
+00105: LoadVar(00001)
+00106: AppFnToArg
+00107: PushString("Value")
+00108: AppFnToArg
+00109: LoadFn { code: 00096, fvars: 00006 }
+00110: AppFnToArg
+00111: LoadFn { code: 00100, fvars: 00000 }
+00112: AppFnToArg
+00113:   Return
+00114: LoadFn { code: 00104, fvars: 00005 }
+00115:   Return
+00116: PushEffect("todo")
+00117: PushString("")
+00118: AppFnToArg
+00119:   Return
+00120: LoadFn { code: 00077, fvars: 00000 }
+00121: LoadVar(00004)
+00122: AppFnToArg
+00123: LoadFn { code: 00081, fvars: 00000 }
+00124: PushString("")
+00125: PushString(""arg"")
+00126: AppFnToArg
+00127: PushString(""type"")
+00128: AppFnToArg
+00129: AppFnToArg
+00130: LoadFn { code: 00114, fvars: 00004 }
+00131: AppFnToArg
+00132: AppFnToArg
+00133: LoadFn { code: 00116, fvars: 00000 }
+00134: AppFnToArg
+00135:   Return
+00136: LoadFn { code: 00046, fvars: 00000 }
+00137: LoadVar(00001)
+00138: AppFnToArg
+00139: LoadFn { code: 00050, fvars: 00000 }
+00140: PushString("")
+00141: PushString(""f"")
+00142: AppFnToArg
+00143: PushString(""type"")
+00144: AppFnToArg
+00145: AppFnToArg
+00146: LoadFn { code: 00066, fvars: 00004 }
+00147: AppFnToArg
+00148: AppFnToArg
+00149: LoadFn { code: 00120, fvars: 00004 }
+00150: AppFnToArg
+00151:   Return
+00152: LoadFn { code: 00136, fvars: 00003 }
+00153:   Return
+00154: PushEffect("must-be-called-as-macro")
+00155: PushString("")
+00156: AppFnToArg
+00157:   Return
+00158: LoadFn { code: 00031, fvars: 00000 }
+00159: LoadVar(00002)
+00160: AppFnToArg
+00161: LoadFn { code: 00035, fvars: 00000 }
+00162: PushString("")
+00163: PushString(""arg"")
+00164: AppFnToArg
+00165: PushString(""type"")
+00166: AppFnToArg
+00167: AppFnToArg
+00168: LoadFn { code: 00152, fvars: 00002 }
+00169: AppFnToArg
+00170: AppFnToArg
+00171: LoadFn { code: 00154, fvars: 00000 }
+00172: AppFnToArg
+00173:   Return
+00174: LoadFn { code: 00158, fvars: 00002 }
+00175:   Return
+00176: LoadFn { code: 00174, fvars: 00001 }
+00177:   Return
+00178: LoadVar(00000)
+00179:   Return
+00180: LoadVar(00000)
+00181: PushString("Binding")
+00182: PushString(""foo"")
+00183: AppFnToArg
+00184: AppFnToArg
+00185: PushString("Value")
+00186: PushString("Foo")
+00187: AppFnToArg
+00188: AppFnToArg
+00189: LoadFn { code: 00178, fvars: 00000 }
+00190: AppFnToArg
+00191:   Return
+00192: LoadFn { code: 00016, fvars: 00000 }
+00193: PushString(""="")
+00194: AppFnToArg
+00195: LoadFn { code: 00020, fvars: 00000 }
+00196: PushString("")
+00197: PushString(""block"")
+00198: AppFnToArg
+00199: PushString(""value"")
+00200: AppFnToArg
+00201: PushString(""binding"")
+00202: AppFnToArg
+00203: AppFnToArg
+00204: LoadFn { code: 00176, fvars: 00000 }
+00205: AppFnToArg
+00206: AppFnToArg
+00207: LoadFn { code: 00180, fvars: 00000 }
+00208: AppFnToArg
+00209:   Return
+
+Foo

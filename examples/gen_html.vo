@@ -1,8 +1,8 @@
 // A simple html generator
 
-:escape = (:str => { str })
+::escape(:str) = { str }
 
-:gen-inline = (:inline => {
+::gen-inline(:inline) = {
     match(inline) with: [
         Em(:content) -> { ["<em>", escape(content), "</em>"] }
         Strong(:content) -> { ["<strong>", escape(content), "</strong>"] }
@@ -10,9 +10,9 @@
         Link([["href", :href], ["text", :text]]) -> { [#"<a href=""#, href, #"">"#, escape(text), "</a>"] }
         :string -> { [escape(string)] }
     ]
-})
+}
 
-:gen-block = (:gen-block ~> { [:pre, :post, :block] => {
+::gen-block(:pre, :post, :block) = {
     match (block) with: [
         Subsection([["title", :title], ["blocks", :blocks]]) -> { [
             "<h3>", escape(title), "</h3>"
@@ -24,9 +24,9 @@
         Code(:code) -> { ["<pre><code>", escape(code), "</code></pre>"] }
         :inline -> { [pre, inline |> map(gen-inline), post] }
     ]
-} })
+}
 
-:gen-section = ([:title, :section] => {
+::gen-section(:title, :section) = {
     match (section) with: [
         Note([["date", [:yy, :mm, :dd]]]) -> { [
             #"<p><a href="..#notes">Notes</a><br />"#, yy, "/", mm, "/", dd, "</p>"
@@ -41,9 +41,9 @@
             blocks |> map(gen-block("<p>", "</p>"))
         ] }
     ]
-})
+}
 
-:gen-html = (:page => {
+::gen-html(:page) = {
     match (page) with: [
         Html([["lang", :lang], ["stylesheet", :stylesheet], ["title", :title], ["sections", :sections]]) -> { [
             "<!DOCTYPE html>"
@@ -60,6 +60,6 @@
             "</html>"
         ] }
     ]
-})
+}
 
 read!() |> gen-html |> deep-flatten

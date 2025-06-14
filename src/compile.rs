@@ -1,6 +1,6 @@
 use std::{cmp::max, iter, mem, usize, vec::IntoIter};
 
-use crate::bytecode::{Bytecode, Ctx, Op, Reflect};
+use crate::bytecode::{Bytecode, Ctx, Op, Syn};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tok<'code> {
@@ -8,7 +8,7 @@ enum Tok<'code> {
     Atom(&'code str),
     String(&'code str),
     Keyword(&'code str),
-    Binding(&'code str),
+    Binding(usize, &'code str),
     LParen,
     RParen,
     LBracket,
@@ -18,7 +18,7 @@ enum Tok<'code> {
     Separator,
 }
 
-fn scan(code: &str) -> Result<Vec<(Tok, usize, &str)>, usize> {
+fn scan(code: &str) -> Result<Vec<(Tok, usize, &str)>, (usize, &str)> {
     let mut toks = vec![];
     let mut i = 0;
     let mut chars = code.char_indices().chain(iter::once((code.len(), ' ')));
@@ -38,7 +38,12 @@ fn scan(code: &str) -> Result<Vec<(Tok, usize, &str)>, usize> {
         if tok.is_some() || c.is_ascii_whitespace() || is_comment || is_str_literal {
             if let (Some(n), Some(l)) = (code[i..j].chars().next(), code[i..j].chars().last()) {
                 let tok = match (n, l) {
-                    (':', _) => Tok::Binding(&code[i + 1..j]),
+                    (':', _) if i + 1 == j => return Err((i, "an empty binding")),
+                    (':', ':') => return Err((i, "a binding used as a keyword")),
+                    (':', _) => {
+                        let colons = code[i..].chars().take_while(|c| *c == ':').count();
+                        Tok::Binding(colons - 1, &code[i + colons..j])
+                    }
                     (_, ':') => Tok::Keyword(&code[i..j - 1]),
                     (n, _) if n.is_ascii_uppercase() => Tok::Atom(&code[i..j]),
                     _ => Tok::Ident(&code[i..j]),
@@ -57,7 +62,7 @@ fn scan(code: &str) -> Result<Vec<(Tok, usize, &str)>, usize> {
             let n = code[j..].chars().take_while(|&ch| ch == '#').count();
             let end = format!("\"{}", "#".repeat(n));
             match chars.by_ref().skip(n).map(|(j, _)| j).find(|j| code[*j..].starts_with(&end)) {
-                None => return Err(i - 1),
+                None => return Err((i - 1, "an unclosed string literal")),
                 Some(j) => {
                     toks.push((Tok::String(&code[i + n..j]), i - 1, &code[i - 1..j + n + 1]));
                     i = j + n + 1;
@@ -76,7 +81,7 @@ pub enum A {
     Var(String),
     Atom(String),
     String(String),
-    Binding(String),
+    Binding(usize, String),
     Block(Vec<Ast>),
     List(Vec<Ast>),
     Call(Box<Ast>, Vec<Ast>),
@@ -172,7 +177,7 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
                 Tok::Ident(s) => Ok(Ast(i, A::Var(s.to_string()))),
                 Tok::Atom(s) => Ok(Ast(i, A::Atom(s.to_string()))),
                 Tok::String(s) => Ok(Ast(i, A::String(s.to_string()))),
-                Tok::Binding(s) => Ok(Ast(i, A::Binding(s.to_string()))),
+                Tok::Binding(lvl, s) => Ok(Ast(i, A::Binding(lvl, s.to_string()))),
                 Tok::LParen => match _expr(toks) {
                     Err(E(i, tok, _E::Value)) => Err(E(i, tok, _E::RParen)),
                     Err(e) => Err(e),
@@ -219,7 +224,7 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
             }
         }
     }
-    let toks = scan(code).map_err(|i| format!("Unclosed token starting at {}", pos_at(i, code)))?;
+    let toks = scan(code).map_err(|(i, msg)| format!("Found {msg} at {}", pos_at(i, code)))?;
     let mut toks = toks.into_iter().peekable();
     match _exprs(&mut toks, 0, None) {
         Ok(exprs) => Ok(exprs),
@@ -266,7 +271,7 @@ pub fn app(f: Expr, arg: Expr) -> Expr {
 }
 
 pub fn nil() -> Expr {
-    Expr::String(Reflect::Nil as usize)
+    Expr::String(Syn::Nil as usize)
 }
 
 pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr, String> {
@@ -281,7 +286,7 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
     }
     fn contains_bindings(Ast(_, ast): &Ast) -> bool {
         match ast {
-            A::Binding(_) => true,
+            A::Binding(_, _) => true,
             A::Var(_) | A::Atom(_) | A::String(_) | A::Block(_) => false,
             A::Call(f, _) if contains_bindings(f) => true,
             A::List(items) | A::Call(_, items) => {
@@ -290,26 +295,26 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
             }
         }
     }
-    fn desug_reflect(ast: Ast, ctx: &mut Ctx) -> Result<Expr, (usize, String)> {
+    fn desug_macro(ast: Ast, ctx: &mut Ctx) -> Result<Expr, (usize, String)> {
         fn desug_all(xs: Vec<Ast>, ctx: &mut Ctx) -> Result<Vec<Expr>, (usize, String)> {
-            xs.into_iter().map(|x| desug_reflect(x, ctx)).collect()
+            xs.into_iter().map(|x| desug_macro(x, ctx)).collect()
         }
         match ast.1 {
             A::List(items) if contains_bindings(&ast) => {
                 let items = desug_all(items.into_iter().rev().collect(), ctx)?;
                 let list = items.into_iter().fold(nil(), |l, x| app(l, x));
-                Ok(app(Expr::String(Reflect::List as usize), list))
+                Ok(app(Expr::String(Syn::List as usize), list))
             }
             A::Call(f, args) if contains_bindings(&ast) => {
+                let f = desug_macro(*f, ctx)?;
                 let args = desug_all(args, ctx)?;
                 let list = args.into_iter().rev().fold(nil(), |l, x| app(l, x));
-                let f = desug_reflect(*f, ctx)?;
-                Ok(app(app(Expr::String(Reflect::Compound as usize), f), list))
+                Ok(app(app(Expr::String(Syn::Compound as usize), f), list))
             }
             A::Var(_) | A::Atom(_) | A::String(_) | A::List(_) | A::Call(_, _) => {
-                Ok(app(Expr::String(Reflect::Value as usize), desug_val(ast, ctx)?))
+                Ok(app(Expr::String(Syn::Value as usize), desug_val(ast, ctx)?))
             }
-            A::Binding(_) => Ok(app(Expr::String(Reflect::Binding as usize), desug_val(ast, ctx)?)),
+            A::Binding(_, _) => Ok(app(Expr::String(Syn::Binding as usize), desug_val(ast, ctx)?)),
             A::Block(_) => desug_val(ast, ctx),
         }
     }
@@ -336,8 +341,8 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
             },
             A::Atom(s) => Ok(Expr::String(resolve_str(s.to_string(), ctx))),
             A::String(s) => Ok(Expr::String(resolve_str(format!("\"{s}\""), ctx))),
-            A::Binding(b) => {
-                ctx.bindings.push(b.to_string());
+            A::Binding(lvl, b) => {
+                ctx.bindings.push((lvl, b.to_string()));
                 Ok(Expr::String(resolve_str(format!("\"{b}\""), ctx)))
             }
             A::Block(mut items) => {
@@ -347,7 +352,8 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                 }
                 for ast in items {
                     let bindings = ctx.bindings.len();
-                    ctx.vars.extend(ctx.bindings.drain(..));
+                    let drained = ctx.drain_bindings();
+                    ctx.vars.extend(drained);
                     if bindings == 0 {
                         ctx.vars.push(String::new())
                     }
@@ -362,7 +368,7 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                     bindings = prev_bindings;
                 }
                 ctx.vars.truncate(ctx.vars.len() - max(1, bindings));
-                ctx.bindings.clear();
+                ctx.clear_bindings();
                 Ok(expr)
             }
             A::List(items) => {
@@ -374,12 +380,15 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
                 let mut f = desug_val(*f, ctx)?;
                 let is_builtin = matches!(f, Expr::Abs(_));
-                let is_macro = !is_builtin && args.iter().any(|x| matches!(x, Ast(_, A::Block(_))));
+                let is_macro = !is_builtin
+                    && args
+                        .iter()
+                        .any(|x| contains_bindings(x) || matches!(x, Ast(_, A::Block(_))));
                 if args.is_empty() {
                     f = app(f, nil());
                 }
                 for x in args {
-                    f = app(f, if is_macro { desug_reflect(x, ctx)? } else { desug_val(x, ctx)? })
+                    f = app(f, if is_macro { desug_macro(x, ctx)? } else { desug_val(x, ctx)? })
                 }
                 ctx.bindings.splice(0..0, bindings);
                 Ok(f)

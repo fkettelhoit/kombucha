@@ -16,7 +16,7 @@ fn pretty_ast<'c>(prg: &[Ast]) -> String {
             A::Var(s) => buf.push_str(s),
             A::Atom(s) => buf.push_str(s),
             A::String(s) => buf.push_str(&format!("\"{s}\"")),
-            A::Binding(s) => buf.push_str(&format!(":{s}")),
+            A::Binding(lvl, s) => buf.push_str(&(":".repeat(lvl + 1) + s)),
             A::Block(items) => {
                 buf.push_str("{ ");
                 for (i, item) in items.iter().enumerate() {

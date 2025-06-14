@@ -126,4 +126,16 @@ Expected an expression, but found 'foo:' at line 1, col 1
 
 f("foo)
 
-Unclosed token starting at line 1, col 3
+Found an unclosed string literal at line 1, col 3
+
+---
+
+f(: => {})
+
+Found an empty binding at line 1, col 3
+
+---
+
+f :foo: bar
+
+Found a binding used as a keyword at line 1, col 3

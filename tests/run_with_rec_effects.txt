@@ -132,7 +132,7 @@ List(Foo)
     :val => { :r => {
         __handle({
             r(val)
-        }, toggle!, :r => { : => {
+        }, toggle!, :r => { :arg => {
             __compare(val, True, {
               loop(False, r)
             }, {
@@ -158,7 +158,7 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
                 (=>
                   :r
                   { (=>
-                      :
+                      :arg
                       { (__compare
                           val
                           True
@@ -216,7 +216,7 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
                       ( ( =>
                             =>
                               0
-                          "" )
+                          "arg" )
                         =>
                           ( ( ( ( =>
                                     =>
@@ -343,7 +343,7 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00090: AppFnToArg
 00091:   Return
 00092: LoadFn { code: 00055, fvars: 00000 }
-00093: PushString("""")
+00093: PushString(""arg"")
 00094: AppFnToArg
 00095: LoadFn { code: 00082, fvars: 00004 }
 00096: AppFnToArg

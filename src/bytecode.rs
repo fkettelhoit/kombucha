@@ -1,5 +1,5 @@
 // The order mirrors their position in the bytecode header:
-pub enum Reflect {
+pub enum Syn {
     Nil = 0,
     Value = 1,
     Binding = 2,
@@ -18,7 +18,7 @@ pub struct Bytecode {
 
 #[derive(Debug, Clone)]
 pub struct Ctx {
-    pub bindings: Vec<String>,
+    pub bindings: Vec<(usize, String)>,
     pub vars: Vec<String>,
     pub strs: Vec<String>,
 }
@@ -27,6 +27,30 @@ impl Default for Ctx {
     fn default() -> Self {
         let strs = [NIL, "Value", "Binding", "Compound", "List"].map(|s| s.to_string()).to_vec();
         Ctx { bindings: vec![], vars: vec![], strs }
+    }
+}
+
+impl Ctx {
+    pub fn drain_bindings(&mut self) -> Vec<String> {
+        let mut kept = vec![];
+        let mut drained = vec![];
+        for (lvl, b) in self.bindings.drain(..) {
+            if lvl > 0 {
+                kept.push((lvl, b.clone()));
+            }
+            drained.push(b);
+        }
+        self.bindings = kept;
+        drained
+    }
+
+    pub fn clear_bindings(&mut self) {
+        self.bindings = self
+            .bindings
+            .drain(..)
+            .filter(|(lvl, _)| *lvl > 0)
+            .map(|(lvl, b)| (lvl - 1, b))
+            .collect()
     }
 }
 
@@ -56,7 +80,12 @@ impl Bytecode {
         buf.extend((self.ctx.vars.len() as u32).to_be_bytes());
         buf.extend((self.ctx.strs.len() as u32).to_be_bytes());
         buf.extend((self.start as u32).to_be_bytes());
-        for section in [&self.ctx.bindings, &self.ctx.vars, &self.ctx.strs] {
+        for (lvl, s) in &self.ctx.bindings {
+            buf.extend((*lvl as u16).to_be_bytes());
+            buf.extend((s.len() as u32).to_be_bytes());
+            buf.extend(s.as_bytes());
+        }
+        for section in [&self.ctx.vars, &self.ctx.strs] {
             for s in section {
                 buf.extend((s.len() as u32).to_be_bytes());
                 buf.extend(s.as_bytes());
@@ -120,7 +149,22 @@ impl Bytecode {
             i += 4;
         }
         let [b, v, s, start_op] = strs;
-        for (strings, count) in [(&mut ctx.bindings, b), (&mut ctx.vars, v), (&mut ctx.strs, s)] {
+        for _ in 0..b {
+            if i + 6 > buf.len() {
+                return Err(format!("Expected 6 binding length bytes at offset {i}"));
+            }
+            let lvl = u16::from_be_bytes([buf[i], buf[i + 1]]);
+            let len = u32::from_be_bytes([buf[i + 2], buf[i + 3], buf[i + 4], buf[i + 5]]) as usize;
+            i += 6;
+            if i + len > buf.len() {
+                return Err(format!("String at {i} is shorter than length {len}"));
+            }
+            let string = String::from_utf8(buf[i..i + len].to_vec())
+                .map_err(|_| format!("Invalid UTF8 string at {i}"))?;
+            ctx.bindings.push((lvl as usize, string.into()));
+            i += len;
+        }
+        for (strings, count) in [(&mut ctx.vars, v), (&mut ctx.strs, s)] {
             strings.clear();
             for _ in 0..count {
                 if i + 4 > buf.len() {

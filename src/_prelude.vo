@@ -150,3 +150,22 @@
     })
 }})
 :deep-flatten = (:xs => { xs |> deep-flatten([]) |> reverse })
+:= = ([:binding, :value, :block] => {
+  __unpack(binding, [:type, :arg] => {
+    __unpack(type, [:type, :f] => {
+      block([] ~> value)
+    }, {
+      __unpack(value, [:type, :arg] => {
+        __compare(type, Value, {
+          block(arg)
+        }, {
+          todo!()
+        })
+      }, {
+        todo!()
+      })
+    })
+  }, {
+    must-be-called-as-macro!("="([binding, value, block]))
+  })
+})

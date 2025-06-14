@@ -255,7 +255,7 @@ Pair(Args(Bar, Baz))
 
 ---
 
-__handle({ Foo }, unused!, :r => { : => { Error }})
+__handle({ Foo }, unused!, :r => { :arg => { Error }})
 
 (__handle
   { Foo }
@@ -263,7 +263,7 @@ __handle({ Foo }, unused!, :r => { : => { Error }})
   (=>
     :r
     { (=>
-        :
+        :arg
         { Error }) }))
 
 ( ( ( =>
@@ -284,7 +284,7 @@ __handle({ Foo }, unused!, :r => { : => { Error }})
       ( ( =>
             =>
               0
-          "" )
+          "arg" )
         =>
           Error ) ) )
 
@@ -324,7 +324,7 @@ __handle({ Foo }, unused!, :r => { : => { Error }})
 00033: PushString("Error")
 00034:   Return
 00035: LoadFn { code: 00031, fvars: 00000 }
-00036: PushString("""")
+00036: PushString(""arg"")
 00037: AppFnToArg
 00038: LoadFn { code: 00033, fvars: 00000 }
 00039: AppFnToArg
@@ -451,7 +451,7 @@ Foo(Bar)
 
 __handle({
     Foo(eff!())
-}, eff!, :r => { : => {
+}, eff!, :r => { :arg => {
     Pair(r(Bar), r(Baz))
 } })
 
@@ -462,7 +462,7 @@ __handle({
   (=>
     :r
     { (=>
-        :
+        :arg
         { (Pair
             (r
               Bar)
@@ -489,7 +489,7 @@ __handle({
       ( ( =>
             =>
               0
-          "" )
+          "arg" )
         =>
           ( ( Pair
               ( 1
@@ -545,7 +545,7 @@ __handle({
 00045: AppFnToArg
 00046:   Return
 00047: LoadFn { code: 00035, fvars: 00000 }
-00048: PushString("""")
+00048: PushString(""arg"")
 00049: AppFnToArg
 00050: LoadFn { code: 00037, fvars: 00001 }
 00051: AppFnToArg
@@ -715,11 +715,9 @@ Twice(List(Foo, Foo), List(Baz))
 
 Foo(__handle({
   Baz(effect!(), effect!())
-}, effect!, :r => {
-  : => {
+}, effect!, :r => { :arg => {
     Bar(r(Qux))
-  }
-}))
+} }))
 
 (Foo
   (__handle
@@ -730,7 +728,7 @@ Foo(__handle({
     (=>
       :r
       { (=>
-          :
+          :arg
           { (Bar
               (r
                 Qux)) }) })))
@@ -758,7 +756,7 @@ Foo(__handle({
         ( ( =>
               =>
                 0
-            "" )
+            "arg" )
           =>
             ( Bar
               ( 1
@@ -812,7 +810,7 @@ Foo(__handle({
 00045: AppFnToArg
 00046:   Return
 00047: LoadFn { code: 00039, fvars: 00000 }
-00048: PushString("""")
+00048: PushString(""arg"")
 00049: AppFnToArg
 00050: LoadFn { code: 00041, fvars: 00001 }
 00051: AppFnToArg
@@ -839,11 +837,11 @@ effect!([])
 __handle({
   List(get!(), get!())
 }, get!, :r => {
-  : => {
+  :arg => {
     __handle({
       r(Foo)
     }, get!, :r => {
-      : => {
+      :arg => {
         r(Bar)
       }
     })
@@ -858,7 +856,7 @@ __handle({
   (=>
     :r
     { (=>
-        :
+        :arg
         { (__handle
             { (r
                 Foo) }
@@ -866,7 +864,7 @@ __handle({
             (=>
               :r
               { (=>
-                  :
+                  :arg
                   { (r
                       Bar) }) })) }) }))
 
@@ -892,7 +890,7 @@ __handle({
       ( ( =>
             =>
               0
-          "" )
+          "arg" )
         =>
           ( ( ( =>
                   =>
@@ -913,7 +911,7 @@ __handle({
                 ( ( =>
                       =>
                         0
-                    "" )
+                    "arg" )
                   =>
                     ( 1
                       Bar ) ) ) ) ) ) )
@@ -989,7 +987,7 @@ __handle({
 00068: AppFnToArg
 00069:   Return
 00070: LoadFn { code: 00064, fvars: 00000 }
-00071: PushString("""")
+00071: PushString(""arg"")
 00072: AppFnToArg
 00073: LoadFn { code: 00066, fvars: 00001 }
 00074: AppFnToArg
@@ -1007,7 +1005,7 @@ __handle({
 00086: AppFnToArg
 00087:   Return
 00088: LoadFn { code: 00039, fvars: 00000 }
-00089: PushString("""")
+00089: PushString(""arg"")
 00090: AppFnToArg
 00091: LoadFn { code: 00076, fvars: 00001 }
 00092: AppFnToArg

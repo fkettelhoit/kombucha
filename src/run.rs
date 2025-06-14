@@ -1,4 +1,4 @@
-use crate::bytecode::{Bytecode, Op, Reflect};
+use crate::bytecode::{Bytecode, Op, Syn};
 use std::{rc::Rc, usize};
 
 impl Bytecode {
@@ -69,6 +69,7 @@ impl Vm {
                 }
                 Op::LoadString(s) => temps.push(Val::String(s)),
                 Op::LoadEffect(eff) => temps.push(Val::Effect(eff)),
+                Op::LoadFn { code: _, fvars } if fvars > vars.len() => return Err(ip),
                 Op::LoadFn { code, fvars } => {
                     let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
                     temps.push(Val::Closure(code, captured))
@@ -158,7 +159,7 @@ impl Vm {
                             temps.push(t);
                         }
                         (f, _, _) => {
-                            temps.push(Val::String(Reflect::Nil as usize));
+                            temps.push(Val::String(Syn::Nil as usize));
                             temps.push(f);
                             ip += 1;
                         }
@@ -173,7 +174,7 @@ impl Vm {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
                             let ret = ip + 2; // skip apply + unwind
                             handlers.push(Handler { effect, handler, state, ret });
-                            temps.push(Val::String(Reflect::Nil as usize));
+                            temps.push(Val::String(Syn::Nil as usize));
                             temps.push(v);
                         }
                         _ => {
@@ -197,7 +198,7 @@ impl Vm {
                         (Val::String(a), Val::String(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
-                    temps.push(Val::String(Reflect::Nil as usize));
+                    temps.push(Val::String(Syn::Nil as usize));
                     temps.push(branch);
                 }
             }
