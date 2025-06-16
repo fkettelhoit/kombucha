@@ -32,6 +32,9 @@
             #"<p><a href="..#notes">Notes</a><br />"#, yy, "/", mm, "/", dd, "</p>"
             "<h1>", escape(title), "</h1>"
         ] }
+        Section([["blocks", :blocks]]) -> { [
+            blocks |> map(gen-block("<p>", "</p>"))
+        ] }
         Section([["title", :title], ["blocks", :blocks]]) -> { [
             "<h2>", escape(title), "</h2>"
             blocks |> map(gen-block("<p>", "</p>"))
