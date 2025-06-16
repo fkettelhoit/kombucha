@@ -59,6 +59,17 @@ fn prelude_generate_html2() -> Result<(), String> {
                     let start = vm.bytecode.load(include_str!("../examples/gen_html.page.vo"))?;
                     result = vm.resume_at(start).unwrap();
                 }
+                "escape" => {
+                    let str = vm.deserialize::<String>().unwrap();
+                    let escaped = str
+                        .replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                        .replace("\"", "&quot;")
+                        .replace("'", "&apos;");
+                    let arg = vm.bytecode.serialize(&escaped).unwrap();
+                    result = vm.resume(arg).unwrap();
+                }
                 eff => panic!("{eff}!({})", pretty_res(&vm)),
             },
         }
