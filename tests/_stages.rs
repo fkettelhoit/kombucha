@@ -286,52 +286,52 @@ fn test(path: PathBuf) -> Result<(), String> {
 }
 
 #[test]
-fn test_parse() -> Result<(), String> {
-    test(PathBuf::from("tests/parse.txt"))
+fn parse_ok() -> Result<(), String> {
+    test(PathBuf::from("tests/parse_ok.txt"))
 }
 
 #[test]
-fn test_err_parse() -> Result<(), String> {
-    test(PathBuf::from("tests/err_parse.txt"))
+fn parse_err() -> Result<(), String> {
+    test(PathBuf::from("tests/parse_err.txt"))
 }
 
 #[test]
-fn test_err_desugar() -> Result<(), String> {
-    test(PathBuf::from("tests/err_desugar.txt"))
+fn desugar_err() -> Result<(), String> {
+    test(PathBuf::from("tests/desugar_err.txt"))
 }
 
 #[test]
-fn test_run_apply() -> Result<(), String> {
+fn run_apply() -> Result<(), String> {
     test(PathBuf::from("tests/run_apply.txt"))
 }
 
 #[test]
-fn test_run_fn() -> Result<(), String> {
+fn run_fn() -> Result<(), String> {
     test(PathBuf::from("tests/run_fn.txt"))
 }
 
 #[test]
-fn test_run_block() -> Result<(), String> {
+fn run_block() -> Result<(), String> {
     test(PathBuf::from("tests/run_block.txt"))
 }
 
 #[test]
-fn test_run_if() -> Result<(), String> {
+fn run_if() -> Result<(), String> {
     test(PathBuf::from("tests/run_if.txt"))
 }
 
 #[test]
-fn test_run_macro() -> Result<(), String> {
+fn run_macro() -> Result<(), String> {
     test(PathBuf::from("tests/run_macro.txt"))
 }
 
 #[test]
-fn test_run_pop() -> Result<(), String> {
+fn run_pop() -> Result<(), String> {
     test(PathBuf::from("tests/run_pop.txt"))
 }
 
 #[test]
-fn test_run_rec() -> Result<(), String> {
+fn run_rec() -> Result<(), String> {
     test(PathBuf::from("tests/run_rec.txt"))
 }
 
@@ -374,16 +374,16 @@ fn test_with_effects(path: PathBuf) -> Result<(), String> {
 }
 
 #[test]
-fn test_run_with_effects() -> Result<(), String> {
+fn run_with_effects() -> Result<(), String> {
     test_with_effects(PathBuf::from("tests/run_with_effects.txt"))
 }
 
 #[test]
-fn test_run_with_rec_effects() -> Result<(), String> {
+fn run_with_rec_effects() -> Result<(), String> {
     test_with_effects(PathBuf::from("tests/run_with_rec_effects.txt"))
 }
 
 #[test]
-fn test_run_with_std_fns() -> Result<(), String> {
+fn run_with_std_fns() -> Result<(), String> {
     test(PathBuf::from("tests/run_with_std_fns.txt"))
 }
