@@ -37,7 +37,7 @@ fn main() -> ExitCode {
                                 eprintln!("Could not read {input_file}: {e}");
                                 return ExitCode::FAILURE;
                             }
-                            Ok(file) => match vm.bytecode.load(&file) {
+                            Ok(file) => match vm.arg.bytecode.load(&file) {
                                 Err(e) => {
                                     eprintln!("{e}");
                                     return ExitCode::FAILURE;
@@ -45,7 +45,7 @@ fn main() -> ExitCode {
                                 Ok(start) => result = vm.resume_at(start),
                             },
                         },
-                        "escape" => match vm.deserialize::<String>() {
+                        "escape" => match vm.arg.deserialize::<String>() {
                             Ok(str) => {
                                 let escaped = str
                                     .replace("&", "&amp;")
@@ -53,7 +53,7 @@ fn main() -> ExitCode {
                                     .replace(">", "&gt;")
                                     .replace("\"", "&quot;")
                                     .replace("'", "&apos;");
-                                let arg = vm.bytecode.serialize(&escaped).unwrap();
+                                let arg = vm.serialize(&escaped).unwrap();
                                 result = vm.resume(arg);
                             }
                             Err(e) => {
@@ -66,7 +66,7 @@ fn main() -> ExitCode {
                                 eprintln!("Could not read {input_file}: {e}");
                                 return ExitCode::FAILURE;
                             }
-                            Ok(file) => match vm.bytecode.serialize(&file) {
+                            Ok(file) => match vm.serialize(&file) {
                                 Err(e) => {
                                     eprintln!("Could not serialize code: {e}");
                                     return ExitCode::FAILURE;

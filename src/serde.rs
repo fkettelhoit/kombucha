@@ -109,8 +109,8 @@ impl Value {
 }
 
 impl Resumable {
-    pub fn deserialize<'a, T: Deserialize<'a>>(&'a self) -> Result<T> {
-        self.bytecode.deserialize(&self.arg)
+    pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val> {
+        self.arg.bytecode.serialize(value)
     }
 }
 

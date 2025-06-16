@@ -1,4 +1,4 @@
-use crate::bytecode::{Bytecode, Op, Syn};
+use crate::bytecode::{Bytecode, NIL, Op, Syn};
 use std::{rc::Rc, usize};
 
 impl Bytecode {
@@ -32,9 +32,8 @@ pub struct Value {
 
 #[derive(Debug)]
 pub struct Resumable {
-    pub bytecode: Bytecode,
     pub effect: usize,
-    pub arg: Val,
+    pub arg: Value,
     pub vm: Vm,
 }
 
@@ -104,7 +103,8 @@ impl Vm {
                                 }
                                 None => {
                                     let vm = Vm { ip, vars, temps, frames, handlers };
-                                    let r = Resumable { bytecode, effect, arg, vm };
+                                    let arg = Value { bytecode, val: arg };
+                                    let r = Resumable { effect, arg, vm };
                                     return Ok(State::Resumable(r));
                                 }
                             }
@@ -206,28 +206,66 @@ impl Vm {
     }
 }
 
+fn pretty(v: &Val, strs: &Vec<String>) -> String {
+    match v {
+        Val::String(s) if strs[*s] == NIL => "[]".to_string(),
+        Val::String(s) => strs[*s].to_string(),
+        Val::Effect(s) => format!("{}!", strs[*s]),
+        Val::Closure(c, _) => format!("#fn-{c}"),
+        Val::Record(s, vs) if strs[*s] == NIL => {
+            let items = vs.iter().rev().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+            format!("[{}]", items.join(", "))
+        }
+        Val::Record(s, vs) => {
+            if vs.len() == 1 {
+                match *vs[0] {
+                    Val::String(v) if strs[v] == NIL => {
+                        return format!("{}()", pretty(&Val::String(*s), strs));
+                    }
+                    _ => {}
+                }
+            }
+            let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+            format!("{}({})", strs[*s].to_string(), items.join(", "))
+        }
+        Val::Resumable(_, _) => format!("#resumable"),
+    }
+}
+
+impl Value {
+    pub fn pretty(&self) -> String {
+        pretty(&self.val, &self.bytecode.ctx.strs)
+    }
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.pretty())
+    }
+}
+
 impl Resumable {
     pub fn effect(&self) -> &str {
-        self.bytecode.ctx.strs.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
+        self.arg.bytecode.ctx.strs.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
     }
 
     pub fn intern_atom(&mut self, s: String) -> Val {
-        Val::String(intern(&mut self.bytecode.ctx.strs, s))
+        Val::String(intern(&mut self.arg.bytecode.ctx.strs, s))
     }
 
     pub fn intern_string(&mut self, s: impl AsRef<str>) -> Val {
-        Val::String(intern(&mut self.bytecode.ctx.strs, format!("\"{}\"", s.as_ref())))
+        Val::String(intern(&mut self.arg.bytecode.ctx.strs, format!("\"{}\"", s.as_ref())))
     }
 
     pub fn resume(mut self, arg: Val) -> Result<State, usize> {
         self.vm.temps.push(arg);
-        self.vm.run(self.bytecode)
+        self.vm.run(self.arg.bytecode)
     }
 
     pub fn resume_at(mut self, start: usize) -> Result<State, usize> {
         self.vm.frames.push((self.vm.vars.len(), self.vm.ip));
         self.vm.ip = start;
-        self.vm.run(self.bytecode)
+        self.vm.run(self.arg.bytecode)
     }
 }
 

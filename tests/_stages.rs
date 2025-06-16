@@ -1,13 +1,10 @@
 use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
-use common::{pretty_res, pretty_v};
 use vorpal::{
     bytecode::{Bytecode, Ctx, NIL, Op},
     compile::{A, Ast, Expr, codegen, desugar, parse},
     run::State,
 };
-
-mod common;
 
 fn pretty_ast<'c>(prg: &[Ast]) -> String {
     fn pretty<'c>(ast: &Ast, lvl: usize, buf: &mut String) {
@@ -273,9 +270,9 @@ fn test(path: PathBuf) -> Result<(), String> {
         let (mut actual, compiled) = test_without_run(&code);
         for vm in compiled {
             match vm.run() {
-                Ok(State::Done(v)) => actual.push(pretty_v(&v)),
+                Ok(State::Done(v)) => actual.push(v.to_string()),
                 Ok(State::Resumable(vm)) => {
-                    actual.push(format!("{}!({})", vm.effect(), pretty_res(&vm)))
+                    actual.push(format!("{}!({})", vm.effect(), vm.arg.to_string()))
                 }
                 Err(e) => actual.push(format!("Error at op {e}")),
             }
@@ -346,23 +343,23 @@ fn test_with_effects(path: PathBuf) -> Result<(), String> {
             loop {
                 match result {
                     Ok(State::Resumable(mut vm)) => {
-                        let arg = pretty_res(&vm);
+                        let arg = vm.arg.to_string();
                         match vm.effect() {
                             "print" => {
                                 printed.push(format!("\"{arg}\"\n"));
-                                let nil = vm.bytecode.serialize(&()).unwrap();
+                                let nil = vm.serialize(&()).unwrap();
                                 result = vm.resume(nil);
                             }
                             "load" => {
-                                let code: String = vm.bytecode.deserialize(&vm.arg).unwrap();
-                                let start = vm.bytecode.load(&code).unwrap();
+                                let code = vm.arg.deserialize::<String>().unwrap();
+                                let start = vm.arg.bytecode.load(&code).unwrap();
                                 result = vm.resume_at(start);
                             }
                             name => break actual.push(format!("{name}!({arg})")),
                         }
                     }
                     Ok(State::Done(v)) => {
-                        break actual.push(printed.join("") + &pretty_v(&v));
+                        break actual.push(printed.join("") + &v.to_string());
                     }
                     Err(e) => break actual.push(format!("Error at op {e}")),
                 }
