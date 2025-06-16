@@ -1,6 +1,6 @@
 // A simple html generator
 
-::escape(:str) = { str }
+::escape(:str) = { escape!(str) }
 
 ::gen-inline(:inline) = {
     match(inline) with: [

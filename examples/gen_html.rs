@@ -45,6 +45,35 @@ fn main() -> ExitCode {
                                 Ok(start) => result = vm.resume_at(start),
                             },
                         },
+                        "escape" => match vm.deserialize::<String>() {
+                            Ok(str) => {
+                                let escaped = str
+                                    .replace("&", "&amp;")
+                                    .replace("<", "&lt;")
+                                    .replace(">", "&gt;")
+                                    .replace("\"", "&quot;")
+                                    .replace("'", "&apos;");
+                                let arg = vm.bytecode.serialize(&escaped).unwrap();
+                                result = vm.resume(arg);
+                            }
+                            Err(e) => {
+                                eprintln!("Could not deserialize argument as string: {e}");
+                                return ExitCode::FAILURE;
+                            }
+                        },
+                        "quine" => match read_to_string(&input_file) {
+                            Err(e) => {
+                                eprintln!("Could not read {input_file}: {e}");
+                                return ExitCode::FAILURE;
+                            }
+                            Ok(file) => match vm.bytecode.serialize(&file) {
+                                Err(e) => {
+                                    eprintln!("Could not serialize code: {e}");
+                                    return ExitCode::FAILURE;
+                                }
+                                Ok(code) => result = vm.resume(code),
+                            },
+                        },
                         eff => {
                             eprintln!("{eff}!(...)");
                             return ExitCode::FAILURE;
