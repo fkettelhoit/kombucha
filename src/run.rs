@@ -206,7 +206,7 @@ impl Vm {
     }
 }
 
-fn pretty(v: &Val, strs: &Vec<String>) -> String {
+pub(crate) fn pretty(v: &Val, strs: &Vec<String>) -> String {
     match v {
         Val::String(s) if strs[*s] == NIL => "[]".to_string(),
         Val::String(s) => strs[*s].to_string(),

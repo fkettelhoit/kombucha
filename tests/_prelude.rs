@@ -40,7 +40,7 @@ fn prelude_fn_def() -> Result<(), String> {
 }
 
 #[test]
-fn prelude_generate_html2() -> Result<(), String> {
+fn prelude_generate_html() -> Result<(), String> {
     let code = include_str!("../examples/gen_html.vo");
     let bytecode = compile(code)?;
     let mut result = bytecode.run().unwrap();
