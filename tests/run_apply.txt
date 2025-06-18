@@ -93,7 +93,7 @@ Foo()
 Foo([], Bar)
 
 (Foo
-  [  ]
+  []
   Bar)
 
 ( ( Foo
@@ -123,9 +123,10 @@ Foo([], Bar)
 
 [A, B, C]
 
-[ A
+([]
+  A
   B
-  C ]
+  C)
 
 ( ( ( []
       A )
@@ -157,7 +158,7 @@ Foo([], Bar)
 
 [](A)(B)(C)
 
-((([  ]
+((([]
   A)
   B)
   C)
@@ -193,8 +194,10 @@ Foo([], Bar)
 Foo bar: Baz
 
 (Foo
-  [ [ "bar"
-      Baz ] ])
+  ([]
+    ([]
+      "bar"
+      Baz)))
 
 ( Foo
   ( []

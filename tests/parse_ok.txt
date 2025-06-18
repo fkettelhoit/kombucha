@@ -75,10 +75,13 @@ if (x == y) do: {
   (==
     x
     y)
-  [ [ "do"
-      { (foo) } ]
-    [ "else"
-      { Bar } ] ])
+  ([]
+    ([]
+      "do"
+      { (foo) })
+    ([]
+      "else"
+      { Bar })))
 
 ---
 
@@ -88,13 +91,19 @@ if (x == y) do: (foo [Bar] baz: Qux) else: Bar
   (==
     x
     y)
-  [ [ "do"
+  ([]
+    ([]
+      "do"
       (foo
-        [ Bar ]
-        [ [ "baz"
-            Qux ] ]) ]
-    [ "else"
-      Bar ] ])
+        ([]
+          Bar)
+        ([]
+          ([]
+            "baz"
+            Qux))))
+    ([]
+      "else"
+      Bar)))
 
 ---
 
@@ -134,8 +143,11 @@ foo = Foo
       (Pair
         x
         y)
-      [ [ "with"
-          [ (=>
+      ([]
+        ([]
+          "with"
+          ([]
+            (=>
               (Pair
                 :x
                 :x)
@@ -148,7 +160,7 @@ foo = Foo
             (=>
               :x
               { (InvalidPair
-                  x) }) ] ] ]) })
+                  x) }))))) })
 
 ---
 
@@ -159,22 +171,28 @@ if (x == Foo) do: Pair(x, x) else: Error
   (==
     x
     y)
-  [ [ "do"
+  ([]
+    ([]
+      "do"
       { (print
-          Equal) } ]
-    [ "else"
+          Equal) })
+    ([]
+      "else"
       { (print
-          NotEqual) } ] ])
+          NotEqual) })))
 (if
   (==
     x
     Foo)
-  [ [ "do"
+  ([]
+    ([]
+      "do"
       (Pair
         x
-        x) ]
-    [ "else"
-      Error ] ])
+        x))
+    ([]
+      "else"
+      Error)))
 
 ---
 

@@ -12,14 +12,16 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -29,14 +31,16 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
             { acc }) }) }))
 (fold
   (=>
-    [ :acc
-      :x ]
+    ([]
+      :acc
+      :x)
     { (acc
         x) })
-  [  ]
-  [ A
+  []
+  ([]
+    A
     B
-    C ])
+    C))
 
 ( ( ( =>
         =>
@@ -259,14 +263,16 @@ reverse([A, B, C])
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -280,16 +286,18 @@ reverse([A, B, C])
     :xs
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               x) })
-        [  ]
+        []
         xs) }))
 (reverse
-  [ A
+  ([]
+    A
     B
-    C ])
+    C))
 
 ( ( ( =>
         =>
@@ -557,14 +565,16 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -578,21 +588,24 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
     :xs
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               x) })
-        [  ]
+        []
         xs) }))
 (=
   :apply
   (=>
-    [ :f
-      :xs ]
+    ([]
+      :f
+      :xs)
     { (fold
         (=>
-          [ :f
-            :x ]
+          ([]
+            :f
+            :x)
           { (f
               x) })
         f
@@ -600,16 +613,18 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
           xs)) }))
 (apply
   (=>
-    [ :x
+    ([]
+      :x
       :y
-      :z ]
+      :z)
     { (Triple
         x
         y
         z) })
-  [ A
+  ([]
+    A
     B
-    C ])
+    C))
 
 ( ( ( =>
         =>
@@ -1006,14 +1021,16 @@ map(:x => { Foo(x) }, [A, B, C])
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -1027,25 +1044,28 @@ map(:x => { Foo(x) }, [A, B, C])
     :xs
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               x) })
-        [  ]
+        []
         xs) }))
 (=
   :map
   (=>
-    [ :f
-      :xs ]
+    ([]
+      :f
+      :xs)
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               (f
                 x)) })
-        [  ]
+        []
         (reverse
           xs)) }))
 (map
@@ -1053,9 +1073,10 @@ map(:x => { Foo(x) }, [A, B, C])
     :x
     { (Foo
         x) })
-  [ A
+  ([]
+    A
     B
-    C ])
+    C))
 
 ( ( ( =>
         =>
@@ -1445,14 +1466,16 @@ map(:x => { Foo(x) }, [A, B, C])
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -1466,81 +1489,96 @@ map(:x => { Foo(x) }, [A, B, C])
     :xs
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               x) })
-        [  ]
+        []
         xs) }))
 (=
   :zip
   (~>
     :zip
     { (=>
-        [ :acc
+        ([]
+          :acc
           :xs
-          :ys ]
+          :ys)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (__unpack
                   ys
                   (=>
-                    [ :ys
-                      :y ]
+                    ([]
+                      :ys
+                      :y)
                     { (zip
                         (acc
-                          [ x
-                            y ])
+                          ([]
+                            x
+                            y))
                         xs
                         ys) })
                   {  }) })
             { (__unpack
                 ys
                 (=>
-                  [ :ys
-                    :y ]
+                  ([]
+                    :ys
+                    :y)
                   {  })
                 { acc }) }) }) }))
 (=
   :zip
   (=>
-    [ :xs
-      :ys ]
+    ([]
+      :xs
+      :ys)
     { (reverse
         (zip
-          [  ]
+          []
           xs
           ys)) }))
-[ (zip
-    [ A
-      B
-      C ]
-    [ X
-      Y
-      Z ])
+([]
   (zip
-    [ A
+    ([]
+      A
       B
-      C ]
-    [ X
-      Y ])
-  (zip
-    [ A
-      B ]
-    [ X
+      C)
+    ([]
+      X
       Y
-      Z ])
+      Z))
+  (zip
+    ([]
+      A
+      B
+      C)
+    ([]
+      X
+      Y))
+  (zip
+    ([]
+      A
+      B)
+    ([]
+      X
+      Y
+      Z))
   (zip
     Foo
-    [ X
+    ([]
+      X
       Y
-      Z ])
+      Z))
   (zip
     Foo
-    Bar) ]
+    Bar))
 
 ( ( ( =>
         =>
@@ -2214,18 +2252,21 @@ map(:x => { Foo(x) }, [A, B, C])
   (~>
     :==
     { (=>
-        [ :a
-          :b ]
+        ([]
+          :a
+          :b)
         { (__unpack
             a
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (__unpack
                   b
                   (=>
-                    [ :ys
-                      :y ]
+                    ([]
+                      :ys
+                      :y)
                     { (__compare
                         (==
                           x
@@ -2241,7 +2282,8 @@ map(:x => { Foo(x) }, [A, B, C])
                 b
                 { True }
                 { False }) }) }) }))
-[ (==
+([]
+  (==
     Foo
     Foo)
   (==
@@ -2272,7 +2314,7 @@ map(:x => { Foo(x) }, [A, B, C])
     (:f
       :a)
     (:g
-      :a)) ]
+      :a)))
 
 ( ( ( =>
         =>
@@ -2733,14 +2775,16 @@ flatten([[A, B], [C, D]])
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -2754,11 +2798,12 @@ flatten([[A, B], [C, D]])
     :xs
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               x) })
-        [  ]
+        []
         xs) }))
 (=
   :flatten
@@ -2767,23 +2812,28 @@ flatten([[A, B], [C, D]])
     { (reverse
         (fold
           (=>
-            [ :acc
-              :x ]
+            ([]
+              :acc
+              :x)
             { (fold
                 (=>
-                  [ :acc
-                    :x ]
+                  ([]
+                    :acc
+                    :x)
                   { (acc
                       x) })
                 acc
                 x) })
-          [  ]
+          []
           xs)) }))
 (flatten
-  [ [ A
-      B ]
-    [ C
-      D ] ])
+  ([]
+    ([]
+      A
+      B)
+    ([]
+      C
+      D)))
 
 ( ( ( =>
         =>
@@ -3175,14 +3225,16 @@ destructure(Foo(Bar, Baz, Qux))
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -3196,32 +3248,36 @@ destructure(Foo(Bar, Baz, Qux))
     :xs
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               x) })
-        [  ]
+        []
         xs) }))
 (=
   :destructure
   ((~>
     :destructure
     { (=>
-        [ :acc
-          :compound ]
+        ([]
+          :acc
+          :compound)
         { (__unpack
             compound
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (destructure
                   (acc
                     x)
                   xs) })
-            { [ compound
+            { ([]
+                compound
                 (reverse
-                  acc) ] }) }) })
-    [  ]))
+                  acc)) }) }) })
+    []))
 (destructure
   (Foo
     Bar
@@ -3757,14 +3813,16 @@ __handle({
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -3778,21 +3836,24 @@ __handle({
     :xs
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               x) })
-        [  ]
+        []
         xs) }))
 (=
   :apply
   (=>
-    [ :f
-      :xs ]
+    ([]
+      :f
+      :xs)
     { (fold
         (=>
-          [ :f
-            :x ]
+          ([]
+            :f
+            :x)
           { (f
               x) })
         f
@@ -3801,16 +3862,18 @@ __handle({
 (=
   :map
   (=>
-    [ :f
-      :xs ]
+    ([]
+      :f
+      :xs)
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               (f
                 x)) })
-        [  ]
+        []
         (reverse
           xs)) }))
 (=
@@ -3820,58 +3883,66 @@ __handle({
     { (reverse
         (fold
           (=>
-            [ :acc
-              :x ]
+            ([]
+              :acc
+              :x)
             { (fold
                 (=>
-                  [ :acc
-                    :x ]
+                  ([]
+                    :acc
+                    :x)
                   { (acc
                       x) })
                 acc
                 x) })
-          [  ]
+          []
           xs)) }))
 (=
   :zip-reverse
   (~>
     :zip-reverse
     { (=>
-        [ :acc
+        ([]
+          :acc
           :xs
-          :ys ]
+          :ys)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (__unpack
                   ys
                   (=>
-                    [ :ys
-                      :y ]
+                    ([]
+                      :ys
+                      :y)
                     { (zip-reverse
                         (acc
-                          [ x
-                            y ])
+                          ([]
+                            x
+                            y))
                         xs
                         ys) })
                   {  }) })
             { (__unpack
                 ys
                 (=>
-                  [ :ys
-                    :y ]
+                  ([]
+                    :ys
+                    :y)
                   {  })
                 { acc }) }) }) }))
 (=
   :zip
   (=>
-    [ :xs
-      :ys ]
+    ([]
+      :xs
+      :ys)
     { (reverse
         (zip-reverse
-          [  ]
+          []
           xs
           ys)) }))
 (=
@@ -3879,38 +3950,44 @@ __handle({
   ((~>
     :destructure
     { (=>
-        [ :acc
-          :compound ]
+        ([]
+          :acc
+          :compound)
         { (__unpack
             compound
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (destructure
                   (acc
                     x)
                   xs) })
-            { [ compound
+            { ([]
+                compound
                 (reverse
-                  acc) ] }) }) })
-    [  ]))
+                  acc)) }) }) })
+    []))
 (=
   :==
   (~>
     :==
     { (=>
-        [ :a
-          :b ]
+        ([]
+          :a
+          :b)
         { (__unpack
             a
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (__unpack
                   b
                   (=>
-                    [ :ys
-                      :y ]
+                    ([]
+                      :ys
+                      :y)
                     { (__compare
                         (==
                           x
@@ -3933,8 +4010,9 @@ __handle({
     { (__unpack
         xs
         (=>
-          [ :_
-            :x ]
+          ([]
+            :_
+            :x)
           { x })
         { xs }) }))
 (=
@@ -3944,8 +4022,9 @@ __handle({
     { (__unpack
         xs
         (=>
-          [ :xs
-            :_ ]
+          ([]
+            :xs
+            :_)
           { (second
               xs) })
         { xs }) }))
@@ -3953,8 +4032,9 @@ __handle({
   :join
   (fold
     (=>
-      [ :acc
-        :pair ]
+      ([]
+        :acc
+        :pair)
       { (=
           :xvar
           (first
@@ -3965,8 +4045,9 @@ __handle({
             pair))
         (fold
           (=>
-            [ :_
-              :pair ]
+            ([]
+              :_
+              :pair)
             { (=
                 :yvar
                 (first
@@ -3984,50 +4065,58 @@ __handle({
                       yval)
                     False
                     { (no-match!
-                        [ [ xvar
-                            xval ]
-                          [ yvar
-                            yval ] ]) }
+                        ([]
+                          ([]
+                            xvar
+                            xval)
+                          ([]
+                            yvar
+                            yval))) }
                     {  }) }
                 {  }) })
-          [  ]
+          []
           acc)
         (acc
           pair) })
-    [  ]))
+    []))
 (=
   :unify
   (~>
     :unify
     { (=>
-        [ :pattern
-          :value ]
+        ([]
+          :pattern
+          :value)
         { (__unpack
             pattern
             (=>
-              [ :type
-                :pattern ]
+              ([]
+                :type
+                :pattern)
               { (__compare
                   type
                   Binding
-                  { [ [ pattern
-                        value ] ] }
+                  { ([]
+                      ([]
+                        pattern
+                        value)) }
                   { (__compare
                       type
                       List
                       { (=
                           :zipped
                           (zip-reverse
-                            [  ]
+                            []
                             pattern
                             value))
                         (__compare
                           zipped
-                          [  ]
+                          []
                           { (no-match!
-                              [ (type
+                              ([]
+                                (type
                                   pattern)
-                                value ]) }
+                                value)) }
                           { (reverse
                               (join
                                 (flatten
@@ -4039,8 +4128,9 @@ __handle({
                       { (__unpack
                           type
                           (=>
-                            [ :type
-                              :f ]
+                            ([]
+                              :type
+                              :f)
                             { (__compare
                                 type
                                 Compound
@@ -4059,17 +4149,18 @@ __handle({
                                   (=
                                     :zipped
                                     (zip-reverse
-                                      [  ]
+                                      []
                                       pattern
                                       vargs))
                                   (__compare
                                     zipped
-                                    [  ]
+                                    []
                                     { (no-match!
-                                        [ (type
+                                        ([]
+                                          (type
                                             f
                                             pattern)
-                                          value ]) }
+                                          value)) }
                                     { (reverse
                                         (join
                                           (flatten
@@ -4078,8 +4169,9 @@ __handle({
                                                 (apply
                                                   unify)
                                                 (zipped
-                                                  [ f
-                                                    vf ])))))) }) }
+                                                  ([]
+                                                    f
+                                                    vf))))))) }) }
                                 { (invalid!
                                     (type
                                       f
@@ -4089,18 +4181,20 @@ __handle({
                                 pattern
                                 value)
                               True
-                              { [  ] }
+                              { [] }
                               { (no-match!
-                                  [ pattern
-                                    value ]) }) }) }) }) })
+                                  ([]
+                                    pattern
+                                    value)) }) }) }) }) })
             { (invalid!
                 pattern) }) }) }))
 (=
   :->
   (=>
-    [ :pattern
+    ([]
+      :pattern
       :body
-      :value ]
+      :value)
     { (__handle
         { (=
             :args
@@ -4111,19 +4205,21 @@ __handle({
                 value)))
           (__compare
             args
-            [  ]
+            []
             { (body) }
             { (apply
                 body
                 args) }) }
         no-match!
         (=>
-          [ :_
-            :arg ]
+          ([]
+            :_
+            :arg)
           { (no-match!
               arg) })) }))
 (__handle
-  { [ ((->
+  { ([]
+      ((->
         Foo
         { Bar })
         Foo)
@@ -4176,11 +4272,13 @@ __handle({
           Foo
           Bar))
       ((->
-        [ :x
-          :y ]
+        ([]
+          :x
+          :y)
         { y })
-        [ Foo
-          Bar ])
+        ([]
+          Foo
+          Bar))
       ((->
         (Pair
           :x
@@ -4188,11 +4286,12 @@ __handle({
         { x })
         (Pair
           Foo
-          Bar)) ] }
+          Bar))) }
   no-match!
   (=>
-    [ :r
-      :arg ]
+    ([]
+      :r
+      :arg)
     { (r
         (NoMatch
           arg)) }))
@@ -5167,7 +5266,9 @@ __handle({
                                                                             Foo )
                                                                           Bar ) ) )
                                                                     ( ( ( 1
-                                                                          ( List
+                                                                          ( ( Compound
+                                                                              ( Value
+                                                                                [] ) )
                                                                             ( ( []
                                                                                 ( Binding
                                                                                   "x" ) )
@@ -6921,278 +7022,282 @@ __handle({
 01711: AppFnToArg
 01712: AppFnToArg
 01713: LoadVar(00001)
-01714: PushString("List")
-01715: PushString("")
-01716: PushString("Binding")
-01717: PushString(""x"")
+01714: PushString("Compound")
+01715: PushString("Value")
+01716: PushString("")
+01717: AppFnToArg
 01718: AppFnToArg
-01719: AppFnToArg
+01719: PushString("")
 01720: PushString("Binding")
-01721: PushString(""y"")
+01721: PushString(""x"")
 01722: AppFnToArg
 01723: AppFnToArg
-01724: AppFnToArg
-01725: AppFnToArg
-01726: LoadFn { code: 01554, fvars: 00000 }
+01724: PushString("Binding")
+01725: PushString(""y"")
+01726: AppFnToArg
 01727: AppFnToArg
-01728: PushString("")
-01729: PushString("Foo")
-01730: AppFnToArg
-01731: PushString("Bar")
-01732: AppFnToArg
-01733: AppFnToArg
+01728: AppFnToArg
+01729: AppFnToArg
+01730: LoadFn { code: 01554, fvars: 00000 }
+01731: AppFnToArg
+01732: PushString("")
+01733: PushString("Foo")
 01734: AppFnToArg
-01735: LoadVar(00001)
-01736: PushString("Compound")
-01737: PushString("Value")
-01738: PushString("Pair")
-01739: AppFnToArg
-01740: AppFnToArg
-01741: PushString("")
-01742: PushString("Binding")
-01743: PushString(""x"")
+01735: PushString("Bar")
+01736: AppFnToArg
+01737: AppFnToArg
+01738: AppFnToArg
+01739: LoadVar(00001)
+01740: PushString("Compound")
+01741: PushString("Value")
+01742: PushString("Pair")
+01743: AppFnToArg
 01744: AppFnToArg
-01745: AppFnToArg
+01745: PushString("")
 01746: PushString("Binding")
 01747: PushString(""x"")
 01748: AppFnToArg
 01749: AppFnToArg
-01750: AppFnToArg
-01751: AppFnToArg
-01752: LoadFn { code: 01558, fvars: 00000 }
+01750: PushString("Binding")
+01751: PushString(""x"")
+01752: AppFnToArg
 01753: AppFnToArg
-01754: PushString("Pair")
-01755: PushString("Foo")
-01756: AppFnToArg
-01757: PushString("Bar")
-01758: AppFnToArg
-01759: AppFnToArg
+01754: AppFnToArg
+01755: AppFnToArg
+01756: LoadFn { code: 01558, fvars: 00000 }
+01757: AppFnToArg
+01758: PushString("Pair")
+01759: PushString("Foo")
 01760: AppFnToArg
-01761:   Return
-01762: LoadVar(00000)
-01763:   Return
-01764: LoadFn { code: 01762, fvars: 00000 }
+01761: PushString("Bar")
+01762: AppFnToArg
+01763: AppFnToArg
+01764: AppFnToArg
 01765:   Return
-01766: LoadVar(00001)
-01767: PushString("NoMatch")
-01768: LoadVar(00000)
-01769: AppFnToArg
-01770: AppFnToArg
-01771:   Return
-01772: LoadFn { code: 01766, fvars: 00001 }
-01773:   Return
-01774: LoadFn { code: 01526, fvars: 00000 }
-01775: LoadFn { code: 01560, fvars: 00001 }
-01776: AppFnToArg
-01777: PushEffect("no-match")
-01778: AppFnToArg
-01779: LoadFn { code: 01764, fvars: 00000 }
-01780: PushString("")
-01781: PushString(""r"")
+01766: LoadVar(00000)
+01767:   Return
+01768: LoadFn { code: 01766, fvars: 00000 }
+01769:   Return
+01770: LoadVar(00001)
+01771: PushString("NoMatch")
+01772: LoadVar(00000)
+01773: AppFnToArg
+01774: AppFnToArg
+01775:   Return
+01776: LoadFn { code: 01770, fvars: 00001 }
+01777:   Return
+01778: LoadFn { code: 01526, fvars: 00000 }
+01779: LoadFn { code: 01560, fvars: 00001 }
+01780: AppFnToArg
+01781: PushEffect("no-match")
 01782: AppFnToArg
-01783: PushString(""arg"")
-01784: AppFnToArg
-01785: AppFnToArg
-01786: LoadFn { code: 01772, fvars: 00000 }
-01787: AppFnToArg
+01783: LoadFn { code: 01768, fvars: 00000 }
+01784: PushString("")
+01785: PushString(""r"")
+01786: AppFnToArg
+01787: PushString(""arg"")
 01788: AppFnToArg
-01789:   Return
-01790: LoadFn { code: 01409, fvars: 00000 }
-01791: PushString(""->"")
+01789: AppFnToArg
+01790: LoadFn { code: 01776, fvars: 00000 }
+01791: AppFnToArg
 01792: AppFnToArg
-01793: LoadFn { code: 01413, fvars: 00000 }
-01794: PushString("")
-01795: PushString(""pattern"")
+01793:   Return
+01794: LoadFn { code: 01409, fvars: 00000 }
+01795: PushString(""->"")
 01796: AppFnToArg
-01797: PushString(""body"")
-01798: AppFnToArg
-01799: PushString(""value"")
+01797: LoadFn { code: 01413, fvars: 00000 }
+01798: PushString("")
+01799: PushString(""pattern"")
 01800: AppFnToArg
-01801: AppFnToArg
-01802: LoadFn { code: 01513, fvars: 00011 }
-01803: AppFnToArg
+01801: PushString(""body"")
+01802: AppFnToArg
+01803: PushString(""value"")
 01804: AppFnToArg
-01805: LoadFn { code: 01774, fvars: 00000 }
-01806: AppFnToArg
-01807:   Return
-01808: LoadFn { code: 00983, fvars: 00000 }
-01809: PushString(""unify"")
+01805: AppFnToArg
+01806: LoadFn { code: 01513, fvars: 00011 }
+01807: AppFnToArg
+01808: AppFnToArg
+01809: LoadFn { code: 01778, fvars: 00000 }
 01810: AppFnToArg
-01811: LoadFn { code: 00989, fvars: 00000 }
-01812: PushString(""unify"")
-01813: AppFnToArg
-01814: LoadFn { code: 01393, fvars: 00011 }
-01815: AppFnToArg
-01816: AppFnToArg
-01817: LoadFn { code: 01790, fvars: 00010 }
-01818: AppFnToArg
-01819:   Return
-01820: LoadFn { code: 00799, fvars: 00000 }
-01821: PushString(""join"")
+01811:   Return
+01812: LoadFn { code: 00983, fvars: 00000 }
+01813: PushString(""unify"")
+01814: AppFnToArg
+01815: LoadFn { code: 00989, fvars: 00000 }
+01816: PushString(""unify"")
+01817: AppFnToArg
+01818: LoadFn { code: 01393, fvars: 00011 }
+01819: AppFnToArg
+01820: AppFnToArg
+01821: LoadFn { code: 01794, fvars: 00010 }
 01822: AppFnToArg
-01823: LoadVar(00010)
-01824: LoadFn { code: 00803, fvars: 00000 }
-01825: PushString("")
-01826: PushString(""acc"")
-01827: AppFnToArg
-01828: PushString(""pair"")
-01829: AppFnToArg
-01830: AppFnToArg
-01831: LoadFn { code: 00975, fvars: 00011 }
-01832: AppFnToArg
+01823:   Return
+01824: LoadFn { code: 00799, fvars: 00000 }
+01825: PushString(""join"")
+01826: AppFnToArg
+01827: LoadVar(00010)
+01828: LoadFn { code: 00803, fvars: 00000 }
+01829: PushString("")
+01830: PushString(""acc"")
+01831: AppFnToArg
+01832: PushString(""pair"")
 01833: AppFnToArg
-01834: PushString("")
-01835: AppFnToArg
+01834: AppFnToArg
+01835: LoadFn { code: 00975, fvars: 00011 }
 01836: AppFnToArg
-01837: LoadFn { code: 01808, fvars: 00010 }
-01838: AppFnToArg
-01839:   Return
-01840: LoadFn { code: 00748, fvars: 00000 }
-01841: PushString(""first"")
+01837: AppFnToArg
+01838: PushString("")
+01839: AppFnToArg
+01840: AppFnToArg
+01841: LoadFn { code: 01812, fvars: 00010 }
 01842: AppFnToArg
-01843: LoadFn { code: 00752, fvars: 00000 }
-01844: PushString(""xs"")
-01845: AppFnToArg
-01846: LoadFn { code: 00777, fvars: 00001 }
-01847: AppFnToArg
-01848: AppFnToArg
-01849: LoadFn { code: 01820, fvars: 00010 }
-01850: AppFnToArg
-01851:   Return
-01852: LoadFn { code: 00699, fvars: 00000 }
-01853: PushString(""second"")
+01843:   Return
+01844: LoadFn { code: 00748, fvars: 00000 }
+01845: PushString(""first"")
+01846: AppFnToArg
+01847: LoadFn { code: 00752, fvars: 00000 }
+01848: PushString(""xs"")
+01849: AppFnToArg
+01850: LoadFn { code: 00777, fvars: 00001 }
+01851: AppFnToArg
+01852: AppFnToArg
+01853: LoadFn { code: 01824, fvars: 00010 }
 01854: AppFnToArg
-01855: LoadFn { code: 00703, fvars: 00000 }
-01856: PushString(""xs"")
-01857: AppFnToArg
-01858: LoadFn { code: 00726, fvars: 00000 }
-01859: AppFnToArg
-01860: AppFnToArg
-01861: LoadFn { code: 01840, fvars: 00009 }
-01862: AppFnToArg
-01863:   Return
-01864: LoadFn { code: 00539, fvars: 00000 }
-01865: PushString(""=="")
+01855:   Return
+01856: LoadFn { code: 00699, fvars: 00000 }
+01857: PushString(""second"")
+01858: AppFnToArg
+01859: LoadFn { code: 00703, fvars: 00000 }
+01860: PushString(""xs"")
+01861: AppFnToArg
+01862: LoadFn { code: 00726, fvars: 00000 }
+01863: AppFnToArg
+01864: AppFnToArg
+01865: LoadFn { code: 01844, fvars: 00009 }
 01866: AppFnToArg
-01867: LoadFn { code: 00545, fvars: 00000 }
-01868: PushString(""=="")
-01869: AppFnToArg
-01870: LoadFn { code: 00683, fvars: 00000 }
-01871: AppFnToArg
-01872: AppFnToArg
-01873: LoadFn { code: 01852, fvars: 00008 }
-01874: AppFnToArg
-01875:   Return
-01876: LoadFn { code: 00460, fvars: 00000 }
-01877: PushString(""destructure"")
+01867:   Return
+01868: LoadFn { code: 00539, fvars: 00000 }
+01869: PushString(""=="")
+01870: AppFnToArg
+01871: LoadFn { code: 00545, fvars: 00000 }
+01872: PushString(""=="")
+01873: AppFnToArg
+01874: LoadFn { code: 00683, fvars: 00000 }
+01875: AppFnToArg
+01876: AppFnToArg
+01877: LoadFn { code: 01856, fvars: 00008 }
 01878: AppFnToArg
-01879: LoadFn { code: 00466, fvars: 00000 }
-01880: PushString(""destructure"")
-01881: AppFnToArg
-01882: LoadFn { code: 00523, fvars: 00006 }
-01883: AppFnToArg
-01884: PushString("")
+01879:   Return
+01880: LoadFn { code: 00460, fvars: 00000 }
+01881: PushString(""destructure"")
+01882: AppFnToArg
+01883: LoadFn { code: 00466, fvars: 00000 }
+01884: PushString(""destructure"")
 01885: AppFnToArg
-01886: AppFnToArg
-01887: LoadFn { code: 01864, fvars: 00007 }
-01888: AppFnToArg
-01889:   Return
-01890: LoadFn { code: 00436, fvars: 00000 }
-01891: PushString(""zip"")
+01886: LoadFn { code: 00523, fvars: 00006 }
+01887: AppFnToArg
+01888: PushString("")
+01889: AppFnToArg
+01890: AppFnToArg
+01891: LoadFn { code: 01868, fvars: 00007 }
 01892: AppFnToArg
-01893: LoadFn { code: 00440, fvars: 00000 }
-01894: PushString("")
-01895: PushString(""xs"")
+01893:   Return
+01894: LoadFn { code: 00436, fvars: 00000 }
+01895: PushString(""zip"")
 01896: AppFnToArg
-01897: PushString(""ys"")
-01898: AppFnToArg
-01899: AppFnToArg
-01900: LoadFn { code: 00452, fvars: 00005 }
-01901: AppFnToArg
+01897: LoadFn { code: 00440, fvars: 00000 }
+01898: PushString("")
+01899: PushString(""xs"")
+01900: AppFnToArg
+01901: PushString(""ys"")
 01902: AppFnToArg
-01903: LoadFn { code: 01876, fvars: 00006 }
-01904: AppFnToArg
-01905:   Return
-01906: LoadFn { code: 00283, fvars: 00000 }
-01907: PushString(""zip-reverse"")
+01903: AppFnToArg
+01904: LoadFn { code: 00452, fvars: 00005 }
+01905: AppFnToArg
+01906: AppFnToArg
+01907: LoadFn { code: 01880, fvars: 00006 }
 01908: AppFnToArg
-01909: LoadFn { code: 00289, fvars: 00000 }
-01910: PushString(""zip-reverse"")
-01911: AppFnToArg
-01912: LoadFn { code: 00418, fvars: 00000 }
-01913: AppFnToArg
-01914: AppFnToArg
-01915: LoadFn { code: 01890, fvars: 00005 }
-01916: AppFnToArg
-01917:   Return
-01918: LoadFn { code: 00221, fvars: 00000 }
-01919: PushString(""flatten"")
+01909:   Return
+01910: LoadFn { code: 00283, fvars: 00000 }
+01911: PushString(""zip-reverse"")
+01912: AppFnToArg
+01913: LoadFn { code: 00289, fvars: 00000 }
+01914: PushString(""zip-reverse"")
+01915: AppFnToArg
+01916: LoadFn { code: 00418, fvars: 00000 }
+01917: AppFnToArg
+01918: AppFnToArg
+01919: LoadFn { code: 01894, fvars: 00005 }
 01920: AppFnToArg
-01921: LoadFn { code: 00225, fvars: 00000 }
-01922: PushString(""xs"")
-01923: AppFnToArg
-01924: LoadFn { code: 00259, fvars: 00004 }
-01925: AppFnToArg
-01926: AppFnToArg
-01927: LoadFn { code: 01906, fvars: 00004 }
-01928: AppFnToArg
-01929:   Return
-01930: LoadFn { code: 00177, fvars: 00000 }
-01931: PushString(""map"")
+01921:   Return
+01922: LoadFn { code: 00221, fvars: 00000 }
+01923: PushString(""flatten"")
+01924: AppFnToArg
+01925: LoadFn { code: 00225, fvars: 00000 }
+01926: PushString(""xs"")
+01927: AppFnToArg
+01928: LoadFn { code: 00259, fvars: 00004 }
+01929: AppFnToArg
+01930: AppFnToArg
+01931: LoadFn { code: 01910, fvars: 00004 }
 01932: AppFnToArg
-01933: LoadFn { code: 00181, fvars: 00000 }
-01934: PushString("")
-01935: PushString(""f"")
+01933:   Return
+01934: LoadFn { code: 00177, fvars: 00000 }
+01935: PushString(""map"")
 01936: AppFnToArg
-01937: PushString(""xs"")
-01938: AppFnToArg
-01939: AppFnToArg
-01940: LoadFn { code: 00213, fvars: 00003 }
-01941: AppFnToArg
+01937: LoadFn { code: 00181, fvars: 00000 }
+01938: PushString("")
+01939: PushString(""f"")
+01940: AppFnToArg
+01941: PushString(""xs"")
 01942: AppFnToArg
-01943: LoadFn { code: 01918, fvars: 00003 }
-01944: AppFnToArg
-01945:   Return
-01946: LoadFn { code: 00135, fvars: 00000 }
-01947: PushString(""apply"")
+01943: AppFnToArg
+01944: LoadFn { code: 00213, fvars: 00003 }
+01945: AppFnToArg
+01946: AppFnToArg
+01947: LoadFn { code: 01922, fvars: 00003 }
 01948: AppFnToArg
-01949: LoadFn { code: 00139, fvars: 00000 }
-01950: PushString("")
-01951: PushString(""f"")
+01949:   Return
+01950: LoadFn { code: 00135, fvars: 00000 }
+01951: PushString(""apply"")
 01952: AppFnToArg
-01953: PushString(""xs"")
-01954: AppFnToArg
-01955: AppFnToArg
-01956: LoadFn { code: 00169, fvars: 00002 }
-01957: AppFnToArg
+01953: LoadFn { code: 00139, fvars: 00000 }
+01954: PushString("")
+01955: PushString(""f"")
+01956: AppFnToArg
+01957: PushString(""xs"")
 01958: AppFnToArg
-01959: LoadFn { code: 01930, fvars: 00002 }
-01960: AppFnToArg
-01961:   Return
-01962: LoadFn { code: 00097, fvars: 00000 }
-01963: PushString(""reverse"")
+01959: AppFnToArg
+01960: LoadFn { code: 00169, fvars: 00002 }
+01961: AppFnToArg
+01962: AppFnToArg
+01963: LoadFn { code: 01934, fvars: 00002 }
 01964: AppFnToArg
-01965: LoadFn { code: 00101, fvars: 00000 }
-01966: PushString(""xs"")
-01967: AppFnToArg
-01968: LoadFn { code: 00113, fvars: 00001 }
-01969: AppFnToArg
-01970: AppFnToArg
-01971: LoadFn { code: 01946, fvars: 00001 }
-01972: AppFnToArg
-01973:   Return
-01974: LoadFn { code: 00016, fvars: 00000 }
-01975: PushString(""fold"")
+01965:   Return
+01966: LoadFn { code: 00097, fvars: 00000 }
+01967: PushString(""reverse"")
+01968: AppFnToArg
+01969: LoadFn { code: 00101, fvars: 00000 }
+01970: PushString(""xs"")
+01971: AppFnToArg
+01972: LoadFn { code: 00113, fvars: 00001 }
+01973: AppFnToArg
+01974: AppFnToArg
+01975: LoadFn { code: 01950, fvars: 00001 }
 01976: AppFnToArg
-01977: LoadFn { code: 00022, fvars: 00000 }
-01978: PushString(""fold"")
-01979: AppFnToArg
-01980: LoadFn { code: 00079, fvars: 00000 }
-01981: AppFnToArg
-01982: AppFnToArg
-01983: LoadFn { code: 01962, fvars: 00000 }
-01984: AppFnToArg
-01985:   Return
+01977:   Return
+01978: LoadFn { code: 00016, fvars: 00000 }
+01979: PushString(""fold"")
+01980: AppFnToArg
+01981: LoadFn { code: 00022, fvars: 00000 }
+01982: PushString(""fold"")
+01983: AppFnToArg
+01984: LoadFn { code: 00079, fvars: 00000 }
+01985: AppFnToArg
+01986: AppFnToArg
+01987: LoadFn { code: 01966, fvars: 00000 }
+01988: AppFnToArg
+01989:   Return
 
 [Bar, Foo, Bar, Foo, Bar, Foo, Bar, Foo, Bar, NoMatch([["x", Foo], ["x", Bar]])]
 
@@ -7355,14 +7460,16 @@ __handle({
   (~>
     :fold
     { (=>
-        [ :f
+        ([]
+          :f
           :acc
-          :xs ]
+          :xs)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (fold
                   f
                   (f
@@ -7376,21 +7483,24 @@ __handle({
     :xs
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               x) })
-        [  ]
+        []
         xs) }))
 (=
   :apply
   (=>
-    [ :f
-      :xs ]
+    ([]
+      :f
+      :xs)
     { (fold
         (=>
-          [ :f
-            :x ]
+          ([]
+            :f
+            :x)
           { (f
               x) })
         f
@@ -7399,16 +7509,18 @@ __handle({
 (=
   :map
   (=>
-    [ :f
-      :xs ]
+    ([]
+      :f
+      :xs)
     { (fold
         (=>
-          [ :xs
-            :x ]
+          ([]
+            :xs
+            :x)
           { (xs
               (f
                 x)) })
-        [  ]
+        []
         (reverse
           xs)) }))
 (=
@@ -7418,94 +7530,108 @@ __handle({
     { (reverse
         (fold
           (=>
-            [ :acc
-              :x ]
+            ([]
+              :acc
+              :x)
             { (fold
                 (=>
-                  [ :acc
-                    :x ]
+                  ([]
+                    :acc
+                    :x)
                   { (acc
                       x) })
                 acc
                 x) })
-          [  ]
+          []
           xs)) }))
 (=
   :zip
   ((~>
     :zip
     { (=>
-        [ :acc
+        ([]
+          :acc
           :xs
-          :ys ]
+          :ys)
         { (__unpack
             xs
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (__unpack
                   ys
                   (=>
-                    [ :ys
-                      :y ]
+                    ([]
+                      :ys
+                      :y)
                     { (zip
                         (acc
-                          [ x
-                            y ])
+                          ([]
+                            x
+                            y))
                         xs
                         ys) })
                   {  }) })
             { (__unpack
                 ys
                 (=>
-                  [ :ys
-                    :y ]
+                  ([]
+                    :ys
+                    :y)
                   {  })
                 { acc }) }) }) })
-    [  ]))
+    []))
 (=
   :destructure
   ((~>
     :destructure
     { (=>
-        [ :acc
-          :compound ]
+        ([]
+          :acc
+          :compound)
         { (__unpack
             compound
             (=>
-              [ :xs
-                :x ]
+              ([]
+                :xs
+                :x)
               { (destructure
                   (acc
                     x)
                   xs) })
-            { [ compound
+            { ([]
+                compound
                 (reverse
-                  acc) ] }) }) })
-    [  ]))
+                  acc)) }) }) })
+    []))
 (=
   :->
   (=>
-    [ :pattern
+    ([]
+      :pattern
       :body
-      :value ]
+      :value)
     { (=
         :==
         (~>
           :==
           { (=>
-              [ :a
-                :b ]
+              ([]
+                :a
+                :b)
               { (__unpack
                   a
                   (=>
-                    [ :xs
-                      :x ]
+                    ([]
+                      :xs
+                      :x)
                     { (__unpack
                         b
                         (=>
-                          [ :ys
-                            :y ]
+                          ([]
+                            :ys
+                            :y)
                           { (__compare
                               (==
                                 x
@@ -7528,8 +7654,9 @@ __handle({
           { (__unpack
               xs
               (=>
-                [ :_
-                  :x ]
+                ([]
+                  :_
+                  :x)
                 { x })
               { xs }) }))
       (=
@@ -7539,8 +7666,9 @@ __handle({
           { (__unpack
               xs
               (=>
-                [ :xs
-                  :_ ]
+                ([]
+                  :xs
+                  :_)
                 { (second
                     xs) })
               { xs }) }))
@@ -7548,8 +7676,9 @@ __handle({
         :join
         (fold
           (=>
-            [ :acc
-              :pair ]
+            ([]
+              :acc
+              :pair)
             { (=
                 :xvar
                 (first
@@ -7560,8 +7689,9 @@ __handle({
                   pair))
               (fold
                 (=>
-                  [ :_
-                    :pair ]
+                  ([]
+                    :_
+                    :pair)
                   { (=
                       :yvar
                       (first
@@ -7579,34 +7709,41 @@ __handle({
                             yval)
                           False
                           { (no-match!
-                              [ [ yvar
-                                  yval ]
-                                [ xvar
-                                  xval ] ]) }
+                              ([]
+                                ([]
+                                  yvar
+                                  yval)
+                                ([]
+                                  xvar
+                                  xval))) }
                           {  }) }
                       {  }) })
-                [  ]
+                []
                 acc)
               (acc
                 pair) })
-          [  ]))
+          []))
       (=
         :unify
         (~>
           :unify
           { (=>
-              [ :pattern
-                :value ]
+              ([]
+                :pattern
+                :value)
               { (__unpack
                   pattern
                   (=>
-                    [ :type
-                      :pattern ]
+                    ([]
+                      :type
+                      :pattern)
                     { (__compare
                         type
                         Binding
-                        { [ [ pattern
-                              value ] ] }
+                        { ([]
+                            ([]
+                              pattern
+                              value)) }
                         { (__compare
                             type
                             List
@@ -7617,11 +7754,12 @@ __handle({
                                   value))
                               (__compare
                                 zipped
-                                [  ]
+                                []
                                 { (no-match!
-                                    [ (type
+                                    ([]
+                                      (type
                                         pattern)
-                                      value ]) }
+                                      value)) }
                                 { (join
                                     (flatten
                                       (map
@@ -7631,8 +7769,9 @@ __handle({
                             { (__unpack
                                 type
                                 (=>
-                                  [ :type
-                                    :f ]
+                                  ([]
+                                    :type
+                                    :f)
                                   { (__compare
                                       type
                                       Compound
@@ -7655,20 +7794,22 @@ __handle({
                                             vargs))
                                         (__compare
                                           zipped
-                                          [  ]
+                                          []
                                           { (no-match!
-                                              [ (type
+                                              ([]
+                                                (type
                                                   f
                                                   pattern)
-                                                value ]) }
+                                                value)) }
                                           { (join
                                               (flatten
                                                 (map
                                                   (apply
                                                     unify)
                                                   (zipped
-                                                    [ f
-                                                      vf ])))) }) }
+                                                    ([]
+                                                      f
+                                                      vf))))) }) }
                                       { (invalid!
                                           (type
                                             f
@@ -7680,8 +7821,9 @@ __handle({
                                     True
                                     {  }
                                     { (no-match!
-                                        [ pattern
-                                          value ]) }) }) }) }) })
+                                        ([]
+                                          pattern
+                                          value)) }) }) }) }) })
                   { (invalid!
                       pattern) }) }) }))
       (__handle
@@ -7694,62 +7836,73 @@ __handle({
                 value)))
           (__compare
             args
-            [  ]
+            []
             { (body) }
             { (apply
                 body
                 args) }) }
         no-match!
         (=>
-          [ :_
-            :arg ]
+          ([]
+            :_
+            :arg)
           { (no-match!
               arg) })) }))
 (=
   :match
   (=>
-    [ :value
-      :args ]
+    ([]
+      :value
+      :args)
     { ((->
-        [ [ "with"
-            :clauses ] ]
+        ([]
+          ([]
+            "with"
+            :clauses))
         { (=
             :result
             (fold
               (=>
-                [ :result
-                  :clause ]
+                ([]
+                  :result
+                  :clause)
                 { (__compare
                     result
-                    [  ]
+                    []
                     { (__handle
                         { (Match
                             (clause
                               value)) }
                         no-match!
                         (=>
-                          [ :r
-                            :arg ]
+                          ([]
+                            :r
+                            :arg)
                           {  })) }
                     { result }) })
-              [  ]
+              []
               (reverse
                 clauses)))
           (__unpack
             result
             (=>
-              [ :_
-                :result ]
+              ([]
+                :_
+                :result)
               { result })
             { (no-match!
                 value) }) })
         args) }))
-[ (match
+([]
+  (match
     (Pair
       Foo
       Bar)
-    [ [ "with"
-        [ (->
+    ([]
+      ([]
+        "with"
+        ([]
+          (->
             (Pair
               :x
               :x)
@@ -7769,12 +7922,15 @@ __handle({
           (->
             :_
             { (throw!
-                InvalidPair) }) ] ] ])
+                InvalidPair) })))))
   (__handle
     { (match
         Foo
-        [ [ "with"
-            [ (->
+        ([]
+          ([]
+            "with"
+            ([]
+              (->
                 (Pair
                   :x
                   :x)
@@ -7790,13 +7946,14 @@ __handle({
                 (Pair
                   :x
                   :y)
-                { y }) ] ] ]) }
+                { y }))))) }
     no-match!
     (=>
-      [ :_
-        :arg ]
+      ([]
+        :_
+        :arg)
       { (NoMatch
-          arg) })) ]
+          arg) })))
 
 ( ( ( =>
         =>
@@ -8660,9 +8817,13 @@ __handle({
                                       =>
                                         =>
                                           ( ( ( 2
-                                                ( List
+                                                ( ( Compound
+                                                    ( Value
+                                                      [] ) )
                                                   ( []
-                                                    ( List
+                                                    ( ( Compound
+                                                        ( Value
+                                                          [] ) )
                                                       ( ( []
                                                           ( Value
                                                             "with" ) )
@@ -10565,387 +10726,395 @@ __handle({
 01702: AppFnToArg
 01703:   Return
 01704: LoadVar(00002)
-01705: PushString("List")
-01706: PushString("")
-01707: PushString("List")
-01708: PushString("")
-01709: PushString("Value")
-01710: PushString(""with"")
-01711: AppFnToArg
-01712: AppFnToArg
-01713: PushString("Binding")
-01714: PushString(""clauses"")
+01705: PushString("Compound")
+01706: PushString("Value")
+01707: PushString("")
+01708: AppFnToArg
+01709: AppFnToArg
+01710: PushString("")
+01711: PushString("Compound")
+01712: PushString("Value")
+01713: PushString("")
+01714: AppFnToArg
 01715: AppFnToArg
-01716: AppFnToArg
-01717: AppFnToArg
-01718: AppFnToArg
+01716: PushString("")
+01717: PushString("Value")
+01718: PushString(""with"")
 01719: AppFnToArg
 01720: AppFnToArg
-01721: LoadFn { code: 01680, fvars: 00010 }
-01722: AppFnToArg
-01723: LoadVar(00000)
+01721: PushString("Binding")
+01722: PushString(""clauses"")
+01723: AppFnToArg
 01724: AppFnToArg
-01725:   Return
-01726: LoadFn { code: 01704, fvars: 00009 }
-01727:   Return
-01728: PushString("Twice")
-01729: LoadVar(00000)
+01725: AppFnToArg
+01726: AppFnToArg
+01727: AppFnToArg
+01728: AppFnToArg
+01729: LoadFn { code: 01680, fvars: 00010 }
 01730: AppFnToArg
 01731: LoadVar(00000)
 01732: AppFnToArg
 01733:   Return
-01734: LoadFn { code: 01728, fvars: 00000 }
+01734: LoadFn { code: 01704, fvars: 00009 }
 01735:   Return
-01736: PushString("SecondIsFoo")
-01737:   Return
-01738: LoadVar(00000)
-01739:   Return
-01740: LoadFn { code: 01738, fvars: 00000 }
+01736: PushString("Twice")
+01737: LoadVar(00000)
+01738: AppFnToArg
+01739: LoadVar(00000)
+01740: AppFnToArg
 01741:   Return
-01742: PushEffect("throw")
-01743: PushString("InvalidPair")
-01744: AppFnToArg
+01742: LoadFn { code: 01736, fvars: 00000 }
+01743:   Return
+01744: PushString("SecondIsFoo")
 01745:   Return
-01746: LoadVar(00002)
-01747: LoadVar(00001)
-01748: LoadVar(00000)
-01749: Try
-01750: AppArgToFn
-01751: Unwind
-01752: AppArgToFn
-01753: AppArgToFn
-01754:   Return
-01755: LoadFn { code: 01746, fvars: 00002 }
-01756:   Return
-01757: LoadFn { code: 01755, fvars: 00001 }
-01758:   Return
-01759: PushString("Twice")
-01760: LoadVar(00000)
-01761: AppFnToArg
-01762: LoadVar(00000)
-01763: AppFnToArg
+01746: LoadVar(00000)
+01747:   Return
+01748: LoadFn { code: 01746, fvars: 00000 }
+01749:   Return
+01750: PushEffect("throw")
+01751: PushString("InvalidPair")
+01752: AppFnToArg
+01753:   Return
+01754: LoadVar(00002)
+01755: LoadVar(00001)
+01756: LoadVar(00000)
+01757: Try
+01758: AppArgToFn
+01759: Unwind
+01760: AppArgToFn
+01761: AppArgToFn
+01762:   Return
+01763: LoadFn { code: 01754, fvars: 00002 }
 01764:   Return
-01765: LoadFn { code: 01759, fvars: 00000 }
+01765: LoadFn { code: 01763, fvars: 00001 }
 01766:   Return
-01767: PushString("SecondIsFoo")
-01768:   Return
-01769: LoadVar(00000)
-01770:   Return
-01771: LoadFn { code: 01769, fvars: 00000 }
+01767: PushString("Twice")
+01768: LoadVar(00000)
+01769: AppFnToArg
+01770: LoadVar(00000)
+01771: AppFnToArg
 01772:   Return
-01773: LoadVar(00001)
-01774: PushString("Foo")
-01775: AppFnToArg
-01776: PushString("")
-01777: PushString("")
-01778: PushString(""with"")
-01779: AppFnToArg
-01780: PushString("")
-01781: LoadVar(00002)
-01782: PushString("Compound")
-01783: PushString("Value")
-01784: PushString("Pair")
-01785: AppFnToArg
-01786: AppFnToArg
-01787: PushString("")
-01788: PushString("Binding")
-01789: PushString(""x"")
-01790: AppFnToArg
-01791: AppFnToArg
-01792: PushString("Binding")
-01793: PushString(""x"")
+01773: LoadFn { code: 01767, fvars: 00000 }
+01774:   Return
+01775: PushString("SecondIsFoo")
+01776:   Return
+01777: LoadVar(00000)
+01778:   Return
+01779: LoadFn { code: 01777, fvars: 00000 }
+01780:   Return
+01781: LoadVar(00001)
+01782: PushString("Foo")
+01783: AppFnToArg
+01784: PushString("")
+01785: PushString("")
+01786: PushString(""with"")
+01787: AppFnToArg
+01788: PushString("")
+01789: LoadVar(00002)
+01790: PushString("Compound")
+01791: PushString("Value")
+01792: PushString("Pair")
+01793: AppFnToArg
 01794: AppFnToArg
-01795: AppFnToArg
-01796: AppFnToArg
-01797: AppFnToArg
-01798: LoadFn { code: 01765, fvars: 00000 }
+01795: PushString("")
+01796: PushString("Binding")
+01797: PushString(""x"")
+01798: AppFnToArg
 01799: AppFnToArg
-01800: AppFnToArg
-01801: LoadVar(00002)
-01802: PushString("Compound")
-01803: PushString("Value")
-01804: PushString("Pair")
+01800: PushString("Binding")
+01801: PushString(""x"")
+01802: AppFnToArg
+01803: AppFnToArg
+01804: AppFnToArg
 01805: AppFnToArg
-01806: AppFnToArg
-01807: PushString("")
-01808: PushString("Binding")
-01809: PushString(""x"")
-01810: AppFnToArg
-01811: AppFnToArg
-01812: PushString("Value")
-01813: PushString("Foo")
+01806: LoadFn { code: 01773, fvars: 00000 }
+01807: AppFnToArg
+01808: AppFnToArg
+01809: LoadVar(00002)
+01810: PushString("Compound")
+01811: PushString("Value")
+01812: PushString("Pair")
+01813: AppFnToArg
 01814: AppFnToArg
-01815: AppFnToArg
-01816: AppFnToArg
-01817: AppFnToArg
-01818: LoadFn { code: 01767, fvars: 00000 }
+01815: PushString("")
+01816: PushString("Binding")
+01817: PushString(""x"")
+01818: AppFnToArg
 01819: AppFnToArg
-01820: AppFnToArg
-01821: LoadVar(00002)
-01822: PushString("Compound")
-01823: PushString("Value")
-01824: PushString("Pair")
+01820: PushString("Value")
+01821: PushString("Foo")
+01822: AppFnToArg
+01823: AppFnToArg
+01824: AppFnToArg
 01825: AppFnToArg
-01826: AppFnToArg
-01827: PushString("")
-01828: PushString("Binding")
-01829: PushString(""x"")
-01830: AppFnToArg
-01831: AppFnToArg
-01832: PushString("Binding")
-01833: PushString(""y"")
+01826: LoadFn { code: 01775, fvars: 00000 }
+01827: AppFnToArg
+01828: AppFnToArg
+01829: LoadVar(00002)
+01830: PushString("Compound")
+01831: PushString("Value")
+01832: PushString("Pair")
+01833: AppFnToArg
 01834: AppFnToArg
-01835: AppFnToArg
-01836: AppFnToArg
-01837: AppFnToArg
-01838: LoadFn { code: 01771, fvars: 00000 }
+01835: PushString("")
+01836: PushString("Binding")
+01837: PushString(""x"")
+01838: AppFnToArg
 01839: AppFnToArg
-01840: AppFnToArg
-01841: AppFnToArg
+01840: PushString("Binding")
+01841: PushString(""y"")
 01842: AppFnToArg
 01843: AppFnToArg
-01844:   Return
-01845: LoadVar(00000)
-01846:   Return
-01847: LoadFn { code: 01845, fvars: 00000 }
-01848:   Return
-01849: PushString("NoMatch")
-01850: LoadVar(00000)
+01844: AppFnToArg
+01845: AppFnToArg
+01846: LoadFn { code: 01779, fvars: 00000 }
+01847: AppFnToArg
+01848: AppFnToArg
+01849: AppFnToArg
+01850: AppFnToArg
 01851: AppFnToArg
 01852:   Return
-01853: LoadFn { code: 01849, fvars: 00000 }
+01853: LoadVar(00000)
 01854:   Return
-01855: PushString("")
-01856: LoadVar(00000)
-01857: PushString("Pair")
-01858: PushString("Foo")
+01855: LoadFn { code: 01853, fvars: 00000 }
+01856:   Return
+01857: PushString("NoMatch")
+01858: LoadVar(00000)
 01859: AppFnToArg
-01860: PushString("Bar")
-01861: AppFnToArg
-01862: AppFnToArg
+01860:   Return
+01861: LoadFn { code: 01857, fvars: 00000 }
+01862:   Return
 01863: PushString("")
-01864: PushString("")
-01865: PushString(""with"")
-01866: AppFnToArg
-01867: PushString("")
-01868: LoadVar(00001)
-01869: PushString("Compound")
-01870: PushString("Value")
-01871: PushString("Pair")
-01872: AppFnToArg
-01873: AppFnToArg
-01874: PushString("")
-01875: PushString("Binding")
-01876: PushString(""x"")
-01877: AppFnToArg
-01878: AppFnToArg
-01879: PushString("Binding")
-01880: PushString(""x"")
+01864: LoadVar(00000)
+01865: PushString("Pair")
+01866: PushString("Foo")
+01867: AppFnToArg
+01868: PushString("Bar")
+01869: AppFnToArg
+01870: AppFnToArg
+01871: PushString("")
+01872: PushString("")
+01873: PushString(""with"")
+01874: AppFnToArg
+01875: PushString("")
+01876: LoadVar(00001)
+01877: PushString("Compound")
+01878: PushString("Value")
+01879: PushString("Pair")
+01880: AppFnToArg
 01881: AppFnToArg
-01882: AppFnToArg
-01883: AppFnToArg
-01884: AppFnToArg
-01885: LoadFn { code: 01734, fvars: 00000 }
+01882: PushString("")
+01883: PushString("Binding")
+01884: PushString(""x"")
+01885: AppFnToArg
 01886: AppFnToArg
-01887: AppFnToArg
-01888: LoadVar(00001)
-01889: PushString("Compound")
-01890: PushString("Value")
-01891: PushString("Pair")
+01887: PushString("Binding")
+01888: PushString(""x"")
+01889: AppFnToArg
+01890: AppFnToArg
+01891: AppFnToArg
 01892: AppFnToArg
-01893: AppFnToArg
-01894: PushString("")
-01895: PushString("Binding")
-01896: PushString(""x"")
-01897: AppFnToArg
-01898: AppFnToArg
-01899: PushString("Value")
-01900: PushString("Foo")
+01893: LoadFn { code: 01742, fvars: 00000 }
+01894: AppFnToArg
+01895: AppFnToArg
+01896: LoadVar(00001)
+01897: PushString("Compound")
+01898: PushString("Value")
+01899: PushString("Pair")
+01900: AppFnToArg
 01901: AppFnToArg
-01902: AppFnToArg
-01903: AppFnToArg
-01904: AppFnToArg
-01905: LoadFn { code: 01736, fvars: 00000 }
+01902: PushString("")
+01903: PushString("Binding")
+01904: PushString(""x"")
+01905: AppFnToArg
 01906: AppFnToArg
-01907: AppFnToArg
-01908: LoadVar(00001)
-01909: PushString("Compound")
-01910: PushString("Value")
-01911: PushString("Pair")
+01907: PushString("Value")
+01908: PushString("Foo")
+01909: AppFnToArg
+01910: AppFnToArg
+01911: AppFnToArg
 01912: AppFnToArg
-01913: AppFnToArg
-01914: PushString("")
-01915: PushString("Binding")
-01916: PushString(""x"")
-01917: AppFnToArg
-01918: AppFnToArg
-01919: PushString("Binding")
-01920: PushString(""y"")
+01913: LoadFn { code: 01744, fvars: 00000 }
+01914: AppFnToArg
+01915: AppFnToArg
+01916: LoadVar(00001)
+01917: PushString("Compound")
+01918: PushString("Value")
+01919: PushString("Pair")
+01920: AppFnToArg
 01921: AppFnToArg
-01922: AppFnToArg
-01923: AppFnToArg
-01924: AppFnToArg
-01925: LoadFn { code: 01740, fvars: 00000 }
+01922: PushString("")
+01923: PushString("Binding")
+01924: PushString(""x"")
+01925: AppFnToArg
 01926: AppFnToArg
-01927: AppFnToArg
-01928: LoadVar(00001)
-01929: PushString("Binding")
-01930: PushString(""_"")
+01927: PushString("Binding")
+01928: PushString(""y"")
+01929: AppFnToArg
+01930: AppFnToArg
 01931: AppFnToArg
 01932: AppFnToArg
-01933: LoadFn { code: 01742, fvars: 00000 }
+01933: LoadFn { code: 01748, fvars: 00000 }
 01934: AppFnToArg
 01935: AppFnToArg
-01936: AppFnToArg
-01937: AppFnToArg
-01938: AppFnToArg
+01936: LoadVar(00001)
+01937: PushString("Binding")
+01938: PushString(""_"")
 01939: AppFnToArg
-01940: LoadFn { code: 01757, fvars: 00000 }
-01941: LoadFn { code: 01773, fvars: 00002 }
+01940: AppFnToArg
+01941: LoadFn { code: 01750, fvars: 00000 }
 01942: AppFnToArg
-01943: PushEffect("no-match")
+01943: AppFnToArg
 01944: AppFnToArg
-01945: LoadFn { code: 01847, fvars: 00000 }
-01946: PushString("")
-01947: PushString(""_"")
-01948: AppFnToArg
-01949: PushString(""arg"")
+01945: AppFnToArg
+01946: AppFnToArg
+01947: AppFnToArg
+01948: LoadFn { code: 01765, fvars: 00000 }
+01949: LoadFn { code: 01781, fvars: 00002 }
 01950: AppFnToArg
-01951: AppFnToArg
-01952: LoadFn { code: 01853, fvars: 00000 }
-01953: AppFnToArg
-01954: AppFnToArg
-01955: AppFnToArg
-01956:   Return
-01957: LoadFn { code: 01553, fvars: 00000 }
-01958: PushString(""match"")
+01951: PushEffect("no-match")
+01952: AppFnToArg
+01953: LoadFn { code: 01855, fvars: 00000 }
+01954: PushString("")
+01955: PushString(""_"")
+01956: AppFnToArg
+01957: PushString(""arg"")
+01958: AppFnToArg
 01959: AppFnToArg
-01960: LoadFn { code: 01557, fvars: 00000 }
-01961: PushString("")
-01962: PushString(""value"")
+01960: LoadFn { code: 01861, fvars: 00000 }
+01961: AppFnToArg
+01962: AppFnToArg
 01963: AppFnToArg
-01964: PushString(""args"")
-01965: AppFnToArg
-01966: AppFnToArg
-01967: LoadFn { code: 01726, fvars: 00008 }
-01968: AppFnToArg
-01969: AppFnToArg
-01970: LoadFn { code: 01855, fvars: 00001 }
+01964:   Return
+01965: LoadFn { code: 01553, fvars: 00000 }
+01966: PushString(""match"")
+01967: AppFnToArg
+01968: LoadFn { code: 01557, fvars: 00000 }
+01969: PushString("")
+01970: PushString(""value"")
 01971: AppFnToArg
-01972:   Return
-01973: LoadFn { code: 00515, fvars: 00000 }
-01974: PushString(""->"")
-01975: AppFnToArg
-01976: LoadFn { code: 00519, fvars: 00000 }
-01977: PushString("")
-01978: PushString(""pattern"")
+01972: PushString(""args"")
+01973: AppFnToArg
+01974: AppFnToArg
+01975: LoadFn { code: 01734, fvars: 00008 }
+01976: AppFnToArg
+01977: AppFnToArg
+01978: LoadFn { code: 01863, fvars: 00001 }
 01979: AppFnToArg
-01980: PushString(""body"")
-01981: AppFnToArg
-01982: PushString(""value"")
+01980:   Return
+01981: LoadFn { code: 00515, fvars: 00000 }
+01982: PushString(""->"")
 01983: AppFnToArg
-01984: AppFnToArg
-01985: LoadFn { code: 01545, fvars: 00007 }
-01986: AppFnToArg
+01984: LoadFn { code: 00519, fvars: 00000 }
+01985: PushString("")
+01986: PushString(""pattern"")
 01987: AppFnToArg
-01988: LoadFn { code: 01957, fvars: 00007 }
+01988: PushString(""body"")
 01989: AppFnToArg
-01990:   Return
-01991: LoadFn { code: 00436, fvars: 00000 }
-01992: PushString(""destructure"")
-01993: AppFnToArg
-01994: LoadFn { code: 00442, fvars: 00000 }
-01995: PushString(""destructure"")
-01996: AppFnToArg
-01997: LoadFn { code: 00499, fvars: 00005 }
-01998: AppFnToArg
-01999: PushString("")
-02000: AppFnToArg
+01990: PushString(""value"")
+01991: AppFnToArg
+01992: AppFnToArg
+01993: LoadFn { code: 01545, fvars: 00007 }
+01994: AppFnToArg
+01995: AppFnToArg
+01996: LoadFn { code: 01965, fvars: 00007 }
+01997: AppFnToArg
+01998:   Return
+01999: LoadFn { code: 00436, fvars: 00000 }
+02000: PushString(""destructure"")
 02001: AppFnToArg
-02002: LoadFn { code: 01973, fvars: 00006 }
-02003: AppFnToArg
-02004:   Return
-02005: LoadFn { code: 00283, fvars: 00000 }
-02006: PushString(""zip"")
-02007: AppFnToArg
-02008: LoadFn { code: 00289, fvars: 00000 }
-02009: PushString(""zip"")
-02010: AppFnToArg
-02011: LoadFn { code: 00418, fvars: 00000 }
-02012: AppFnToArg
-02013: PushString("")
-02014: AppFnToArg
+02002: LoadFn { code: 00442, fvars: 00000 }
+02003: PushString(""destructure"")
+02004: AppFnToArg
+02005: LoadFn { code: 00499, fvars: 00005 }
+02006: AppFnToArg
+02007: PushString("")
+02008: AppFnToArg
+02009: AppFnToArg
+02010: LoadFn { code: 01981, fvars: 00006 }
+02011: AppFnToArg
+02012:   Return
+02013: LoadFn { code: 00283, fvars: 00000 }
+02014: PushString(""zip"")
 02015: AppFnToArg
-02016: LoadFn { code: 01991, fvars: 00005 }
-02017: AppFnToArg
-02018:   Return
-02019: LoadFn { code: 00221, fvars: 00000 }
-02020: PushString(""flatten"")
-02021: AppFnToArg
-02022: LoadFn { code: 00225, fvars: 00000 }
-02023: PushString(""xs"")
-02024: AppFnToArg
-02025: LoadFn { code: 00259, fvars: 00004 }
-02026: AppFnToArg
-02027: AppFnToArg
-02028: LoadFn { code: 02005, fvars: 00004 }
+02016: LoadFn { code: 00289, fvars: 00000 }
+02017: PushString(""zip"")
+02018: AppFnToArg
+02019: LoadFn { code: 00418, fvars: 00000 }
+02020: AppFnToArg
+02021: PushString("")
+02022: AppFnToArg
+02023: AppFnToArg
+02024: LoadFn { code: 01999, fvars: 00005 }
+02025: AppFnToArg
+02026:   Return
+02027: LoadFn { code: 00221, fvars: 00000 }
+02028: PushString(""flatten"")
 02029: AppFnToArg
-02030:   Return
-02031: LoadFn { code: 00177, fvars: 00000 }
-02032: PushString(""map"")
-02033: AppFnToArg
-02034: LoadFn { code: 00181, fvars: 00000 }
-02035: PushString("")
-02036: PushString(""f"")
+02030: LoadFn { code: 00225, fvars: 00000 }
+02031: PushString(""xs"")
+02032: AppFnToArg
+02033: LoadFn { code: 00259, fvars: 00004 }
+02034: AppFnToArg
+02035: AppFnToArg
+02036: LoadFn { code: 02013, fvars: 00004 }
 02037: AppFnToArg
-02038: PushString(""xs"")
-02039: AppFnToArg
-02040: AppFnToArg
-02041: LoadFn { code: 00213, fvars: 00003 }
-02042: AppFnToArg
-02043: AppFnToArg
-02044: LoadFn { code: 02019, fvars: 00003 }
+02038:   Return
+02039: LoadFn { code: 00177, fvars: 00000 }
+02040: PushString(""map"")
+02041: AppFnToArg
+02042: LoadFn { code: 00181, fvars: 00000 }
+02043: PushString("")
+02044: PushString(""f"")
 02045: AppFnToArg
-02046:   Return
-02047: LoadFn { code: 00135, fvars: 00000 }
-02048: PushString(""apply"")
-02049: AppFnToArg
-02050: LoadFn { code: 00139, fvars: 00000 }
-02051: PushString("")
-02052: PushString(""f"")
+02046: PushString(""xs"")
+02047: AppFnToArg
+02048: AppFnToArg
+02049: LoadFn { code: 00213, fvars: 00003 }
+02050: AppFnToArg
+02051: AppFnToArg
+02052: LoadFn { code: 02027, fvars: 00003 }
 02053: AppFnToArg
-02054: PushString(""xs"")
-02055: AppFnToArg
-02056: AppFnToArg
-02057: LoadFn { code: 00169, fvars: 00002 }
-02058: AppFnToArg
-02059: AppFnToArg
-02060: LoadFn { code: 02031, fvars: 00002 }
+02054:   Return
+02055: LoadFn { code: 00135, fvars: 00000 }
+02056: PushString(""apply"")
+02057: AppFnToArg
+02058: LoadFn { code: 00139, fvars: 00000 }
+02059: PushString("")
+02060: PushString(""f"")
 02061: AppFnToArg
-02062:   Return
-02063: LoadFn { code: 00097, fvars: 00000 }
-02064: PushString(""reverse"")
-02065: AppFnToArg
-02066: LoadFn { code: 00101, fvars: 00000 }
-02067: PushString(""xs"")
-02068: AppFnToArg
-02069: LoadFn { code: 00113, fvars: 00001 }
-02070: AppFnToArg
-02071: AppFnToArg
-02072: LoadFn { code: 02047, fvars: 00001 }
+02062: PushString(""xs"")
+02063: AppFnToArg
+02064: AppFnToArg
+02065: LoadFn { code: 00169, fvars: 00002 }
+02066: AppFnToArg
+02067: AppFnToArg
+02068: LoadFn { code: 02039, fvars: 00002 }
+02069: AppFnToArg
+02070:   Return
+02071: LoadFn { code: 00097, fvars: 00000 }
+02072: PushString(""reverse"")
 02073: AppFnToArg
-02074:   Return
-02075: LoadFn { code: 00016, fvars: 00000 }
-02076: PushString(""fold"")
-02077: AppFnToArg
-02078: LoadFn { code: 00022, fvars: 00000 }
-02079: PushString(""fold"")
-02080: AppFnToArg
-02081: LoadFn { code: 00079, fvars: 00000 }
-02082: AppFnToArg
-02083: AppFnToArg
-02084: LoadFn { code: 02063, fvars: 00000 }
+02074: LoadFn { code: 00101, fvars: 00000 }
+02075: PushString(""xs"")
+02076: AppFnToArg
+02077: LoadFn { code: 00113, fvars: 00001 }
+02078: AppFnToArg
+02079: AppFnToArg
+02080: LoadFn { code: 02055, fvars: 00001 }
+02081: AppFnToArg
+02082:   Return
+02083: LoadFn { code: 00016, fvars: 00000 }
+02084: PushString(""fold"")
 02085: AppFnToArg
-02086:   Return
+02086: LoadFn { code: 00022, fvars: 00000 }
+02087: PushString(""fold"")
+02088: AppFnToArg
+02089: LoadFn { code: 00079, fvars: 00000 }
+02090: AppFnToArg
+02091: AppFnToArg
+02092: LoadFn { code: 02071, fvars: 00000 }
+02093: AppFnToArg
+02094:   Return
 
 [Bar, NoMatch(Foo)]

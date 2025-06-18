@@ -11,6 +11,7 @@ fn pretty_ast<'c>(prg: &[Ast]) -> String {
         let indent = "  ";
         match &ast.1 {
             A::Var(s) => buf.push_str(s),
+            A::Atom(s) if s == NIL => buf.push_str("[]"),
             A::Atom(s) => buf.push_str(s),
             A::String(s) => buf.push_str(&format!("\"{s}\"")),
             A::Binding(lvl, s) => buf.push_str(&(":".repeat(lvl + 1) + s)),
@@ -24,17 +25,6 @@ fn pretty_ast<'c>(prg: &[Ast]) -> String {
                     pretty(&item, lvl + 1, buf);
                 }
                 buf.push_str(" }")
-            }
-            A::List(items) => {
-                buf.push_str("[ ");
-                for (i, item) in items.iter().enumerate() {
-                    if i != 0 {
-                        buf.push('\n');
-                        buf.push_str(&indent.repeat(lvl + 1));
-                    }
-                    pretty(&item, lvl + 1, buf);
-                }
-                buf.push_str(" ]")
             }
             A::Call(f, args) => {
                 buf.push('(');
