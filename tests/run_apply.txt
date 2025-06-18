@@ -128,9 +128,9 @@ Foo([], Bar)
   C ]
 
 ( ( ( []
-      C )
+      A )
     B )
-  A )
+  C )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -143,11 +143,11 @@ Foo([], Bar)
 00008: AppArgToFn
 00009:   Return
 00010: PushString("")
-00011: PushString("C")
+00011: PushString("A")
 00012: AppFnToArg
 00013: PushString("B")
 00014: AppFnToArg
-00015: PushString("A")
+00015: PushString("C")
 00016: AppFnToArg
 00017:   Return
 
@@ -155,17 +155,17 @@ Foo([], Bar)
 
 ---
 
-[](C)(B)(A)
+[](A)(B)(C)
 
 ((([  ]
-  C)
-  B)
   A)
+  B)
+  C)
 
 ( ( ( []
-      C )
+      A )
     B )
-  A )
+  C )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -178,11 +178,11 @@ Foo([], Bar)
 00008: AppArgToFn
 00009:   Return
 00010: PushString("")
-00011: PushString("C")
+00011: PushString("A")
 00012: AppFnToArg
 00013: PushString("B")
 00014: AppFnToArg
-00015: PushString("A")
+00015: PushString("C")
 00016: AppFnToArg
 00017:   Return
 
@@ -199,8 +199,8 @@ Foo bar: Baz
 ( Foo
   ( []
     ( ( []
-        Baz )
-      "bar" ) ) )
+        "bar" )
+      Baz ) ) )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -215,9 +215,9 @@ Foo bar: Baz
 00010: PushString("Foo")
 00011: PushString("")
 00012: PushString("")
-00013: PushString("Baz")
+00013: PushString(""bar"")
 00014: AppFnToArg
-00015: PushString(""bar"")
+00015: PushString("Baz")
 00016: AppFnToArg
 00017: AppFnToArg
 00018: AppFnToArg

@@ -5,11 +5,11 @@
         acc
     })
 }})
-:apply = ([:f, :xs] => {
-    fold([:f, :x] => { f(x) }, f, xs)
-})
 :reverse = (:xs => {
     fold([:xs, :x] => { xs(x) }, [], xs)
+})
+:apply = ([:f, :xs] => {
+    fold([:f, :x] => { f(x) }, f, reverse(xs))
 })
 :map = ([:f, :xs] => {
     fold([:xs, :x] => { xs(f(x)) }, [], reverse(xs))
@@ -25,15 +25,12 @@
     }, {
         __unpack(ys, [:ys, :y] => {}, { acc })
     })
-}})
-:zip = ([:xs, :ys] => {
-    reverse(zip([], xs, ys))
-})
+}})([])
 :destructure = (:destructure ~> { [:acc, :compound] => {
     __unpack(compound, [:xs, :x] => {
         destructure(acc(x), xs)
     }, {
-        [compound, acc]
+        [compound, reverse(acc)]
     })
 } })([])
 :-> = ([:pattern, :body, :value] => {
@@ -48,11 +45,11 @@
             __compare(a, b, { True }, { False })
         })
     }})
-    :first = (:xs => {
+    :second = (:xs => {
         __unpack(xs, [:_, :x] => { x }, { xs })
     })
-    :second = (:xs => {
-        __unpack(xs, [:xs, :_] => { first(xs) }, { xs })
+    :first = (:xs => {
+        __unpack(xs, [:xs, :_] => { second(xs) }, { xs })
     })
     :join = fold([:acc, :pair] => {
         :xvar = first(pair)
@@ -74,11 +71,11 @@
                 [[pattern, value]]
             }, {
                 __compare(type, List, {
-                    :zipped = reverse(zip(pattern, value))
+                    :zipped = zip(pattern, value)
                     __compare(zipped, [], {
                         no-match!([type(pattern), value])
                     }, {
-                        join(flatten(map(apply(unify), zipped)))
+                        reverse(join(flatten(reverse(map(apply(unify), zipped)))))
                     })
                 }, {
                     __unpack(type, [:type, :f] => {
@@ -86,11 +83,11 @@
                             :v = destructure(value)
                             :vf = first(v)
                             :vargs = second(v)
-                            :zipped = reverse(zip(pattern(f), vargs(vf)))
+                            :zipped = zip(pattern, vargs)
                             __compare(zipped, [], {
                                 no-match!([type(f, pattern), value])
                             }, {
-                                join(flatten(map(apply(unify), zipped)))
+                                reverse(join(flatten(reverse(map(apply(unify), zipped([f, vf]))))))
                             })
                         }, {
                             invalid!(type(f, pattern))
@@ -106,7 +103,7 @@
             invalid!(pattern)
         })
     }})
-    __handle({
+    __handle( {
         :args = map(second, unify(pattern, value))
         __compare(args, [], {
             body()
@@ -127,13 +124,16 @@
             }, {
                 result
             })
-        }, [], clauses)
+        }, [], reverse(clauses))
         __unpack(result, [:_, :result] => {
             result
         }, {
             no-match!(value)
         })
     })(args)
+})
+:zip = ([:xs, :ys] => {
+    reverse(zip(xs, ys))
 })
 :|> = ([:x, :f] => {
     f(x)

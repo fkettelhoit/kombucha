@@ -301,14 +301,14 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
         }
         match ast.1 {
             A::List(items) if contains_bindings(&ast) => {
-                let items = desug_all(items.into_iter().rev().collect(), ctx)?;
+                let items = desug_all(items.into_iter().collect(), ctx)?;
                 let list = items.into_iter().fold(nil(), |l, x| app(l, x));
                 Ok(app(Expr::String(Syn::List as usize), list))
             }
             A::Call(f, args) if contains_bindings(&ast) => {
                 let f = desug_macro(*f, ctx)?;
                 let args = desug_all(args, ctx)?;
-                let list = args.into_iter().rev().fold(nil(), |l, x| app(l, x));
+                let list = args.into_iter().fold(nil(), |l, x| app(l, x));
                 Ok(app(app(Expr::String(Syn::Compound as usize), f), list))
             }
             A::Var(_) | A::Atom(_) | A::String(_) | A::List(_) | A::Call(_, _) => {
@@ -374,7 +374,7 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
             A::List(items) => {
                 let items: Vec<_> =
                     items.into_iter().map(|x| desug_val(x, ctx)).collect::<Result<_, _>>()?;
-                Ok(items.into_iter().rev().fold(nil(), |l, x| app(l, x)))
+                Ok(items.into_iter().fold(nil(), |l, x| app(l, x)))
             }
             A::Call(f, args) => {
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);

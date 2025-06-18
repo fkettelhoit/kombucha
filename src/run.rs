@@ -213,7 +213,7 @@ pub(crate) fn pretty(v: &Val, strs: &Vec<String>) -> String {
         Val::Effect(s) => format!("{}!", strs[*s]),
         Val::Closure(c, _) => format!("#fn-{c}"),
         Val::Record(s, vs) if strs[*s] == NIL => {
-            let items = vs.iter().rev().map(|v| pretty(v, strs)).collect::<Vec<_>>();
+            let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("[{}]", items.join(", "))
         }
         Val::Record(s, vs) => {

@@ -1,17 +1,48 @@
 use vorpal::{compile::compile, run::State};
 
 #[test]
+fn prelude_match_foo_bar() -> Result<(), String> {
+    let code = "
+match (Foo(Bar(Baz, Qux))) with: [
+    Foo(Bar(:x, :y)) -> { [x, y] }
+]
+";
+    let bytecode = compile(code)?;
+    match bytecode.run().unwrap() {
+        State::Done(v) => assert_eq!(v.to_string(), "[Baz, Qux]"),
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
+    }
+    Ok(())
+}
+
+#[test]
+fn prelude_match_list() -> Result<(), String> {
+    let code = "
+match [[Foo, Bar]] with: [
+    [[:x, :y]] -> { Pair(x, y) }
+]
+";
+    let bytecode = compile(code)?;
+    match bytecode.run().unwrap() {
+        State::Done(v) => assert_eq!(v.to_string(), "Pair(Foo, Bar)"),
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
+    }
+    Ok(())
+}
+
+#[test]
 fn prelude_match_pair() -> Result<(), String> {
     let code = "
-match (Pair first: Foo second: Foo) with: [
+match (Pair first: Foo second: Bar) with: [
     Pair([[\"twice\", :x]]) -> { Twice(x) }
     Pair([[\"first\", :x], [\"second\", :x]]) -> { Twice(x) }
+    Pair([[\"first\", :x], [\"second\", :y]]) -> { Different(x, y) }
     Pair([[\"first\", :x], [\"second\", :y]]) -> { invalid-pair!() }
 ]
 ";
     let bytecode = compile(code)?;
     match bytecode.run().unwrap() {
-        State::Done(v) => assert_eq!(v.to_string(), "Twice(Foo)"),
+        State::Done(v) => assert_eq!(v.to_string(), "Different(Foo, Bar)"),
         State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
     }
     Ok(())

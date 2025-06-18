@@ -293,12 +293,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_seq<V: de::Visitor<'de>>(self, v: V) -> Result<'de, V::Value> {
         match self.current_input() {
-            Val::Record(s, items) if *s == Syn::Nil as usize => {
-                let seq = SeqDeserializer::new(self, items, true);
-                v.visit_seq(seq)
-            }
             Val::Record(_, items) => {
-                let seq = SeqDeserializer::new(self, items, false);
+                let seq = SeqDeserializer::new(self, items);
                 v.visit_seq(seq)
             }
             _ => Err(self.err(E::InvalidSeq)),
@@ -320,7 +316,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 let record_name =
                     self.strs.get(*s).ok_or_else(|| self.err(E::InvalidTupleStruct))?;
                 if record_name == name {
-                    v.visit_seq(SeqDeserializer::new(self, items, false))
+                    v.visit_seq(SeqDeserializer::new(self, items))
                 } else {
                     Err(self.err(E::InvalidTupleStruct))
                 }
@@ -380,12 +376,11 @@ struct SeqDeserializer<'a, 'de> {
     deserializer: &'a mut Deserializer<'de>,
     items: &'de [Rc<Val>],
     index: usize,
-    reverse: bool,
 }
 
 impl<'a, 'de> SeqDeserializer<'a, 'de> {
-    fn new(deserializer: &'a mut Deserializer<'de>, items: &'de [Rc<Val>], reverse: bool) -> Self {
-        Self { deserializer, items, index: 0, reverse }
+    fn new(deserializer: &'a mut Deserializer<'de>, items: &'de [Rc<Val>]) -> Self {
+        Self { deserializer, items, index: 0 }
     }
 }
 
@@ -396,16 +391,7 @@ impl<'de, 'a> de::SeqAccess<'de> for SeqDeserializer<'a, 'de> {
     where
         T: de::DeserializeSeed<'de>,
     {
-        let actual_index = if self.reverse {
-            if self.index >= self.items.len() {
-                return Ok(None);
-            }
-            self.items.len() - 1 - self.index
-        } else {
-            self.index
-        };
-
-        match self.items.get(actual_index) {
+        match self.items.get(self.index) {
             None => Ok(None),
             Some(val) => {
                 self.index += 1;
@@ -538,7 +524,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a, 'de> {
     {
         match self.deserializer.current_input() {
             Val::Record(_s, items) if items.len() == len => {
-                visitor.visit_seq(SeqDeserializer::new(self.deserializer, items, false))
+                visitor.visit_seq(SeqDeserializer::new(self.deserializer, items))
             }
             _ => Err(self.deserializer.err(E::InvalidEnum)),
         }

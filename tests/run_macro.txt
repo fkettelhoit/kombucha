@@ -11,8 +11,8 @@
           =>
             0
         ( ( []
-            "_" )
-          "x" ) )
+            "x" )
+          "_" ) )
       =>
         =>
           1 )
@@ -43,9 +43,9 @@
 00019:   Return
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
-00022: PushString(""_"")
+00022: PushString(""x"")
 00023: AppFnToArg
-00024: PushString(""x"")
+00024: PushString(""_"")
 00025: AppFnToArg
 00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
@@ -75,8 +75,8 @@ Value(Foo)
           =>
             0
         ( ( []
-            "_" )
-          "x" ) )
+            "x" )
+          "_" ) )
       =>
         =>
           1 )
@@ -107,9 +107,9 @@ Value(Foo)
 00019:   Return
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
-00022: PushString(""_"")
+00022: PushString(""x"")
 00023: AppFnToArg
-00024: PushString(""x"")
+00024: PushString(""_"")
 00025: AppFnToArg
 00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
@@ -141,8 +141,8 @@ Binding("binding")
           =>
             0
         ( ( []
-            "_" )
-          "x" ) )
+            "x" )
+          "_" ) )
       =>
         =>
           1 )
@@ -175,9 +175,9 @@ Binding("binding")
 00019:   Return
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
-00022: PushString(""_"")
+00022: PushString(""x"")
 00023: AppFnToArg
-00024: PushString(""x"")
+00024: PushString(""_"")
 00025: AppFnToArg
 00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
@@ -213,8 +213,8 @@ Value(Foo(Bar, Baz))
           =>
             0
         ( ( []
-            "_" )
-          "x" ) )
+            "x" )
+          "_" ) )
       =>
         =>
           1 )
@@ -222,10 +222,10 @@ Value(Foo(Bar, Baz))
         ( Value
           Foo ) )
       ( ( []
-          ( Binding
-            "baz" ) )
-        ( Value
-          Bar ) ) ) )
+          ( Value
+            Bar ) )
+        ( Binding
+          "baz" ) ) ) )
   =>
     [] )
 
@@ -251,9 +251,9 @@ Value(Foo(Bar, Baz))
 00019:   Return
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
-00022: PushString(""_"")
+00022: PushString(""x"")
 00023: AppFnToArg
-00024: PushString(""x"")
+00024: PushString(""_"")
 00025: AppFnToArg
 00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
@@ -264,12 +264,12 @@ Value(Foo(Bar, Baz))
 00032: AppFnToArg
 00033: AppFnToArg
 00034: PushString("")
-00035: PushString("Binding")
-00036: PushString(""baz"")
+00035: PushString("Value")
+00036: PushString("Bar")
 00037: AppFnToArg
 00038: AppFnToArg
-00039: PushString("Value")
-00040: PushString("Bar")
+00039: PushString("Binding")
+00040: PushString(""baz"")
 00041: AppFnToArg
 00042: AppFnToArg
 00043: AppFnToArg
@@ -297,8 +297,8 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
           =>
             0
         ( ( []
-            "_" )
-          "x" ) )
+            "x" )
+          "_" ) )
       =>
         =>
           1 )
@@ -306,10 +306,10 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
         ( Binding
           "foo" ) )
       ( ( []
-          ( Binding
-            "baz" ) )
-        ( Value
-          Bar ) ) ) )
+          ( Value
+            Bar ) )
+        ( Binding
+          "baz" ) ) ) )
   =>
     =>
       [] )
@@ -338,9 +338,9 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 00021:   Return
 00022: LoadFn { code: 00012, fvars: 00000 }
 00023: PushString("")
-00024: PushString(""_"")
+00024: PushString(""x"")
 00025: AppFnToArg
-00026: PushString(""x"")
+00026: PushString(""_"")
 00027: AppFnToArg
 00028: AppFnToArg
 00029: LoadFn { code: 00016, fvars: 00000 }
@@ -351,12 +351,12 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 00034: AppFnToArg
 00035: AppFnToArg
 00036: PushString("")
-00037: PushString("Binding")
-00038: PushString(""baz"")
+00037: PushString("Value")
+00038: PushString("Bar")
 00039: AppFnToArg
 00040: AppFnToArg
-00041: PushString("Value")
-00042: PushString("Bar")
+00041: PushString("Binding")
+00042: PushString(""baz"")
 00043: AppFnToArg
 00044: AppFnToArg
 00045: AppFnToArg
@@ -385,23 +385,23 @@ Compound(Binding("foo"), [Value(Bar), Binding("baz")])
           =>
             0
         ( ( []
-            "_" )
-          "x" ) )
+            "x" )
+          "_" ) )
       =>
         =>
           1 )
     ( List
       ( ( ( []
-            ( List
-              ( ( []
-                  ( Binding
-                    "foo" ) )
-                ( Value
-                  C ) ) ) )
+            ( Value
+              A ) )
           ( Value
             B ) )
-        ( Value
-          A ) ) ) )
+        ( List
+          ( ( []
+              ( Value
+                C ) )
+            ( Binding
+              "foo" ) ) ) ) ) )
   =>
     [] )
 
@@ -427,33 +427,33 @@ Compound(Binding("foo"), [Value(Bar), Binding("baz")])
 00019:   Return
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
-00022: PushString(""_"")
+00022: PushString(""x"")
 00023: AppFnToArg
-00024: PushString(""x"")
+00024: PushString(""_"")
 00025: AppFnToArg
 00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
 00028: AppFnToArg
 00029: PushString("List")
 00030: PushString("")
-00031: PushString("List")
-00032: PushString("")
-00033: PushString("Binding")
-00034: PushString(""foo"")
-00035: AppFnToArg
-00036: AppFnToArg
-00037: PushString("Value")
-00038: PushString("C")
-00039: AppFnToArg
-00040: AppFnToArg
-00041: AppFnToArg
-00042: AppFnToArg
-00043: PushString("Value")
-00044: PushString("B")
-00045: AppFnToArg
-00046: AppFnToArg
-00047: PushString("Value")
-00048: PushString("A")
+00031: PushString("Value")
+00032: PushString("A")
+00033: AppFnToArg
+00034: AppFnToArg
+00035: PushString("Value")
+00036: PushString("B")
+00037: AppFnToArg
+00038: AppFnToArg
+00039: PushString("List")
+00040: PushString("")
+00041: PushString("Value")
+00042: PushString("C")
+00043: AppFnToArg
+00044: AppFnToArg
+00045: PushString("Binding")
+00046: PushString(""foo"")
+00047: AppFnToArg
+00048: AppFnToArg
 00049: AppFnToArg
 00050: AppFnToArg
 00051: AppFnToArg
@@ -479,8 +479,8 @@ List([Value(A), Value(B), List([Value(C), Binding("foo")])])
           =>
             0
         ( ( []
-            "_" )
-          "x" ) )
+            "x" )
+          "_" ) )
       =>
         =>
           1 )
@@ -511,9 +511,9 @@ List([Value(A), Value(B), List([Value(C), Binding("foo")])])
 00019:   Return
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
-00022: PushString(""_"")
+00022: PushString(""x"")
 00023: AppFnToArg
-00024: PushString(""x"")
+00024: PushString(""_"")
 00025: AppFnToArg
 00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
@@ -624,9 +624,9 @@ foo(Bar, Baz)
           =>
             0
         ( ( ( []
-              "block" )
+              "binding" )
             "value" )
-          "binding" ) )
+          "block" ) )
       =>
         =>
           =>
@@ -640,9 +640,9 @@ foo(Bar, Baz)
                 "foo" ) )
             ( ( []
                 ( Binding
-                  "y" ) )
+                  "x" ) )
               ( Binding
-                "x" ) ) ) )
+                "y" ) ) ) )
         =>
           =>
             =>
@@ -710,11 +710,11 @@ foo(Bar, Baz)
 00053: AppFnToArg
 00054: PushString("")
 00055: PushString("Binding")
-00056: PushString(""y"")
+00056: PushString(""x"")
 00057: AppFnToArg
 00058: AppFnToArg
 00059: PushString("Binding")
-00060: PushString(""x"")
+00060: PushString(""y"")
 00061: AppFnToArg
 00062: AppFnToArg
 00063: AppFnToArg
@@ -729,11 +729,11 @@ foo(Bar, Baz)
 00072: AppFnToArg
 00073: LoadFn { code: 00020, fvars: 00000 }
 00074: PushString("")
-00075: PushString(""block"")
+00075: PushString(""binding"")
 00076: AppFnToArg
 00077: PushString(""value"")
 00078: AppFnToArg
-00079: PushString(""binding"")
+00079: PushString(""block"")
 00080: AppFnToArg
 00081: AppFnToArg
 00082: LoadFn { code: 00030, fvars: 00000 }
@@ -805,9 +805,9 @@ foo(Bar, Baz)
           =>
             0
         ( ( ( []
-              "block" )
+              "binding" )
             "value" )
-          "binding" ) )
+          "block" ) )
       =>
         =>
           =>
@@ -823,8 +823,8 @@ foo(Bar, Baz)
                       =>
                         0
                     ( ( []
-                        "arg" )
-                      "type" ) )
+                        "type" )
+                      "arg" ) )
                   =>
                     =>
                       ( ( ( =>
@@ -839,8 +839,8 @@ foo(Bar, Baz)
                                 =>
                                   0
                               ( ( []
-                                  "f" )
-                                "type" ) )
+                                  "type" )
+                                "f" ) )
                             =>
                               =>
                                 ( 4
@@ -863,9 +863,9 @@ foo(Bar, Baz)
                 "foo" ) )
             ( ( []
                 ( Binding
-                  "y" ) )
+                  "x" ) )
               ( Binding
-                "x" ) ) ) )
+                "y" ) ) ) )
         =>
           =>
             =>
@@ -954,9 +954,9 @@ foo(Bar, Baz)
 00074: AppFnToArg
 00075: LoadFn { code: 00050, fvars: 00000 }
 00076: PushString("")
-00077: PushString(""f"")
+00077: PushString(""type"")
 00078: AppFnToArg
-00079: PushString(""type"")
+00079: PushString(""f"")
 00080: AppFnToArg
 00081: AppFnToArg
 00082: LoadFn { code: 00066, fvars: 00004 }
@@ -976,9 +976,9 @@ foo(Bar, Baz)
 00096: AppFnToArg
 00097: LoadFn { code: 00035, fvars: 00000 }
 00098: PushString("")
-00099: PushString(""arg"")
+00099: PushString(""type"")
 00100: AppFnToArg
-00101: PushString(""type"")
+00101: PushString(""arg"")
 00102: AppFnToArg
 00103: AppFnToArg
 00104: LoadFn { code: 00088, fvars: 00002 }
@@ -1015,11 +1015,11 @@ foo(Bar, Baz)
 00135: AppFnToArg
 00136: PushString("")
 00137: PushString("Binding")
-00138: PushString(""y"")
+00138: PushString(""x"")
 00139: AppFnToArg
 00140: AppFnToArg
 00141: PushString("Binding")
-00142: PushString(""x"")
+00142: PushString(""y"")
 00143: AppFnToArg
 00144: AppFnToArg
 00145: AppFnToArg
@@ -1034,11 +1034,11 @@ foo(Bar, Baz)
 00154: AppFnToArg
 00155: LoadFn { code: 00020, fvars: 00000 }
 00156: PushString("")
-00157: PushString(""block"")
+00157: PushString(""binding"")
 00158: AppFnToArg
 00159: PushString(""value"")
 00160: AppFnToArg
-00161: PushString(""binding"")
+00161: PushString(""block"")
 00162: AppFnToArg
 00163: AppFnToArg
 00164: LoadFn { code: 00112, fvars: 00000 }
@@ -1133,9 +1133,9 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
           =>
             0
         ( ( ( []
-              "block" )
+              "binding" )
             "value" )
-          "binding" ) )
+          "block" ) )
       =>
         =>
           =>
@@ -1151,8 +1151,8 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
                       =>
                         0
                     ( ( []
-                        "arg" )
-                      "type" ) )
+                        "type" )
+                      "arg" ) )
                   =>
                     =>
                       ( ( ( =>
@@ -1167,8 +1167,8 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
                                 =>
                                   0
                               ( ( []
-                                  "f" )
-                                "type" ) )
+                                  "type" )
+                                "f" ) )
                             =>
                               =>
                                 ( 4
@@ -1191,11 +1191,11 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
                 "fold" ) )
             ( ( ( []
                   ( Binding
-                    "xs" ) )
+                    "f" ) )
                 ( Binding
                   "acc" ) )
               ( Binding
-                "f" ) ) ) )
+                "xs" ) ) ) )
         =>
           =>
             =>
@@ -1212,8 +1212,8 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
                           =>
                             0
                         ( ( []
-                            "x" )
-                          "xs" ) )
+                            "xs" )
+                          "x" ) )
                       =>
                         =>
                           ( ( ( 5
@@ -1230,17 +1230,17 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
                     =>
                       0
                   ( ( []
-                      "x" )
-                    "acc" ) )
+                      "acc" )
+                    "x" ) )
                 =>
                   =>
                     ( 1
                       0 ) ) )
             [] )
           ( ( ( []
-                C )
+                A )
               B )
-            A ) ) ) )
+            C ) ) ) )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -1319,9 +1319,9 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00074: AppFnToArg
 00075: LoadFn { code: 00050, fvars: 00000 }
 00076: PushString("")
-00077: PushString(""f"")
+00077: PushString(""type"")
 00078: AppFnToArg
-00079: PushString(""type"")
+00079: PushString(""f"")
 00080: AppFnToArg
 00081: AppFnToArg
 00082: LoadFn { code: 00066, fvars: 00004 }
@@ -1341,9 +1341,9 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00096: AppFnToArg
 00097: LoadFn { code: 00035, fvars: 00000 }
 00098: PushString("")
-00099: PushString(""arg"")
+00099: PushString(""type"")
 00100: AppFnToArg
-00101: PushString(""type"")
+00101: PushString(""arg"")
 00102: AppFnToArg
 00103: AppFnToArg
 00104: LoadFn { code: 00088, fvars: 00002 }
@@ -1392,9 +1392,9 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00147: AppFnToArg
 00148: LoadFn { code: 00127, fvars: 00000 }
 00149: PushString("")
-00150: PushString(""x"")
+00150: PushString(""xs"")
 00151: AppFnToArg
-00152: PushString(""xs"")
+00152: PushString(""x"")
 00153: AppFnToArg
 00154: AppFnToArg
 00155: LoadFn { code: 00141, fvars: 00004 }
@@ -1422,9 +1422,9 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00177: LoadVar(00000)
 00178: LoadFn { code: 00169, fvars: 00000 }
 00179: PushString("")
-00180: PushString(""x"")
+00180: PushString(""acc"")
 00181: AppFnToArg
-00182: PushString(""acc"")
+00182: PushString(""x"")
 00183: AppFnToArg
 00184: AppFnToArg
 00185: LoadFn { code: 00175, fvars: 00000 }
@@ -1433,11 +1433,11 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00188: PushString("")
 00189: AppFnToArg
 00190: PushString("")
-00191: PushString("C")
+00191: PushString("A")
 00192: AppFnToArg
 00193: PushString("B")
 00194: AppFnToArg
-00195: PushString("A")
+00195: PushString("C")
 00196: AppFnToArg
 00197: AppFnToArg
 00198:   Return
@@ -1449,7 +1449,7 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00204: AppFnToArg
 00205: PushString("")
 00206: PushString("Binding")
-00207: PushString(""xs"")
+00207: PushString(""f"")
 00208: AppFnToArg
 00209: AppFnToArg
 00210: PushString("Binding")
@@ -1457,7 +1457,7 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00212: AppFnToArg
 00213: AppFnToArg
 00214: PushString("Binding")
-00215: PushString(""f"")
+00215: PushString(""xs"")
 00216: AppFnToArg
 00217: AppFnToArg
 00218: AppFnToArg
@@ -1472,11 +1472,11 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00227: AppFnToArg
 00228: LoadFn { code: 00020, fvars: 00000 }
 00229: PushString("")
-00230: PushString(""block"")
+00230: PushString(""binding"")
 00231: AppFnToArg
 00232: PushString(""value"")
 00233: AppFnToArg
-00234: PushString(""binding"")
+00234: PushString(""block"")
 00235: AppFnToArg
 00236: AppFnToArg
 00237: LoadFn { code: 00112, fvars: 00000 }
@@ -1504,8 +1504,8 @@ x
           =>
             0
         ( ( []
-            "_" )
-          "x" ) )
+            "x" )
+          "_" ) )
       =>
         =>
           1 )
@@ -1536,9 +1536,9 @@ x
 00019:   Return
 00020: LoadFn { code: 00012, fvars: 00000 }
 00021: PushString("")
-00022: PushString(""_"")
+00022: PushString(""x"")
 00023: AppFnToArg
-00024: PushString(""x"")
+00024: PushString(""_"")
 00025: AppFnToArg
 00026: AppFnToArg
 00027: LoadFn { code: 00016, fvars: 00000 }
@@ -1625,9 +1625,9 @@ foo
           =>
             0
         ( ( ( []
-              "block" )
+              "binding" )
             "value" )
-          "binding" ) )
+          "block" ) )
       =>
         =>
           =>
@@ -1643,8 +1643,8 @@ foo
                       =>
                         0
                     ( ( []
-                        "arg" )
-                      "type" ) )
+                        "type" )
+                      "arg" ) )
                   =>
                     =>
                       ( ( ( =>
@@ -1659,8 +1659,8 @@ foo
                                 =>
                                   0
                               ( ( []
-                                  "f" )
-                                "type" ) )
+                                  "type" )
+                                "f" ) )
                             =>
                               =>
                                 ( 4
@@ -1683,8 +1683,8 @@ foo
                                     =>
                                       0
                                   ( ( []
-                                      "arg" )
-                                    "type" ) )
+                                      "type" )
+                                    "arg" ) )
                                 =>
                                   =>
                                     ( ( ( ( =>
@@ -1844,9 +1844,9 @@ foo
 00122: AppFnToArg
 00123: LoadFn { code: 00081, fvars: 00000 }
 00124: PushString("")
-00125: PushString(""arg"")
+00125: PushString(""type"")
 00126: AppFnToArg
-00127: PushString(""type"")
+00127: PushString(""arg"")
 00128: AppFnToArg
 00129: AppFnToArg
 00130: LoadFn { code: 00114, fvars: 00004 }
@@ -1860,9 +1860,9 @@ foo
 00138: AppFnToArg
 00139: LoadFn { code: 00050, fvars: 00000 }
 00140: PushString("")
-00141: PushString(""f"")
+00141: PushString(""type"")
 00142: AppFnToArg
-00143: PushString(""type"")
+00143: PushString(""f"")
 00144: AppFnToArg
 00145: AppFnToArg
 00146: LoadFn { code: 00066, fvars: 00004 }
@@ -1882,9 +1882,9 @@ foo
 00160: AppFnToArg
 00161: LoadFn { code: 00035, fvars: 00000 }
 00162: PushString("")
-00163: PushString(""arg"")
+00163: PushString(""type"")
 00164: AppFnToArg
-00165: PushString(""type"")
+00165: PushString(""arg"")
 00166: AppFnToArg
 00167: AppFnToArg
 00168: LoadFn { code: 00152, fvars: 00002 }
@@ -1916,11 +1916,11 @@ foo
 00194: AppFnToArg
 00195: LoadFn { code: 00020, fvars: 00000 }
 00196: PushString("")
-00197: PushString(""block"")
+00197: PushString(""binding"")
 00198: AppFnToArg
 00199: PushString(""value"")
 00200: AppFnToArg
-00201: PushString(""binding"")
+00201: PushString(""block"")
 00202: AppFnToArg
 00203: AppFnToArg
 00204: LoadFn { code: 00176, fvars: 00000 }
