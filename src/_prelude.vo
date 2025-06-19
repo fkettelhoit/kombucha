@@ -70,32 +70,23 @@
             __compare(type, Binding, {
                 [[pattern, value]]
             }, {
-                __compare(type, List, {
-                    :zipped = zip(pattern, value)
-                    __compare(zipped, [], {
-                        no-match!([type(pattern), value])
+                __unpack(type, [:type, :f] => {
+                    __compare(type, Compound, {
+                        :v = destructure(value)
+                        :vf = first(v)
+                        :vargs = second(v)
+                        :zipped = zip(pattern, vargs)
+                        __compare(zipped, [], {
+                            no-match!([type(f, pattern), value])
+                        }, {
+                            reverse(join(flatten(reverse(map(apply(unify), zipped([f, vf]))))))
+                        })
                     }, {
-                        reverse(join(flatten(reverse(map(apply(unify), zipped)))))
+                        invalid!(type(f, pattern))
                     })
                 }, {
-                    __unpack(type, [:type, :f] => {
-                        __compare(type, Compound, {
-                            :v = destructure(value)
-                            :vf = first(v)
-                            :vargs = second(v)
-                            :zipped = zip(pattern, vargs)
-                            __compare(zipped, [], {
-                                no-match!([type(f, pattern), value])
-                            }, {
-                                reverse(join(flatten(reverse(map(apply(unify), zipped([f, vf]))))))
-                            })
-                        }, {
-                            invalid!(type(f, pattern))
-                        })
-                    }, {
-                        __compare(pattern == value, True, {}, {
-                            no-match!([pattern, value])
-                        })
+                    __compare(pattern == value, True, {}, {
+                        no-match!([pattern, value])
                     })
                 })
             })
