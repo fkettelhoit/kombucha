@@ -1,10 +1,13 @@
 // The order mirrors their position in the bytecode header:
-pub enum Syn {
+pub enum Str {
     Nil = 0,
     Value = 1,
     Binding = 2,
     Compound = 3,
-    List = 4,
+    TyString = 4,
+    TyFunction = 5,
+    TyStruct = 6,
+    TyNil = 7,
 }
 
 pub const NIL: &str = "";
@@ -25,7 +28,9 @@ pub struct Ctx {
 
 impl Default for Ctx {
     fn default() -> Self {
-        let strs = [NIL, "Value", "Binding", "Compound", "List"].map(|s| s.to_string()).to_vec();
+        let strs = [NIL, "Value", "Binding", "Compound", "String", "Function", "Struct", "Nil"]
+            .map(|s| s.to_string())
+            .to_vec();
         Ctx { bindings: vec![], vars: vec![], strs }
     }
 }
@@ -67,6 +72,7 @@ pub enum Op {
     Unpack,
     Try,
     Unwind,
+    Type,
 }
 
 impl Bytecode {
@@ -132,6 +138,7 @@ impl Bytecode {
                 Op::Unpack => buf.push(9 << tag_shift),
                 Op::Try => buf.push(10 << tag_shift),
                 Op::Unwind => buf.push(11 << tag_shift),
+                Op::Type => buf.push(12 << tag_shift),
             }
         }
         Ok(buf)
@@ -229,6 +236,7 @@ impl Bytecode {
                 9 => ops.push(Op::Unpack),
                 10 => ops.push(Op::Try),
                 11 => ops.push(Op::Unwind),
+                12 => ops.push(Op::Type),
                 _ => return Err(format!("Invalid opcode {tag} at {i}")),
             }
             i += 1;

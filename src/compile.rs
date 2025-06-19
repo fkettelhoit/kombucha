@@ -1,6 +1,6 @@
 use std::{cmp::max, iter, mem, usize, vec::IntoIter};
 
-use crate::bytecode::{Bytecode, Ctx, NIL, Op, Syn};
+use crate::bytecode::{Bytecode, Ctx, NIL, Op, Str};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tok<'code> {
@@ -264,6 +264,7 @@ pub enum Expr {
     Abs(Box<Expr>),
     Rec(Box<Expr>),
     App(Box<Expr>, Box<Expr>),
+    Type(Box<Expr>),
     Unpack([Box<Expr>; 3]),
     Handle([Box<Expr>; 3]),
     Compare([Box<Expr>; 4]),
@@ -278,7 +279,7 @@ pub fn app(f: Expr, arg: Expr) -> Expr {
 }
 
 pub fn nil() -> Expr {
-    Expr::String(Syn::Nil as usize)
+    Expr::String(Str::Nil as usize)
 }
 
 pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr, String> {
@@ -311,12 +312,12 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                 let f = desug_macro(*f, ctx)?;
                 let args = desug_all(args, ctx)?;
                 let list = args.into_iter().fold(nil(), |l, x| app(l, x));
-                Ok(app(app(Expr::String(Syn::Compound as usize), f), list))
+                Ok(app(app(Expr::String(Str::Compound as usize), f), list))
             }
             A::Var(_) | A::Atom(_) | A::String(_) | A::Call(_, _) => {
-                Ok(app(Expr::String(Syn::Value as usize), desug_val(ast, ctx)?))
+                Ok(app(Expr::String(Str::Value as usize), desug_val(ast, ctx)?))
             }
-            A::Binding(_, _) => Ok(app(Expr::String(Syn::Binding as usize), desug_val(ast, ctx)?)),
+            A::Binding(_, _) => Ok(app(Expr::String(Str::Binding as usize), desug_val(ast, ctx)?)),
             A::Block(_) => desug_val(ast, ctx),
         }
     }
@@ -330,6 +331,7 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                 (_, "=") => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
                 (_, "=>") => Ok(abs(abs(Expr::Var(0)))),
                 (_, "~>") => Ok(abs(abs(Expr::Rec(Box::new(Expr::Var(0)))))),
+                (_, "type") => Ok(abs(Expr::Type(Box::new(Expr::Var(0))))),
                 (_, "__compare") => {
                     Ok(abs(abs(abs(abs(Expr::Compare([3, 2, 1, 0].map(|v| Expr::Var(v).into())))))))
                 }
@@ -426,6 +428,10 @@ fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
                 emit(&[body], ops, fns);
                 // Fn at code 0 is the built-in fixed-point combinator:
                 ops.extend([Op::LoadFn { code: 0, fvars: 0 }, Op::AppArgToFn]);
+            }
+            Expr::Type(body) => {
+                emit(&[body], ops, fns);
+                ops.push(Op::Type);
             }
             Expr::Compare([a, b, if_t, if_f]) => {
                 emit(&[a, b, if_t, if_f], ops, fns);

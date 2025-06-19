@@ -1,4 +1,4 @@
-use crate::bytecode::{Bytecode, NIL, Op, Syn};
+use crate::bytecode::{Bytecode, NIL, Op, Str};
 use std::{rc::Rc, usize};
 
 impl Bytecode {
@@ -13,7 +13,7 @@ impl Bytecode {
 pub enum Val {
     String(usize),
     Effect(usize),
-    Record(usize, Vec<Rc<Val>>),
+    Struct(usize, Vec<Rc<Val>>),
     Closure(usize, Rc<Vec<Val>>),
     Resumable(usize, Box<Vm>),
 }
@@ -130,10 +130,10 @@ impl Vm {
                             vars.push(arg);
                             ip = c;
                         }
-                        (Val::String(s), arg) => temps.push(Val::Record(s, vec![Rc::new(arg)])),
-                        (Val::Record(s, mut items), arg) => {
+                        (Val::String(s), arg) => temps.push(Val::Struct(s, vec![Rc::new(arg)])),
+                        (Val::Struct(s, mut items), arg) => {
                             items.push(Rc::new(arg));
-                            temps.push(Val::Record(s, items))
+                            temps.push(Val::Struct(s, items))
                         }
                     }
                 }
@@ -146,20 +146,30 @@ impl Vm {
                     vars.truncate(frame);
                     ip = ret
                 }
+                Op::Type => match temps.pop().ok_or(i)? {
+                    Val::String(s) if s == Str::Nil as usize => {
+                        temps.push(Val::String(Str::TyNil as usize))
+                    }
+                    Val::String(_) => temps.push(Val::String(Str::TyString as usize)),
+                    Val::Struct(_, _) => temps.push(Val::String(Str::TyStruct as usize)),
+                    Val::Effect(_) | Val::Closure(_, _) | Val::Resumable(_, _) => {
+                        temps.push(Val::String(Str::TyFunction as usize))
+                    }
+                },
                 Op::Unpack => {
                     match (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
-                        (_, t, Val::Record(f, mut xs)) => {
+                        (_, t, Val::Struct(f, mut xs)) => {
                             let x = xs.pop().ok_or(i)?;
                             temps.push(x.as_ref().clone());
                             temps.push(if xs.is_empty() {
                                 Val::String(f)
                             } else {
-                                Val::Record(f, xs)
+                                Val::Struct(f, xs)
                             });
                             temps.push(t);
                         }
                         (f, _, _) => {
-                            temps.push(Val::String(Syn::Nil as usize));
+                            temps.push(Val::String(Str::Nil as usize));
                             temps.push(f);
                             ip += 1;
                         }
@@ -174,7 +184,7 @@ impl Vm {
                             let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
                             let ret = ip + 2; // skip apply + unwind
                             handlers.push(Handler { effect, handler, state, ret });
-                            temps.push(Val::String(Syn::Nil as usize));
+                            temps.push(Val::String(Str::Nil as usize));
                             temps.push(v);
                         }
                         _ => {
@@ -198,7 +208,7 @@ impl Vm {
                         (Val::String(a), Val::String(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
-                    temps.push(Val::String(Syn::Nil as usize));
+                    temps.push(Val::String(Str::Nil as usize));
                     temps.push(branch);
                 }
             }
@@ -212,11 +222,11 @@ pub(crate) fn pretty(v: &Val, strs: &Vec<String>) -> String {
         Val::String(s) => strs[*s].to_string(),
         Val::Effect(s) => format!("{}!", strs[*s]),
         Val::Closure(c, _) => format!("#fn-{c}"),
-        Val::Record(s, vs) if strs[*s] == NIL => {
+        Val::Struct(s, vs) if strs[*s] == NIL => {
             let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
             format!("[{}]", items.join(", "))
         }
-        Val::Record(s, vs) => {
+        Val::Struct(s, vs) => {
             if vs.len() == 1 {
                 match *vs[0] {
                     Val::String(v) if strs[v] == NIL => {

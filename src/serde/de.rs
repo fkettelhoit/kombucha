@@ -3,7 +3,7 @@ use std::{fmt::Display, rc::Rc};
 use serde::de::{self, IntoDeserializer};
 
 use crate::{
-    bytecode::{NIL, Syn},
+    bytecode::{NIL, Str},
     run::{Val, pretty},
 };
 
@@ -98,7 +98,6 @@ impl serde::de::Error for E {
     }
 }
 
-type Str = &'static str;
 type InternedStrs = Vec<String>;
 
 type Result<'de, T> = std::result::Result<T, Error<'de>>;
@@ -148,7 +147,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 }
             }
             Val::Effect(_) => self.deserialize_str(v),
-            Val::Record(_, _items) => self.deserialize_seq(v),
+            Val::Struct(_, _items) => self.deserialize_seq(v),
             Val::Closure(_, _) => Err(self.err(E::FoundClosure)),
             Val::Resumable(_, _) => Err(self.err(E::FoundResumable)),
         }
@@ -257,21 +256,21 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_option<V: de::Visitor<'de>>(self, v: V) -> Result<'de, V::Value> {
         match self.current_input() {
-            Val::String(s) if *s == Syn::Nil as usize => v.visit_none(),
+            Val::String(s) if *s == Str::Nil as usize => v.visit_none(),
             _ => v.visit_some(self),
         }
     }
 
     fn deserialize_unit<V: de::Visitor<'de>>(self, v: V) -> Result<'de, V::Value> {
         match self.current_input() {
-            Val::String(s) if *s == Syn::Nil as usize => v.visit_unit(),
+            Val::String(s) if *s == Str::Nil as usize => v.visit_unit(),
             _ => Err(self.err(E::InvalidUnit)),
         }
     }
 
     fn deserialize_unit_struct<V: de::Visitor<'de>>(
         self,
-        name: Str,
+        name: &'static str,
         v: V,
     ) -> Result<'de, V::Value> {
         match self.current_input() {
@@ -285,7 +284,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_newtype_struct<V: de::Visitor<'de>>(
         self,
-        _name: Str,
+        _name: &'static str,
         v: V,
     ) -> Result<'de, V::Value> {
         v.visit_newtype_struct(self)
@@ -293,7 +292,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_seq<V: de::Visitor<'de>>(self, v: V) -> Result<'de, V::Value> {
         match self.current_input() {
-            Val::Record(_, items) => {
+            Val::Struct(_, items) => {
                 let seq = SeqDeserializer::new(self, items);
                 v.visit_seq(seq)
             }
@@ -307,12 +306,12 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_tuple_struct<V: de::Visitor<'de>>(
         self,
-        name: Str,
+        name: &'static str,
         len: usize,
         v: V,
     ) -> Result<'de, V::Value> {
         match self.current_input() {
-            Val::Record(s, items) if items.len() == len => {
+            Val::Struct(s, items) if items.len() == len => {
                 let record_name =
                     self.strs.get(*s).ok_or_else(|| self.err(E::InvalidTupleStruct))?;
                 if record_name == name {
@@ -331,12 +330,12 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_struct<V: de::Visitor<'de>>(
         self,
-        name: Str,
-        fields: &'static [Str],
+        name: &'static str,
+        fields: &'static [&'static str],
         v: V,
     ) -> Result<'de, V::Value> {
         match self.current_input() {
-            Val::Record(s, items) if items.len() == fields.len() => {
+            Val::Struct(s, items) if items.len() == fields.len() => {
                 let record_name = self.strs.get(*s).ok_or_else(|| self.err(E::InvalidStruct))?;
                 if record_name == name {
                     v.visit_map(StructDeserializer::new(self, items, fields))
@@ -350,8 +349,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_enum<V: de::Visitor<'de>>(
         self,
-        _name: Str,
-        variants: &'static [Str],
+        _name: &'static str,
+        variants: &'static [&'static str],
         v: V,
     ) -> Result<'de, V::Value> {
         let enum_de = EnumDeserializer::new(self, variants);
@@ -407,12 +406,16 @@ impl<'de, 'a> de::SeqAccess<'de> for SeqDeserializer<'a, 'de> {
 struct StructDeserializer<'a, 'de> {
     de: &'a mut Deserializer<'de>,
     items: &'de [Rc<Val>],
-    fields: &'static [Str],
+    fields: &'static [&'static str],
     index: usize,
 }
 
 impl<'a, 'de> StructDeserializer<'a, 'de> {
-    fn new(de: &'a mut Deserializer<'de>, items: &'de [Rc<Val>], fields: &'static [Str]) -> Self {
+    fn new(
+        de: &'a mut Deserializer<'de>,
+        items: &'de [Rc<Val>],
+        fields: &'static [&'static str],
+    ) -> Self {
         Self { de, items, fields, index: 0 }
     }
 }
@@ -452,11 +455,11 @@ impl<'de, 'a> de::MapAccess<'de> for StructDeserializer<'a, 'de> {
 
 struct EnumDeserializer<'a, 'de> {
     deserializer: &'a mut Deserializer<'de>,
-    variants: &'static [Str],
+    variants: &'static [&'static str],
 }
 
 impl<'a, 'de> EnumDeserializer<'a, 'de> {
-    fn new(deserializer: &'a mut Deserializer<'de>, variants: &'static [Str]) -> Self {
+    fn new(deserializer: &'a mut Deserializer<'de>, variants: &'static [&'static str]) -> Self {
         Self { deserializer, variants }
     }
 }
@@ -476,7 +479,7 @@ impl<'de, 'a> de::EnumAccess<'de> for EnumDeserializer<'a, 'de> {
                 .get(*s)
                 .ok_or_else(|| self.deserializer.err(E::InvalidEnum))?
                 .as_ref(),
-            Val::Record(s, _) => self
+            Val::Struct(s, _) => self
                 .deserializer
                 .strs
                 .get(*s)
@@ -507,7 +510,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a, 'de> {
         T: de::DeserializeSeed<'de>,
     {
         match self.deserializer.current_input() {
-            Val::Record(_s, items) if items.len() == 1 => {
+            Val::Struct(_s, items) if items.len() == 1 => {
                 let val = &items[0];
                 self.deserializer.push_context(val.as_ref());
                 let result = seed.deserialize(&mut *self.deserializer);
@@ -523,7 +526,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a, 'de> {
         V: de::Visitor<'de>,
     {
         match self.deserializer.current_input() {
-            Val::Record(_s, items) if items.len() == len => {
+            Val::Struct(_s, items) if items.len() == len => {
                 visitor.visit_seq(SeqDeserializer::new(self.deserializer, items))
             }
             _ => Err(self.deserializer.err(E::InvalidEnum)),
@@ -532,14 +535,14 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a, 'de> {
 
     fn struct_variant<V>(
         self,
-        fields: &'static [Str],
+        fields: &'static [&'static str],
         visitor: V,
     ) -> std::result::Result<V::Value, Error<'de>>
     where
         V: de::Visitor<'de>,
     {
         match self.deserializer.current_input() {
-            Val::Record(_s, items) if items.len() == fields.len() => {
+            Val::Struct(_s, items) if items.len() == fields.len() => {
                 visitor.visit_map(StructDeserializer::new(self.deserializer, items, fields))
             }
             _ => Err(self.deserializer.err(E::InvalidEnum)),

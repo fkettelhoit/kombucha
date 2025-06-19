@@ -72,6 +72,12 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
                 pretty(arg, strs, lvl + 1, buf);
                 buf.push_str(" )");
             }
+            Expr::Type(v) => {
+                buf.push_str("( type\n");
+                buf.push_str(&indent.repeat(lvl + 1));
+                pretty(v, strs, lvl + 1, buf);
+                buf.push_str(" )");
+            }
             Expr::Unpack([v, t, f]) => {
                 buf.push_str("( pop");
                 for expr in [v, t, f] {
@@ -320,6 +326,11 @@ fn run_pop() -> Result<(), String> {
 #[test]
 fn run_rec() -> Result<(), String> {
     test(PathBuf::from("tests/run_rec.txt"))
+}
+
+#[test]
+fn run_type() -> Result<(), String> {
+    test(PathBuf::from("tests/run_type.txt"))
 }
 
 fn test_with_effects(path: PathBuf) -> Result<(), String> {
