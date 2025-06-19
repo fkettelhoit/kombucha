@@ -36,7 +36,7 @@ __compare(Foo, Bar, { True }, { False })
 00011: LoadVar(00002)
 00012: LoadVar(00001)
 00013: LoadVar(00000)
-00014: Cmp
+00014: Compare
 00015: AppArgToFn
 00016:   Return
 00017: LoadFn { code: 00010, fvars: 00003 }
@@ -134,7 +134,7 @@ False
 00023: LoadVar(00002)
 00024: LoadVar(00001)
 00025: LoadVar(00000)
-00026: Cmp
+00026: Compare
 00027: AppArgToFn
 00028:   Return
 00029: LoadFn { code: 00022, fvars: 00003 }
@@ -254,7 +254,7 @@ True
 00023: LoadVar(00002)
 00024: LoadVar(00001)
 00025: LoadVar(00000)
-00026: Cmp
+00026: Compare
 00027: AppArgToFn
 00028:   Return
 00029: LoadFn { code: 00022, fvars: 00003 }
@@ -301,3 +301,69 @@ True
 00070:   Return
 
 Pair(True, False)
+
+---
+
+__compare(foo!, foo!, { True }, { False })
+
+(__compare
+  foo!
+  foo!
+  { True }
+  { False })
+
+( ( ( ( =>
+          =>
+            =>
+              =>
+                ( if
+                  3
+                  2
+                  1
+                  0 )
+        foo! )
+      foo! )
+    =>
+      True )
+  =>
+    False )
+
+00000: LoadFn { code: 00002, fvars: 00001 }
+00001:   Return
+00002: LoadVar(00000)
+00003: LoadVar(00001)
+00004: LoadFn { code: 00000, fvars: 00000 }
+00005: AppArgToFn
+00006: LoadVar(00001)
+00007: AppArgToFn
+00008: AppArgToFn
+00009:   Return
+00010: LoadVar(00003)
+00011: LoadVar(00002)
+00012: LoadVar(00001)
+00013: LoadVar(00000)
+00014: Compare
+00015: AppArgToFn
+00016:   Return
+00017: LoadFn { code: 00010, fvars: 00003 }
+00018:   Return
+00019: LoadFn { code: 00017, fvars: 00002 }
+00020:   Return
+00021: LoadFn { code: 00019, fvars: 00001 }
+00022:   Return
+00023: PushString("True")
+00024:   Return
+00025: PushString("False")
+00026:   Return
+00027: LoadFn { code: 00021, fvars: 00000 }
+00028: PushEffect("foo")
+00029: AppFnToArg
+00030: PushEffect("foo")
+00031: AppFnToArg
+00032: LoadFn { code: 00023, fvars: 00000 }
+00033: AppFnToArg
+00034: LoadFn { code: 00025, fvars: 00000 }
+00035: AppFnToArg
+00036:   Return
+
+True

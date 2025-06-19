@@ -266,7 +266,7 @@ pub enum Expr {
     App(Box<Expr>, Box<Expr>),
     Type(Box<Expr>),
     Unpack([Box<Expr>; 3]),
-    Handle([Box<Expr>; 3]),
+    Handle([Box<Expr>; 2]),
     Compare([Box<Expr>; 4]),
 }
 
@@ -338,9 +338,7 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                 (_, "__unpack") => {
                     Ok(abs(abs(abs(Expr::Unpack([2, 1, 0].map(|v| Expr::Var(v).into()))))))
                 }
-                (_, "__handle") => {
-                    Ok(abs(abs(abs(Expr::Handle([2, 1, 0].map(|v| Expr::Var(v).into()))))))
-                }
+                (_, "__handle") => Ok(abs(abs(Expr::Handle([1, 0].map(|v| Expr::Var(v).into()))))),
                 _ => Err((pos, v.to_string())),
             },
             A::Atom(s) => Ok(Expr::String(resolve_str(s.to_string(), ctx))),
@@ -435,15 +433,22 @@ fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             }
             Expr::Compare([a, b, if_t, if_f]) => {
                 emit(&[a, b, if_t, if_f], ops, fns);
-                ops.extend([Op::Cmp, Op::AppArgToFn]);
+                ops.extend([Op::Compare, Op::AppArgToFn]);
             }
             Expr::Unpack([val, if_t, if_f]) => {
                 emit(&[val, if_t, if_f], ops, fns);
                 ops.extend([Op::Unpack, Op::AppArgToFn, Op::AppArgToFn]);
             }
-            Expr::Handle([val, eff, handler]) => {
-                emit(&[val, eff, handler], ops, fns);
-                ops.extend([Op::Try, Op::AppArgToFn, Op::Unwind, Op::AppArgToFn, Op::AppArgToFn]);
+            Expr::Handle([val, handler]) => {
+                emit(&[val, handler], ops, fns);
+                ops.extend([
+                    Op::Try,
+                    Op::AppArgToFn,
+                    Op::Unwind,
+                    Op::AppArgToFn,
+                    Op::AppArgToFn,
+                    Op::AppArgToFn,
+                ]);
             }
         }
     }

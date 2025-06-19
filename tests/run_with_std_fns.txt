@@ -2522,7 +2522,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00059: LoadVar(00002)
 00060: LoadVar(00001)
 00061: LoadVar(00000)
-00062: Cmp
+00062: Compare
 00063: AppArgToFn
 00064:   Return
 00065: LoadFn { code: 00058, fvars: 00003 }
@@ -2579,7 +2579,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00116: LoadVar(00002)
 00117: LoadVar(00001)
 00118: LoadVar(00000)
-00119: Cmp
+00119: Compare
 00120: AppArgToFn
 00121:   Return
 00122: LoadFn { code: 00115, fvars: 00003 }

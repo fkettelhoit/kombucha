@@ -347,43 +347,42 @@ Function
 
 __handle({
     foo!()
-}, foo!, [:r, :arg] => {
+}, [:r, :eff, :arg] => {
     type(r)
 })
 
 (__handle
   { (foo!) }
-  foo!
   (=>
     ([]
       :r
+      :eff
       :arg)
     { (type
         r) }))
 
-( ( ( =>
-        =>
-          =>
-            ( try
-              2
-              1
-              0 )
+( ( =>
       =>
-        ( foo!
-          [] ) )
-    foo! )
+        ( try
+          1
+          0 )
+    =>
+      ( foo!
+        [] ) )
   ( ( =>
         =>
           0
-      ( ( []
-          "r" )
+      ( ( ( []
+            "r" )
+          "eff" )
         "arg" ) )
     =>
       =>
-        ( =>
-            ( type
-              0 )
-          1 ) ) )
+        =>
+          ( =>
+              ( type
+                0 )
+            2 ) ) )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -395,44 +394,44 @@ __handle({
 00007: AppArgToFn
 00008: AppArgToFn
 00009:   Return
-00010: LoadVar(00002)
-00011: LoadVar(00001)
-00012: LoadVar(00000)
-00013: Try
-00014: AppArgToFn
-00015: Unwind
+00010: LoadVar(00001)
+00011: LoadVar(00000)
+00012: Try
+00013: AppArgToFn
+00014: Unwind
+00015: AppArgToFn
 00016: AppArgToFn
 00017: AppArgToFn
 00018:   Return
-00019: LoadFn { code: 00010, fvars: 00002 }
+00019: LoadFn { code: 00010, fvars: 00001 }
 00020:   Return
-00021: LoadFn { code: 00019, fvars: 00001 }
-00022:   Return
-00023: PushEffect("foo")
-00024: PushString("")
-00025: AppFnToArg
+00021: PushEffect("foo")
+00022: PushString("")
+00023: AppFnToArg
+00024:   Return
+00025: LoadVar(00000)
 00026:   Return
-00027: LoadVar(00000)
+00027: LoadFn { code: 00025, fvars: 00000 }
 00028:   Return
-00029: LoadFn { code: 00027, fvars: 00000 }
-00030:   Return
-00031: LoadVar(00000)
-00032: Type
-00033:   Return
-00034: LoadFn { code: 00031, fvars: 00000 }
-00035: LoadVar(00001)
-00036: AppFnToArg
+00029: LoadVar(00000)
+00030: Type
+00031:   Return
+00032: LoadFn { code: 00029, fvars: 00000 }
+00033: LoadVar(00002)
+00034: AppFnToArg
+00035:   Return
+00036: LoadFn { code: 00032, fvars: 00002 }
 00037:   Return
-00038: LoadFn { code: 00034, fvars: 00001 }
+00038: LoadFn { code: 00036, fvars: 00001 }
 00039:   Return
-00040: LoadFn { code: 00021, fvars: 00000 }
-00041: LoadFn { code: 00023, fvars: 00000 }
+00040: LoadFn { code: 00019, fvars: 00000 }
+00041: LoadFn { code: 00021, fvars: 00000 }
 00042: AppFnToArg
-00043: PushEffect("foo")
-00044: AppFnToArg
-00045: LoadFn { code: 00029, fvars: 00000 }
-00046: PushString("")
-00047: PushString(""r"")
+00043: LoadFn { code: 00027, fvars: 00000 }
+00044: PushString("")
+00045: PushString(""r"")
+00046: AppFnToArg
+00047: PushString(""eff"")
 00048: AppFnToArg
 00049: PushString(""arg"")
 00050: AppFnToArg

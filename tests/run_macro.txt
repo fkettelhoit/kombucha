@@ -2066,7 +2066,7 @@ foo
 00084: LoadVar(00002)
 00085: LoadVar(00001)
 00086: LoadVar(00000)
-00087: Cmp
+00087: Compare
 00088: AppArgToFn
 00089:   Return
 00090: LoadFn { code: 00083, fvars: 00003 }

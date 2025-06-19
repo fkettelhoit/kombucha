@@ -48,7 +48,6 @@ pub struct Vm {
 
 #[derive(Debug, Clone)]
 struct Handler {
-    effect: usize,
     handler: Val,
     state: (usize, usize, usize, usize),
     ret: usize,
@@ -79,36 +78,34 @@ impl Vm {
                         (_, b, a) => (a, b),
                     };
                     match (f, arg) {
-                        (Val::Effect(effect), arg) => {
-                            let handler = handlers.iter().rev().find(|h| h.effect == effect);
-                            match handler.cloned() {
-                                Some(handler) => {
-                                    let (v, t, f, h) = handler.state;
-                                    let res_vars = vars.drain(v..).collect::<Vec<_>>();
-                                    let res_temps = temps.drain(t..).collect::<Vec<_>>();
-                                    let res_frames = frames.drain(f..).collect::<Vec<_>>();
-                                    let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
-                                    handlers.pop();
-                                    let vm = Vm {
-                                        ip,
-                                        vars: res_vars,
-                                        temps: res_temps,
-                                        frames: res_frames,
-                                        handlers: res_handlers,
-                                    };
-                                    temps.push(arg);
-                                    temps.push(Val::Resumable(v, Box::new(vm)));
-                                    temps.push(handler.handler);
-                                    ip = handler.ret;
-                                }
-                                None => {
-                                    let vm = Vm { ip, vars, temps, frames, handlers };
-                                    let arg = Value { bytecode, val: arg };
-                                    let r = Resumable { effect, arg, vm };
-                                    return Ok(State::Resumable(r));
-                                }
+                        (Val::Effect(effect), arg) => match handlers.iter().last().cloned() {
+                            Some(handler) => {
+                                let (v, t, f, h) = handler.state;
+                                let res_vars = vars.drain(v..).collect::<Vec<_>>();
+                                let res_temps = temps.drain(t..).collect::<Vec<_>>();
+                                let res_frames = frames.drain(f..).collect::<Vec<_>>();
+                                let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
+                                handlers.pop();
+                                let vm = Vm {
+                                    ip,
+                                    vars: res_vars,
+                                    temps: res_temps,
+                                    frames: res_frames,
+                                    handlers: res_handlers,
+                                };
+                                temps.push(arg);
+                                temps.push(Val::Effect(effect));
+                                temps.push(Val::Resumable(v, Box::new(vm)));
+                                temps.push(handler.handler);
+                                ip = handler.ret;
                             }
-                        }
+                            None => {
+                                let vm = Vm { ip, vars, temps, frames, handlers };
+                                let arg = Value { bytecode, val: arg };
+                                let r = Resumable { effect, arg, vm };
+                                return Ok(State::Resumable(r));
+                            }
+                        },
                         (Val::Resumable(v, vm), arg) => {
                             let offset = vars.len() as i64 - v as i64;
                             frames.push((vars.len(), ip));
@@ -177,27 +174,18 @@ impl Vm {
                 }
                 Op::Try => {
                     let handler = temps.pop().ok_or(i)?;
-                    let eff = temps.pop().ok_or(i)?;
                     let v = temps.pop().ok_or(i)?;
-                    match eff {
-                        Val::Effect(effect) => {
-                            let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
-                            let ret = ip + 2; // skip apply + unwind
-                            handlers.push(Handler { effect, handler, state, ret });
-                            temps.push(Val::String(Str::Nil as usize));
-                            temps.push(v);
-                        }
-                        _ => {
-                            temps.push(v);
-                            ip += 4; // skip apply, unwind, apply, apply
-                        }
-                    }
+                    let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
+                    let ret = ip + 2; // skip apply + unwind
+                    handlers.push(Handler { handler, state, ret });
+                    temps.push(Val::String(Str::Nil as usize));
+                    temps.push(v);
                 }
                 Op::Unwind => {
                     handlers.pop();
-                    ip += 2;
+                    ip += 3;
                 }
-                Op::Cmp => {
+                Op::Compare => {
                     let (f, t, b, a) = (
                         temps.pop().ok_or(i)?,
                         temps.pop().ok_or(i)?,
@@ -206,6 +194,7 @@ impl Vm {
                     );
                     let branch = match (a, b, t, f) {
                         (Val::String(a), Val::String(b), t, _) if a == b => t,
+                        (Val::Effect(a), Val::Effect(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
                     temps.push(Val::String(Str::Nil as usize));

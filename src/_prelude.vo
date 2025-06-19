@@ -94,15 +94,19 @@
             invalid!(pattern)
         })
     }})
-    __handle( {
+    __handle({
         :args = map(second, unify(pattern, value))
         __compare(args, [], {
             body()
         }, {
             apply(body, args)
         })
-    }, no-match!, [:_, :arg] => {
-        no-match!(arg)
+    }, [:r, :eff, :arg] => {
+        __compare(eff, no-match!, {
+            no-match!(arg)
+        }, {
+            r(eff(arg))
+        })
     })
 })
 :match = ([:value, :args] => {
@@ -111,7 +115,13 @@
             __compare(result, [], {
                 __handle({
                     Match(clause(value))
-                }, no-match!, [:r, :arg] => {})
+                }, [:r, :eff, :arg] => {
+                    __compare(eff, no-match!, {
+                        []
+                    }, {
+                        r(eff(arg))
+                    })
+                })
             }, {
                 result
             })

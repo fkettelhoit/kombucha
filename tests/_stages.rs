@@ -87,9 +87,9 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
                 }
                 buf.push_str(" )");
             }
-            Expr::Handle([v, e, h]) => {
+            Expr::Handle([v, h]) => {
                 buf.push_str("( try");
-                for expr in [v, e, h] {
+                for expr in [v, h] {
                     buf.push('\n');
                     buf.push_str(&indent.repeat(lvl + 1));
                     pretty(expr, strs, lvl + 1, buf);
