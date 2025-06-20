@@ -17,8 +17,7 @@ fn prelude_arrow() -> Result<(), String> {
     ([[:x, :y]] -> { y })([[Bar, Foo]])
 ]
 ";
-    let bytecode = compile(code)?;
-    match bytecode.run().unwrap() {
+    match compile(code)?.run().unwrap() {
         State::Done(v) => {
             assert_eq!(v.to_string(), format!("[{}]", ["Foo"; 11].join(", ")))
         }
@@ -37,8 +36,7 @@ match (Pair first: Foo second: Bar) with: [
     Pair([[\"first\", :x], [\"second\", :y]]) -> { invalid-pair!() }
 ]
 ";
-    let bytecode = compile(code)?;
-    match bytecode.run().unwrap() {
+    match compile(code)?.run().unwrap() {
         State::Done(v) => assert_eq!(v.to_string(), "Different(Foo, Bar)"),
         State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
     }
@@ -48,8 +46,7 @@ match (Pair first: Foo second: Bar) with: [
 #[test]
 fn prelude_deep_flatten() -> Result<(), String> {
     let code = "deep-flatten([[[A, B, C]], [D, E, [F, G]]])";
-    let bytecode = compile(code)?;
-    match bytecode.run().unwrap() {
+    match compile(code)?.run().unwrap() {
         State::Done(v) => assert_eq!(v.to_string(), "[A, B, C, D, E, F, G]"),
         State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
     }
@@ -59,8 +56,7 @@ fn prelude_deep_flatten() -> Result<(), String> {
 #[test]
 fn prelude_fn_def() -> Result<(), String> {
     let code = "::foo(:x, :y) = { Foo(x, y) }, :bar = Bar, foo(bar, Baz)";
-    let bytecode = compile(code)?;
-    match bytecode.run().unwrap() {
+    match compile(code)?.run().unwrap() {
         State::Done(v) => assert_eq!(v.to_string(), "Foo(Bar, Baz)"),
         State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
     }
@@ -70,8 +66,7 @@ fn prelude_fn_def() -> Result<(), String> {
 #[test]
 fn prelude_generate_html() -> Result<(), String> {
     let code = include_str!("../examples/gen_html.vo");
-    let bytecode = compile(code)?;
-    let mut result = bytecode.run().unwrap();
+    let mut result = compile(code)?.run().unwrap();
     loop {
         match result {
             State::Done(v) => {
