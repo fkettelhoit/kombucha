@@ -205,35 +205,37 @@ impl Vm {
     }
 }
 
-pub(crate) fn pretty(v: &Val, strs: &Vec<String>) -> String {
-    match v {
-        Val::String(s) if strs[*s] == NIL => "[]".to_string(),
-        Val::String(s) => strs[*s].to_string(),
-        Val::Effect(s) => format!("{}!", strs[*s]),
-        Val::Closure(c, _) => format!("#fn-{c}"),
-        Val::Struct(s, vs) if strs[*s] == NIL => {
-            let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-            format!("[{}]", items.join(", "))
-        }
-        Val::Struct(s, vs) => {
-            if vs.len() == 1 {
-                match *vs[0] {
-                    Val::String(v) if strs[v] == NIL => {
-                        return format!("{}()", pretty(&Val::String(*s), strs));
-                    }
-                    _ => {}
-                }
+impl Val {
+    pub fn pretty(&self, strs: &Vec<String>) -> String {
+        match self {
+            Val::String(s) if strs[*s] == NIL => "[]".to_string(),
+            Val::String(s) => strs[*s].to_string(),
+            Val::Effect(s) => format!("{}!", strs[*s]),
+            Val::Closure(c, _) => format!("#fn-{c}"),
+            Val::Struct(s, vs) if strs[*s] == NIL => {
+                let items = vs.iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
+                format!("[{}]", items.join(", "))
             }
-            let items = vs.iter().map(|v| pretty(v, strs)).collect::<Vec<_>>();
-            format!("{}({})", strs[*s].to_string(), items.join(", "))
+            Val::Struct(s, vs) => {
+                if vs.len() == 1 {
+                    match *vs[0] {
+                        Val::String(v) if strs[v] == NIL => {
+                            return format!("{}()", Val::String(*s).pretty(strs));
+                        }
+                        _ => {}
+                    }
+                }
+                let items = vs.iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
+                format!("{}({})", strs[*s].to_string(), items.join(", "))
+            }
+            Val::Resumable(_, _) => format!("#resumable"),
         }
-        Val::Resumable(_, _) => format!("#resumable"),
     }
 }
 
 impl Value {
     pub fn pretty(&self) -> String {
-        pretty(&self.val, &self.bytecode.ctx.strs)
+        self.val.pretty(&self.bytecode.ctx.strs)
     }
 }
 

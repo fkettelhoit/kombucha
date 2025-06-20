@@ -152,7 +152,8 @@ impl<'a> ser::Serializer for &'a mut Serializer<'a> {
     }
 
     fn serialize_none(self) -> Result<Val> {
-        self.serialize_unit()
+        let none = intern(self.strs, "None".to_string());
+        Ok(Val::String(none))
     }
 
     fn serialize_some<T: ?Sized + serde::Serialize>(self, v: &T) -> Result<Val> {
@@ -164,19 +165,20 @@ impl<'a> ser::Serializer for &'a mut Serializer<'a> {
         Ok(nil())
     }
 
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<Val> {
-        self.serialize_unit()
+    fn serialize_unit_struct(self, name: &'static str) -> Result<Val> {
+        Ok(intern_atom(self.strs, name.to_string()))
     }
 
     fn serialize_unit_variant(self, _: &'static str, _: u32, variant: &'static str) -> Result<Val> {
         Ok(intern_atom(self.strs, variant.to_string()))
     }
 
-    fn serialize_newtype_struct<T>(self, _name: &'static str, v: &T) -> Result<Val>
+    fn serialize_newtype_struct<T>(self, name: &'static str, v: &T) -> Result<Val>
     where
         T: ?Sized + serde::Serialize,
     {
-        v.serialize(self)
+        let some = intern(self.strs, name.to_string());
+        Ok(Val::Struct(some, vec![Rc::new(v.serialize(self)?)]))
     }
 
     fn serialize_newtype_variant<T>(
@@ -333,7 +335,8 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer<'a> {
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
         let name = intern(self.strs, self.name.to_string());
-        Ok(Val::Struct(name, self.items.drain(..).collect()))
+        let fields = Val::Struct(Str::Nil as usize, self.items.drain(..).collect());
+        Ok(Val::Struct(name, vec![Rc::new(fields)]))
     }
 }
 
@@ -354,6 +357,7 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer<'a> {
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
         let name = intern(self.strs, self.name.to_string());
-        Ok(Val::Struct(name, self.items.drain(..).collect()))
+        let fields = Val::Struct(Str::Nil as usize, self.items.drain(..).collect());
+        Ok(Val::Struct(name, vec![Rc::new(fields)]))
     }
 }
