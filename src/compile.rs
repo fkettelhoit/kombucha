@@ -481,7 +481,7 @@ pub fn codegen(expr: Expr, ctx: Ctx) -> Bytecode {
 
 pub fn compile(code: &str) -> Result<Bytecode, String> {
     let mut ctx = Ctx::default();
-    let parsed = parse(include_str!("_prelude.vo"))?.into_iter().chain(parse(code)?);
+    let parsed = parse(include_str!("_prelude.kb"))?.into_iter().chain(parse(code)?);
     let expr = desugar(parsed.collect::<Vec<_>>(), &code, &mut ctx)?;
     Ok(codegen(expr, ctx))
 }

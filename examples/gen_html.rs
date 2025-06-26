@@ -18,7 +18,7 @@ fn main() -> ExitCode {
         eprintln!("{usage}");
         return ExitCode::FAILURE;
     };
-    match compile(include_str!("gen_html.vo")) {
+    match compile(include_str!("gen_html.kb")) {
         Err(e) => {
             eprintln!("{e}");
             ExitCode::FAILURE

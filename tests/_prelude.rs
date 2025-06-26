@@ -65,7 +65,7 @@ fn prelude_fn_def() -> Result<(), String> {
 
 #[test]
 fn prelude_generate_html() -> Result<(), String> {
-    let code = include_str!("../examples/gen_html.vo");
+    let code = include_str!("../examples/gen_html.kb");
     let mut result = compile(code)?.run().unwrap();
     loop {
         match result {
@@ -77,7 +77,7 @@ fn prelude_generate_html() -> Result<(), String> {
             State::Resumable(mut vm) => match vm.effect() {
                 "read" => {
                     let start =
-                        vm.arg.bytecode.load(include_str!("../examples/gen_html.page.vo"))?;
+                        vm.arg.bytecode.load(include_str!("../examples/gen_html.page.kb"))?;
                     result = vm.resume_at(start).unwrap();
                 }
                 "escape" => {
