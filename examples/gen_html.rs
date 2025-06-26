@@ -4,11 +4,11 @@ use std::{
     process::ExitCode,
 };
 
-use vorpal::{compile::compile, run::State};
+use kombucha::{compile::compile, run::State};
 
 fn main() -> ExitCode {
     let mut args = args();
-    let bin = args.next().unwrap_or_else(|| "vorpal".into());
+    let bin = args.next().unwrap_or_else(|| "kombucha".into());
     let usage = format!("Usage: {bin} <input_file> <output_file>");
     let Some(input_file) = args.next() else {
         eprintln!("{usage}");

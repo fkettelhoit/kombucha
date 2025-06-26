@@ -1,4 +1,4 @@
-use vorpal::{
+use kombucha::{
     bytecode::Ctx,
     compile::{Expr, abs, app, codegen},
     run::State,

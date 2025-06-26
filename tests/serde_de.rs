@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serde::Deserialize;
-use vorpal::{
+use kombucha::{
     compile::compile,
     run::{State, Value},
     serde::de::Error,

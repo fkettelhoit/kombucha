@@ -1,4 +1,4 @@
-use vorpal::{compile::compile, run::State};
+use kombucha::{compile::compile, run::State};
 
 #[test]
 fn prelude_arrow() -> Result<(), String> {

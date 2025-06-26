@@ -1,6 +1,6 @@
 use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
-use vorpal::{
+use kombucha::{
     bytecode::{Bytecode, Ctx, NIL, Op},
     compile::{A, Ast, Expr, codegen, desugar, parse},
     run::State,
