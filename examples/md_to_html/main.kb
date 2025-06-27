@@ -46,7 +46,6 @@
         ["#", " ", :z] -> { ["<h1>", rest(rest(l)) |> parse-inline, "</h1>"] }
         ["#", "#", " "] -> { ["<h2>", rest(rest(rest(l))) |> parse-inline, "</h2>"] }
         ["#", "#", "#"] -> { ["<h3>", rest(rest(rest(rest(l)))) |> parse-inline, "</h3>"] }
-        // ["-", " ", :z] -> { [""] }
         [[], [], []] -> { [] }
         :else -> { ["<", tag, ">", parse-inline(l), "</", tag, ">"] }
     ]
