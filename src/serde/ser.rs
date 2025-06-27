@@ -240,6 +240,10 @@ impl<'a> ser::Serializer for &'a mut Serializer<'a> {
     }
 }
 
+fn struct_or_atom(name: usize, items: Vec<Rc<Val>>) -> Val {
+    if items.is_empty() { Val::String(name) } else { Val::Struct(name, items) }
+}
+
 impl<'a> ser::SerializeSeq for &'a mut Serializer<'a> {
     type Ok = Val;
     type Error = Error;
@@ -250,7 +254,7 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> Result<Val> {
-        Ok(Val::Struct(Str::Nil as usize, self.items.drain(..).collect()))
+        Ok(struct_or_atom(Str::Nil as usize, self.items.drain(..).collect()))
     }
 }
 
@@ -264,7 +268,7 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
-        Ok(Val::Struct(Str::Nil as usize, self.items.drain(..).collect()))
+        Ok(struct_or_atom(Str::Nil as usize, self.items.drain(..).collect()))
     }
 }
 
@@ -279,7 +283,7 @@ impl<'a> ser::SerializeTupleStruct for &'a mut Serializer<'a> {
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
         let name = intern(self.strs, self.name.to_string());
-        Ok(Val::Struct(name, self.items.drain(..).collect()))
+        Ok(struct_or_atom(name, self.items.drain(..).collect()))
     }
 }
 
@@ -294,7 +298,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer<'a> {
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
         let name = intern(self.strs, self.name.to_string());
-        Ok(Val::Struct(name, self.items.drain(..).collect()))
+        Ok(struct_or_atom(name, self.items.drain(..).collect()))
     }
 }
 
@@ -314,7 +318,7 @@ impl<'a> ser::SerializeMap for &'a mut Serializer<'a> {
     }
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
-        Ok(Val::Struct(Str::Nil as usize, self.items.drain(..).collect()))
+        Ok(struct_or_atom(Str::Nil as usize, self.items.drain(..).collect()))
     }
 }
 
@@ -335,7 +339,7 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer<'a> {
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
         let name = intern(self.strs, self.name.to_string());
-        let fields = Val::Struct(Str::Nil as usize, self.items.drain(..).collect());
+        let fields = struct_or_atom(Str::Nil as usize, self.items.drain(..).collect());
         Ok(Val::Struct(name, vec![Rc::new(fields)]))
     }
 }
@@ -357,7 +361,7 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer<'a> {
 
     fn end(self) -> std::result::Result<Self::Ok, Self::Error> {
         let name = intern(self.strs, self.name.to_string());
-        let fields = Val::Struct(Str::Nil as usize, self.items.drain(..).collect());
+        let fields = struct_or_atom(Str::Nil as usize, self.items.drain(..).collect());
         Ok(Val::Struct(name, vec![Rc::new(fields)]))
     }
 }
