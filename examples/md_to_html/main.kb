@@ -1,0 +1,106 @@
+:newline = "
+"
+
+::escape(:str) = { escape!(str) }
+
+::lines(:ls, :l, :chars) = {
+    match (first(chars)) with: [
+        [] -> { reverse(ls(l)) }
+        newline -> { lines(ls(l), [], rest(chars)) }
+        :c -> { lines(ls, l(c), rest(chars)) }
+    ]
+}
+
+::parse-until(:end, :acc, :l) = {
+    match (first(l)) with: [
+        [] -> { [acc, []] }
+        end -> { [acc, rest(l)] }
+        :c -> { parse-until(end, acc(c), rest(l)) }
+    ]
+}
+
+::parse-inline(:style, :acc, :l) = {
+    // print!("line...")
+    match [first(l), second(l), style] with: [
+        ["`", :y, []] -> { [acc, parse-inline(Code, [], rest(l))] }
+        ["`", :y, Code] -> { ["<code>", acc, "</code>", parse-inline([], [], rest(l))] }
+        ["_", :y, []] -> { [acc, parse-inline(Em, [], rest(l))] }
+        ["_", :y, Em] -> { ["<em>", acc, "</em>", parse-inline([], [], rest(l))] }
+        ["*", "*", []] -> { [acc, parse-inline(Strong, [], rest(rest(l)))] }
+        ["*", "*", Strong] -> { ["<strong>", acc, "</strong>", parse-inline([], [], rest(rest(l)))] }
+        ["[", :y, []] -> { [acc, parse-inline(Link, [], rest(l))] }
+        ["]", "(", Link] -> {
+            match (parse-until(")", [], rest(rest(l)))) with: [
+                [:href, :l] -> { [#"<a href=""#, href, #"">"#, acc, "</a>", parse-inline([], [], l)] }
+            ]
+        }
+        [[], :y, :style] -> { acc }
+        [:x, :y, :style] -> { parse-inline(style, acc(x), rest(l)) }
+    ]
+}
+
+:parse-inline = parse-inline([], [])
+
+::parse-block(:tag, :l) = {
+    match [first(l), second(l), third(l)] with: [
+        ["#", " ", :z] -> { ["<h1>", rest(rest(l)) |> parse-inline, "</h1>"] }
+        ["#", "#", " "] -> { ["<h2>", rest(rest(rest(l))) |> parse-inline, "</h2>"] }
+        ["#", "#", "#"] -> { ["<h3>", rest(rest(rest(rest(l)))) |> parse-inline, "</h3>"] }
+        // ["-", " ", :z] -> { [""] }
+        [[], [], []] -> { [] }
+        :else -> { ["<", tag, ">", parse-inline(l), "</", tag, ">"] }
+    ]
+}
+
+::parse-body(:mode, :acc, :lines) = {
+    match [first(lines), rest(lines)] with: [
+        [[], []] -> { acc }
+        [:l, :lines] -> {
+            match [mode, first(l), second(l), third(l)] with: [
+                [List, [], [], []] -> { parse-body([], acc("</ul>"), lines) }
+                [List, "-", " ", :z] -> { parse-body(List, acc(parse-block("li", rest(rest(l)))), lines) }
+                [Code, "`", "`", "`"] -> { parse-body([], acc("</code></pre>"), lines) }
+                [Code, :x, :y, :z] -> {
+                    // TODO: this should be escaped, but that's currently too slow
+                    parse-body(Code, acc(reverse(l)), lines)
+                }
+                [[], "-", " ", :z] -> { parse-body(List, acc("<ul>", parse-block("li", rest(rest(l)))), lines) }
+                [[], "`", "`", "`"] -> { parse-body(Code, acc("<pre><code>"), lines) }
+                [[], :x, :y, :z] -> { parse-body(mode, acc(parse-block("p", l)), lines) }
+            ]
+        }
+    ]
+}
+
+:parse-body = parse-body([], [])
+
+::title(:l) = {
+    match [first(l), second(l), third(l)] with: [
+        ["#", " ", :z] -> { rest(rest(l)) |> parse-inline }        
+        :else -> { throw!("expected a h1 heading to be the first line") }
+    ]
+}
+
+::html(:lang, :stylesheet, :date, :title, :body) = {
+    [
+        "<!DOCTYPE html>"
+        #"<html lang=""#, lang, #"">"#
+        "<head>"
+        #"<meta charset="utf-8" />"#
+        #"<meta name="viewport" content="width=device-width, initial-scale=1" />"#
+        #"<link rel="stylesheet" href=""#, stylesheet, #"" />"#
+        "<title>", escape(title), "</title>"
+        "</head>"
+        "<body>"
+        #"<p><a href="..#notes">Notes</a><br />"#, date, #"</p>"#
+        body
+        "</body>"
+        "</html>"
+    ]
+}
+
+:lines = lines([], [], chars!())
+:title = title(first(reverse(lines)))
+:body = parse-body(reverse(lines))
+
+html("en", "styles/style.css", "2025/06/12", title, body) |> deep-flatten

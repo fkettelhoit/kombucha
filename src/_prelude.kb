@@ -150,7 +150,21 @@
         })
     })
 }})
-:deep-flatten = (:xs => { xs |> deep-flatten([]) |> reverse })
+:deep-flatten = (:xs => {
+    xs |> deep-flatten([]) |> reverse
+})
+:first = (:xs => {
+    __unpack(xs, [:xs, :x] => { x }, { [] })
+})
+:rest = (:xs => {
+    __unpack(xs, [:xs, :x] => { xs }, { [] })
+})
+:second = (:xs => {
+    first(rest(xs))
+})
+:third = (:xs => {
+    first(rest(rest(xs)))
+})
 := = ([:binding, :value, :block] => {
   __unpack(binding, [:type, :arg] => {
     __unpack(type, [:type, :f] => {

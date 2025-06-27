@@ -64,7 +64,7 @@ fn prelude_fn_def() -> Result<(), String> {
 }
 
 #[test]
-fn prelude_generate_html() -> Result<(), String> {
+fn gen_html() -> Result<(), String> {
     let code = include_str!("../examples/gen_html.kb");
     let mut result = compile(code)?.run().unwrap();
     loop {
@@ -88,6 +88,50 @@ fn prelude_generate_html() -> Result<(), String> {
                         .replace(">", "&gt;")
                         .replace("\"", "&quot;")
                         .replace("'", "&apos;");
+                    let arg = vm.serialize(&escaped).unwrap();
+                    result = vm.resume(arg).unwrap();
+                }
+                eff => panic!("{eff}!({})", vm.arg.to_string()),
+            },
+        }
+    }
+}
+
+#[test]
+fn md_to_html() -> Result<(), String> {
+    let code = include_str!("../examples/md_to_html/main.kb");
+    let mut result = compile(code)?.run().unwrap();
+    loop {
+        match result {
+            State::Done(v) => {
+                let result: Vec<String> = v.deserialize().unwrap();
+                assert_eq!(result.join(""), include_str!("../examples/md_to_html/page.html"));
+                return Ok(());
+            }
+            State::Resumable(mut vm) => match vm.effect() {
+                "print" => {
+                    println!("{}", vm.arg.pretty());
+                    let nil = vm.arg.bytecode.serialize(&()).unwrap();
+                    result = vm.resume(nil).unwrap();
+                }
+                "chars" => {
+                    let chars: Vec<char> =
+                        include_str!("../examples/md_to_html/page.md").chars().collect();
+                    let arg = vm.arg.bytecode.serialize(&chars).map_err(|e| e.to_string())?;
+                    result = vm.resume(arg).unwrap()
+                }
+                "escape" => {
+                    let strs = vm.arg.deserialize::<Vec<String>>().unwrap();
+                    let escaped = strs
+                        .into_iter()
+                        .map(|s| {
+                            s.replace("&", "&amp;")
+                                .replace("<", "&lt;")
+                                .replace(">", "&gt;")
+                                .replace("\"", "&quot;")
+                                .replace("'", "&apos;")
+                        })
+                        .collect::<Vec<String>>();
                     let arg = vm.serialize(&escaped).unwrap();
                     result = vm.resume(arg).unwrap();
                 }
