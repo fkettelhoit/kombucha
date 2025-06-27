@@ -65,19 +65,19 @@ fn prelude_fn_def() -> Result<(), String> {
 
 #[test]
 fn gen_html() -> Result<(), String> {
-    let code = include_str!("../examples/gen_html.kb");
+    let code = include_str!("../examples/generate_html/main.kb");
     let mut result = compile(code)?.run().unwrap();
     loop {
         match result {
             State::Done(v) => {
                 let result: Vec<String> = v.deserialize().unwrap();
-                assert_eq!(result.join(""), include_str!("../examples/gen_html.page.html"));
+                assert_eq!(result.join(""), include_str!("../examples/generate_html/page.html"));
                 return Ok(());
             }
             State::Resumable(mut vm) => match vm.effect() {
                 "read" => {
                     let start =
-                        vm.arg.bytecode.load(include_str!("../examples/gen_html.page.kb"))?;
+                        vm.arg.bytecode.load(include_str!("../examples/generate_html/page.kb"))?;
                     result = vm.resume_at(start).unwrap();
                 }
                 "escape" => {
