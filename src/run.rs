@@ -15,7 +15,7 @@ pub enum Val {
     Effect(usize),
     Struct(usize, Vec<Rc<Val>>),
     Closure(usize, Rc<Vec<Val>>),
-    Resumable(usize, Box<Vm>),
+    Resumable(usize, Rc<Vm>),
 }
 
 #[derive(Debug)]
@@ -43,19 +43,19 @@ pub struct Vm {
     vars: Vec<Val>,
     temps: Vec<Val>,
     frames: Vec<(usize, usize)>,
-    handlers: Vec<Handler>,
 }
 
 #[derive(Debug, Clone)]
 struct Handler {
     handler: Val,
-    state: (usize, usize, usize, usize),
+    state: (usize, usize, usize),
     ret: usize,
 }
 
 impl Vm {
     fn run(self, bytecode: Bytecode) -> Result<State, usize> {
-        let Vm { mut ip, mut vars, mut temps, mut frames, mut handlers } = self;
+        let Vm { mut ip, mut vars, mut temps, mut frames } = self;
+        let mut handlers: Vec<Handler> = vec![];
         loop {
             let op = bytecode.ops.get(ip).copied().ok_or(ip)?;
             let i = ip;
@@ -78,29 +78,21 @@ impl Vm {
                         (_, b, a) => (a, b),
                     };
                     match (f, arg) {
-                        (Val::Effect(effect), arg) => match handlers.iter().last().cloned() {
+                        (Val::Effect(effect), arg) => match handlers.pop() {
                             Some(handler) => {
-                                let (v, t, f, h) = handler.state;
-                                let res_vars = vars.drain(v..).collect::<Vec<_>>();
-                                let res_temps = temps.drain(t..).collect::<Vec<_>>();
-                                let res_frames = frames.drain(f..).collect::<Vec<_>>();
-                                let res_handlers = handlers.drain(h..).collect::<Vec<_>>();
-                                handlers.pop();
-                                let vm = Vm {
-                                    ip,
-                                    vars: res_vars,
-                                    temps: res_temps,
-                                    frames: res_frames,
-                                    handlers: res_handlers,
-                                };
+                                let (v, t, f) = handler.state;
+                                let r_vars = vars.drain(v..).collect::<Vec<_>>();
+                                let r_temps = temps.drain(t..).collect::<Vec<_>>();
+                                let r_frames = frames.drain(f..).collect::<Vec<_>>();
+                                let vm = Vm { ip, vars: r_vars, temps: r_temps, frames: r_frames };
                                 temps.push(arg);
                                 temps.push(Val::Effect(effect));
-                                temps.push(Val::Resumable(v, Box::new(vm)));
+                                temps.push(Val::Resumable(v, Rc::new(vm)));
                                 temps.push(handler.handler);
                                 ip = handler.ret;
                             }
                             None => {
-                                let vm = Vm { ip, vars, temps, frames, handlers };
+                                let vm = Vm { ip, vars, temps, frames };
                                 let arg = Value { bytecode, val: arg };
                                 let r = Resumable { effect, arg, vm };
                                 return Ok(State::Resumable(r));
@@ -109,14 +101,13 @@ impl Vm {
                         (Val::Resumable(v, vm), arg) => {
                             let offset = vars.len() as i64 - v as i64;
                             frames.push((vars.len(), ip));
-                            vars.extend(vm.vars);
-                            temps.extend(vm.temps);
+                            vars.extend(vm.vars.clone());
+                            temps.extend(vm.temps.clone());
                             frames.extend(
                                 vm.frames
-                                    .into_iter()
-                                    .map(|(v, ret)| ((v as i64 + offset) as usize, ret)),
+                                    .iter()
+                                    .map(|(v, ret)| ((*v as i64 + offset) as usize, *ret)),
                             );
-                            handlers.extend(vm.handlers);
                             temps.push(arg);
                             ip = vm.ip;
                         }
@@ -175,7 +166,7 @@ impl Vm {
                 Op::Try => {
                     let handler = temps.pop().ok_or(i)?;
                     let v = temps.pop().ok_or(i)?;
-                    let state = (vars.len(), temps.len(), frames.len(), handlers.len() + 1);
+                    let state = (vars.len(), temps.len(), frames.len());
                     let ret = ip + 2; // skip apply + unwind
                     handlers.push(Handler { handler, state, ret });
                     temps.push(Val::String(Str::Nil as usize));

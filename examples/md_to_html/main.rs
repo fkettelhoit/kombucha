@@ -23,7 +23,7 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
     let date = segments.join("/");
-    let output_file = f.with_extension(".html");
+    let output_file = f.with_extension("html");
     match compile(include_str!("main.kb")) {
         Err(e) => {
             eprintln!("{e}");

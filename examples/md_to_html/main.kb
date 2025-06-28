@@ -59,10 +59,7 @@
                 [List, [], [], []] -> { parse-body([], acc("</ul>"), lines) }
                 [List, "-", " ", :z] -> { parse-body(List, acc(parse-block("li", rest(rest(l)))), lines) }
                 [Code, "`", "`", "`"] -> { parse-body([], acc("</code></pre>"), lines) }
-                [Code, :x, :y, :z] -> {
-                    // TODO: this should be escaped, but that's currently too slow
-                    parse-body(Code, acc(reverse(l)), lines)
-                }
+                [Code, :x, :y, :z] -> { parse-body(Code, acc(reverse(escape(l))), lines) }
                 [[], "-", " ", :z] -> { parse-body(List, acc("<ul>", parse-block("li", rest(rest(l)))), lines) }
                 [[], "`", "`", "`"] -> { parse-body(Code, acc("<pre><code>"), lines) }
                 [[], :x, :y, :z] -> { parse-body(mode, acc(parse-block("p", l)), lines) }
