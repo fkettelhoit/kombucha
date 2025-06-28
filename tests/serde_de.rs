@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use serde::Deserialize;
 use kombucha::{
     compile::compile,
     run::{State, Value},
     serde::de::Error,
 };
+use serde::Deserialize;
 
 fn run(code: &str) -> Option<Value> {
     match compile(code).unwrap().run().unwrap() {
@@ -36,6 +36,8 @@ fn deserialize_string() -> Result<(), Error> {
     assert_eq!(run(":foo").unwrap().deserialize::<String>()?, "foo");
     assert_eq!(run("::foo").unwrap().deserialize::<String>()?, "foo");
     assert_eq!(run("foo!").unwrap().deserialize::<String>()?, "foo");
+    assert_eq!(run("\"\"").unwrap().deserialize::<String>()?, "");
+    assert_eq!(run("[]").unwrap().deserialize::<String>()?, "");
     Ok(())
 }
 
@@ -78,6 +80,7 @@ fn deserialize_newtype_struct() -> Result<(), Error> {
 fn deserialize_seq() -> Result<(), Error> {
     assert_eq!(run("[Foo, Bar]").unwrap().deserialize::<Vec<String>>()?, vec!["Foo", "Bar"]);
     assert_eq!(run("[Foo, Foo]").unwrap().deserialize::<Vec<Foo>>()?, vec![Foo, Foo]);
+    assert_eq!(run("[]").unwrap().deserialize::<Vec<Foo>>()?, vec![]);
     Ok(())
 }
 
@@ -102,6 +105,7 @@ fn deserialize_map() -> Result<(), Error> {
         run("[[A, X], [B, Y]]").unwrap().deserialize::<HashMap<String, String>>()?,
         HashMap::from_iter(vec![("A".into(), "X".into()), ("B".into(), "Y".into())]),
     );
+    assert_eq!(run("[]").unwrap().deserialize::<HashMap<String, String>>()?, HashMap::new(),);
     Ok(())
 }
 

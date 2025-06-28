@@ -46,6 +46,8 @@ pub enum E {
     InvalidUnit,
     InvalidSeq,
     InvalidMap,
+    InvalidMapKey,
+    InvalidMapValue,
     InvalidUnitStruct,
     InvalidTupleStruct,
     InvalidStruct,
@@ -71,6 +73,8 @@ impl Display for E {
             E::InvalidUnit => write!(f, "Invalid unit value"),
             E::InvalidSeq => write!(f, "Invalid sequence"),
             E::InvalidMap => write!(f, "Invalid map"),
+            E::InvalidMapKey => write!(f, "Invalid map key"),
+            E::InvalidMapValue => write!(f, "Invalid map value"),
             E::InvalidUnitStruct => write!(f, "Invalid unit struct"),
             E::InvalidTupleStruct => write!(f, "Invalid tuple struct"),
             E::InvalidStruct => write!(f, "Invalid struct"),
@@ -313,6 +317,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_seq<V: de::Visitor<'de>>(self, v: V) -> Result<V::Value> {
         match self.current_input() {
+            Val::String(s) if *s == Str::Nil as usize => {
+                let seq = SeqDeserializer::new(self, &[]);
+                v.visit_seq(seq)
+            }
             Val::Struct(_, items) => {
                 let seq = SeqDeserializer::new(self, items);
                 v.visit_seq(seq)
@@ -347,11 +355,15 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_map<V: de::Visitor<'de>>(self, v: V) -> Result<V::Value> {
         match self.current_input() {
+            Val::String(s) if *s == Str::Nil as usize => {
+                let map = MapDeserializer::new(self, &[])?;
+                v.visit_map(map)
+            }
             Val::Struct(_, items) => {
                 let map = MapDeserializer::new(self, items)?;
                 v.visit_map(map)
             }
-            _ => Err(self.err(E::InvalidSeq)),
+            _ => Err(self.err(E::InvalidMap)),
         }
     }
 
@@ -479,7 +491,7 @@ impl<'de, 'a> de::MapAccess<'de> for MapDeserializer<'a, 'de> {
             self.deserializer.pop_context();
             result
         } else {
-            Err(self.deserializer.err(E::InvalidSeq))
+            Err(self.deserializer.err(E::InvalidMapKey))
         }
     }
 
@@ -496,7 +508,7 @@ impl<'de, 'a> de::MapAccess<'de> for MapDeserializer<'a, 'de> {
             self.deserializer.pop_context();
             result
         } else {
-            Err(self.deserializer.err(E::InvalidSeq))
+            Err(self.deserializer.err(E::InvalidMapValue))
         }
     }
 }
