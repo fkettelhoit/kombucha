@@ -63,6 +63,16 @@ fn main() -> ExitCode {
                                 }
                             }
                         },
+                        "join" => match vm.arg.deserialize::<Vec<String>>() {
+                            Ok(strs) => {
+                                let arg = vm.serialize(&strs.join("")).unwrap();
+                                result = vm.resume(arg);
+                            }
+                            Err(e) => {
+                                eprintln!("Could not deserialize argument as Vec<String>: {e}");
+                                return ExitCode::FAILURE;
+                            }
+                        },
                         "escape" => match vm.arg.deserialize::<Vec<String>>() {
                             Ok(strs) => {
                                 let escaped = strs
@@ -79,7 +89,7 @@ fn main() -> ExitCode {
                                 result = vm.resume(arg);
                             }
                             Err(e) => {
-                                eprintln!("Could not deserialize argument as string: {e}");
+                                eprintln!("Could not deserialize argument as Vec<String>: {e}");
                                 return ExitCode::FAILURE;
                             }
                         },

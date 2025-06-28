@@ -124,6 +124,11 @@ fn md_to_html() -> Result<(), String> {
                     let arg = vm.arg.bytecode.serialize(&chars).map_err(|e| e.to_string())?;
                     result = vm.resume(arg).unwrap()
                 }
+                "join" => {
+                    let strs = vm.arg.deserialize::<Vec<String>>().unwrap();
+                    let arg = vm.serialize(&strs.join("")).unwrap();
+                    result = vm.resume(arg).unwrap();
+                }
                 "escape" => {
                     let strs = vm.arg.deserialize::<Vec<String>>().unwrap();
                     let escaped = strs

@@ -3,6 +3,8 @@
 
 ::escape(:str) = { escape!(str) }
 
+::print(:strs) = { reverse(strs) |> join! |> print! }
+
 ::lines(:ls, :l, :chars) = {
     match (first(chars)) with: [
         [] -> { reverse(ls(l)) }
@@ -20,7 +22,6 @@
 }
 
 ::parse-inline(:style, :acc, :l) = {
-    // print!("line...")
     match [first(l), second(l), style] with: [
         ["`", :y, []] -> { [acc, parse-inline(Code, [], rest(l))] }
         ["`", :y, Code] -> { ["<code>", acc, "</code>", parse-inline([], [], rest(l))] }
@@ -44,8 +45,14 @@
 ::parse-block(:tag, :l) = {
     match [first(l), second(l), third(l)] with: [
         ["#", " ", :z] -> { ["<h1>", rest(rest(l)) |> parse-inline, "</h1>"] }
-        ["#", "#", " "] -> { ["<h2>", rest(rest(rest(l))) |> parse-inline, "</h2>"] }
-        ["#", "#", "#"] -> { ["<h3>", rest(rest(rest(rest(l)))) |> parse-inline, "</h3>"] }
+        ["#", "#", " "] -> {
+            print(l)
+            ["<h2>", rest(rest(rest(l))) |> parse-inline, "</h2>"]
+        }
+        ["#", "#", "#"] -> {
+            print(l)
+            ["<h3>", rest(rest(rest(rest(l)))) |> parse-inline, "</h3>"]
+        }
         [[], [], []] -> { [] }
         :else -> { ["<", tag, ">", parse-inline(l), "</", tag, ">"] }
     ]
@@ -95,9 +102,17 @@
     ]
 }
 
+print!("Generating html...")
+
 :date = date!()
+
+print!("Splitting into lines...")
 :lines = lines([], [], chars!())
+
+print!("Extracting title...")
 :title = title(first(reverse(lines)))
+
+print!("Generating body...")
 :body = parse-body(reverse(lines))
 
 html("en", "styles/style.css", date, title, body) |> deep-flatten
