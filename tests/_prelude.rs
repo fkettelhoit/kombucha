@@ -105,7 +105,7 @@ fn md_to_html() -> Result<(), String> {
         match result {
             State::Done(v) => {
                 let result: Vec<String> = v.deserialize().unwrap();
-                assert_eq!(result.join(""), include_str!("../examples/md_to_html/page.html"));
+                assert_eq!(result.join(""), include_str!("../examples/md_to_html/2025-06-12.html"));
                 return Ok(());
             }
             State::Resumable(mut vm) => match vm.effect() {
@@ -114,9 +114,13 @@ fn md_to_html() -> Result<(), String> {
                     let nil = vm.arg.bytecode.serialize(&()).unwrap();
                     result = vm.resume(nil).unwrap();
                 }
+                "date" => {
+                    let date = vm.arg.bytecode.serialize(&"2025/06/12").unwrap();
+                    result = vm.resume(date).unwrap();
+                }
                 "chars" => {
                     let chars: Vec<char> =
-                        include_str!("../examples/md_to_html/page.md").chars().collect();
+                        include_str!("../examples/md_to_html/2025-06-12.md").chars().collect();
                     let arg = vm.arg.bytecode.serialize(&chars).map_err(|e| e.to_string())?;
                     result = vm.resume(arg).unwrap()
                 }

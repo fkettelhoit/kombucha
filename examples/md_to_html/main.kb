@@ -98,8 +98,9 @@
     ]
 }
 
+:date = date!()
 :lines = lines([], [], chars!())
 :title = title(first(reverse(lines)))
 :body = parse-body(reverse(lines))
 
-html("en", "styles/style.css", "2025/06/12", title, body) |> deep-flatten
+html("en", "styles/style.css", date, title, body) |> deep-flatten

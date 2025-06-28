@@ -75,7 +75,7 @@ fn main() -> ExitCode {
                             },
                         },
                         eff => {
-                            eprintln!("{eff}!(...)");
+                            eprintln!("{eff}!({})", vm.arg.to_string());
                             return ExitCode::FAILURE;
                         }
                     },
