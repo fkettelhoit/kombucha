@@ -2424,41 +2424,21 @@ map(:x => { Foo(x) }, [A, B, C])
                 ( Foo
                   Baz ) ) )
             ( ( 0
-                ( Binding
-                  "a" ) )
-              ( Binding
-                "a" ) ) )
+                "a" )
+              "a" ) )
           ( ( 0
-              ( Binding
-                "a" ) )
-            ( Binding
-              "b" ) ) )
+              "a" )
+            "b" ) )
         ( ( 0
-            ( ( Compound
-                ( Binding
-                  "f" ) )
-              ( []
-                ( Binding
-                  "a" ) ) ) )
-          ( ( Compound
-              ( Binding
-                "f" ) )
-            ( []
-              ( Binding
-                "a" ) ) ) ) )
+            ( "f"
+              "a" ) )
+          ( "f"
+            "a" ) ) )
       ( ( 0
-          ( ( Compound
-              ( Binding
-                "f" ) )
-            ( []
-              ( Binding
-                "a" ) ) ) )
-        ( ( Compound
-            ( Binding
-              "g" ) )
-          ( []
-            ( Binding
-              "a" ) ) ) ) ) )
+          ( "f"
+            "a" ) )
+        ( "g"
+          "a" ) ) ) )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -2664,90 +2644,50 @@ map(:x => { Foo(x) }, [A, B, C])
 00201: AppFnToArg
 00202: AppFnToArg
 00203: LoadVar(00000)
-00204: PushString("Binding")
-00205: PushString(""a"")
-00206: AppFnToArg
+00204: PushString(""a"")
+00205: AppFnToArg
+00206: PushString(""a"")
 00207: AppFnToArg
-00208: PushString("Binding")
-00209: PushString(""a"")
-00210: AppFnToArg
+00208: AppFnToArg
+00209: LoadVar(00000)
+00210: PushString(""a"")
 00211: AppFnToArg
-00212: AppFnToArg
-00213: LoadVar(00000)
-00214: PushString("Binding")
-00215: PushString(""a"")
-00216: AppFnToArg
-00217: AppFnToArg
-00218: PushString("Binding")
-00219: PushString(""b"")
-00220: AppFnToArg
-00221: AppFnToArg
+00212: PushString(""b"")
+00213: AppFnToArg
+00214: AppFnToArg
+00215: LoadVar(00000)
+00216: PushString(""f"")
+00217: PushString(""a"")
+00218: AppFnToArg
+00219: AppFnToArg
+00220: PushString(""f"")
+00221: PushString(""a"")
 00222: AppFnToArg
-00223: LoadVar(00000)
-00224: PushString("Compound")
-00225: PushString("Binding")
+00223: AppFnToArg
+00224: AppFnToArg
+00225: LoadVar(00000)
 00226: PushString(""f"")
-00227: AppFnToArg
+00227: PushString(""a"")
 00228: AppFnToArg
-00229: PushString("")
-00230: PushString("Binding")
+00229: AppFnToArg
+00230: PushString(""g"")
 00231: PushString(""a"")
 00232: AppFnToArg
 00233: AppFnToArg
 00234: AppFnToArg
-00235: AppFnToArg
-00236: PushString("Compound")
-00237: PushString("Binding")
-00238: PushString(""f"")
-00239: AppFnToArg
-00240: AppFnToArg
-00241: PushString("")
-00242: PushString("Binding")
-00243: PushString(""a"")
+00235:   Return
+00236: LoadFn { code: 00016, fvars: 00000 }
+00237: PushString(""=="")
+00238: AppFnToArg
+00239: LoadFn { code: 00022, fvars: 00000 }
+00240: PushString(""=="")
+00241: AppFnToArg
+00242: LoadFn { code: 00160, fvars: 00000 }
+00243: AppFnToArg
 00244: AppFnToArg
-00245: AppFnToArg
+00245: LoadFn { code: 00170, fvars: 00000 }
 00246: AppFnToArg
-00247: AppFnToArg
-00248: AppFnToArg
-00249: LoadVar(00000)
-00250: PushString("Compound")
-00251: PushString("Binding")
-00252: PushString(""f"")
-00253: AppFnToArg
-00254: AppFnToArg
-00255: PushString("")
-00256: PushString("Binding")
-00257: PushString(""a"")
-00258: AppFnToArg
-00259: AppFnToArg
-00260: AppFnToArg
-00261: AppFnToArg
-00262: PushString("Compound")
-00263: PushString("Binding")
-00264: PushString(""g"")
-00265: AppFnToArg
-00266: AppFnToArg
-00267: PushString("")
-00268: PushString("Binding")
-00269: PushString(""a"")
-00270: AppFnToArg
-00271: AppFnToArg
-00272: AppFnToArg
-00273: AppFnToArg
-00274: AppFnToArg
-00275:   Return
-00276: LoadFn { code: 00016, fvars: 00000 }
-00277: PushString(""=="")
-00278: AppFnToArg
-00279: LoadFn { code: 00022, fvars: 00000 }
-00280: PushString(""=="")
-00281: AppFnToArg
-00282: LoadFn { code: 00160, fvars: 00000 }
-00283: AppFnToArg
-00284: AppFnToArg
-00285: LoadFn { code: 00170, fvars: 00000 }
-00286: AppFnToArg
-00287:   Return
+00247:   Return
 
 [True, False, True, False, True, False, True, False]
 

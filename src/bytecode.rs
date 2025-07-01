@@ -12,6 +12,12 @@ pub enum Str {
 
 pub const NIL: &str = "";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BindType {
+    Variable,
+    Macro,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Bytecode {
     pub ctx: Ctx,
@@ -21,8 +27,8 @@ pub struct Bytecode {
 
 #[derive(Debug, Clone)]
 pub struct Ctx {
-    pub bindings: Vec<(usize, String)>,
-    pub vars: Vec<String>,
+    pub bindings: Vec<(usize, BindType, String)>,
+    pub vars: Vec<(BindType, String)>,
     pub strs: Vec<String>,
 }
 
@@ -36,14 +42,14 @@ impl Default for Ctx {
 }
 
 impl Ctx {
-    pub fn drain_bindings(&mut self) -> Vec<String> {
+    pub fn drain_bindings(&mut self) -> Vec<(BindType, String)> {
         let mut kept = vec![];
         let mut drained = vec![];
-        for (lvl, b) in self.bindings.drain(..) {
+        for (lvl, c, b) in self.bindings.drain(..) {
             if lvl > 0 {
-                kept.push((lvl, b.clone()));
+                kept.push((lvl, c, b.clone()));
             }
-            drained.push(b);
+            drained.push((c, b));
         }
         self.bindings = kept;
         drained
@@ -53,8 +59,8 @@ impl Ctx {
         self.bindings = self
             .bindings
             .drain(..)
-            .filter(|(lvl, _)| *lvl > 0)
-            .map(|(lvl, b)| (lvl - 1, b))
+            .filter(|(lvl, _, _)| *lvl > 0)
+            .map(|(lvl, c, b)| (lvl - 1, c, b))
             .collect()
     }
 }
@@ -86,16 +92,20 @@ impl Bytecode {
         buf.extend((self.ctx.vars.len() as u32).to_be_bytes());
         buf.extend((self.ctx.strs.len() as u32).to_be_bytes());
         buf.extend((self.start as u32).to_be_bytes());
-        for (lvl, s) in &self.ctx.bindings {
+        for (lvl, ty, s) in &self.ctx.bindings {
             buf.extend((*lvl as u16).to_be_bytes());
+            buf.push(*ty as u8);
             buf.extend((s.len() as u32).to_be_bytes());
             buf.extend(s.as_bytes());
         }
-        for section in [&self.ctx.vars, &self.ctx.strs] {
-            for s in section {
-                buf.extend((s.len() as u32).to_be_bytes());
-                buf.extend(s.as_bytes());
-            }
+        for (ty, s) in &self.ctx.vars {
+            buf.push(*ty as u8);
+            buf.extend((s.len() as u32).to_be_bytes());
+            buf.extend(s.as_bytes());
+        }
+        for s in &self.ctx.strs {
+            buf.extend((s.len() as u32).to_be_bytes());
+            buf.extend(s.as_bytes());
         }
         fn check_size(op: usize, v: usize, bits: usize) -> Result<(), String> {
             if v >= (1 << bits) {
@@ -155,38 +165,60 @@ impl Bytecode {
             *str = u32::from_be_bytes([buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]);
             i += 4;
         }
+        fn parse_bind_ty(buf: &[u8], i: usize) -> Result<BindType, String> {
+            match buf[i] {
+                b if b == BindType::Variable as u8 => Ok(BindType::Variable),
+                b if b == BindType::Macro as u8 => Ok(BindType::Macro),
+                _ => Err(format!("Invalid binding type at offset {i}")),
+            }
+        }
         let [b, v, s, start_op] = strs;
         for _ in 0..b {
-            if i + 6 > buf.len() {
-                return Err(format!("Expected 6 binding length bytes at offset {i}"));
+            if i + 7 > buf.len() {
+                return Err(format!("Expected 7 binding length bytes at offset {i}"));
             }
             let lvl = u16::from_be_bytes([buf[i], buf[i + 1]]);
-            let len = u32::from_be_bytes([buf[i + 2], buf[i + 3], buf[i + 4], buf[i + 5]]) as usize;
-            i += 6;
+            let ty = parse_bind_ty(buf, i + 2)?;
+            let len = u32::from_be_bytes([buf[i + 3], buf[i + 4], buf[i + 5], buf[i + 6]]) as usize;
+            i += 7;
             if i + len > buf.len() {
                 return Err(format!("String at {i} is shorter than length {len}"));
             }
             let string = String::from_utf8(buf[i..i + len].to_vec())
                 .map_err(|_| format!("Invalid UTF8 string at {i}"))?;
-            ctx.bindings.push((lvl as usize, string.into()));
+            ctx.bindings.push((lvl as usize, ty, string.into()));
             i += len;
         }
-        for (strings, count) in [(&mut ctx.vars, v), (&mut ctx.strs, s)] {
-            strings.clear();
-            for _ in 0..count {
-                if i + 4 > buf.len() {
-                    return Err(format!("Expected 4 string length bytes at offset {i}"));
-                }
-                let len = u32::from_be_bytes([buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]) as usize;
-                i += 4;
-                if i + len > buf.len() {
-                    return Err(format!("String at {i} is shorter than length {len}"));
-                }
-                let string = String::from_utf8(buf[i..i + len].to_vec())
-                    .map_err(|_| format!("Invalid UTF8 string at {i}"))?;
-                strings.push(string.into());
-                i += len;
+        ctx.vars.clear();
+        for _ in 0..v {
+            if i + 5 > buf.len() {
+                return Err(format!("Expected 5 var length bytes at offset {i}"));
             }
+            let ty = parse_bind_ty(buf, i)?;
+            let len = u32::from_be_bytes([buf[i + 1], buf[i + 2], buf[i + 3], buf[i + 4]]) as usize;
+            i += 5;
+            if i + len > buf.len() {
+                return Err(format!("String at {i} is shorter than length {len}"));
+            }
+            let string = String::from_utf8(buf[i..i + len].to_vec())
+                .map_err(|_| format!("Invalid UTF8 string at {i}"))?;
+            ctx.vars.push((ty, string.into()));
+            i += len;
+        }
+        ctx.strs.clear();
+        for _ in 0..s {
+            if i + 4 > buf.len() {
+                return Err(format!("Expected 4 string length bytes at offset {i}"));
+            }
+            let len = u32::from_be_bytes([buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]) as usize;
+            i += 4;
+            if i + len > buf.len() {
+                return Err(format!("String at {i} is shorter than length {len}"));
+            }
+            let string = String::from_utf8(buf[i..i + len].to_vec())
+                .map_err(|_| format!("Invalid UTF8 string at {i}"))?;
+            ctx.strs.push(string.into());
+            i += len;
         }
         fn check_bytes(bytes: &[u8], i: usize, needed: usize, op: &str) -> Result<(), String> {
             if i + needed > bytes.len() {

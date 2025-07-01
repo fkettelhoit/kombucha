@@ -1,8 +1,8 @@
-:macro = ([:x, :_] => { x })
+#macro = ([:x, :_] => { x })
 macro(Foo, {})
 
 (=
-  :macro
+  #macro
   (=>
     ([]
       :x
@@ -91,11 +91,11 @@ Value(Foo)
 
 ---
 
-:macro = ([:x, :_] => { x })
+#macro = ([:x, :_] => { x })
 macro(:binding, {})
 
 (=
-  :macro
+  #macro
   (=>
     ([]
       :x
@@ -184,11 +184,11 @@ Binding("binding")
 
 ---
 
-:macro = ([:x, :_] => { x })
+#macro = ([:x, :_] => { x })
 macro(Foo(Bar, Baz), {})
 
 (=
-  :macro
+  #macro
   (=>
     ([]
       :x
@@ -285,11 +285,11 @@ Value(Foo(Bar, Baz))
 
 ---
 
-:macro = ([:x, :_] => { x })
+#macro = ([:x, :_] => { x })
 macro(Foo(Bar, :baz), {})
 
 (=
-  :macro
+  #macro
   (=>
     ([]
       :x
@@ -398,11 +398,11 @@ Compound(Value(Foo), [Value(Bar), Binding("baz")])
 
 ---
 
-:macro = ([:x, :_] => { x })
+#macro = ([:x, :_] => { x })
 macro(:foo(Bar, :baz), {})
 
 (=
-  :macro
+  #macro
   (=>
     ([]
       :x
@@ -514,11 +514,11 @@ Compound(Binding("foo"), [Value(Bar), Binding("baz")])
 
 ---
 
-:macro = ([:x, :_] => { x })
+#macro = ([:x, :_] => { x })
 macro([A, B, [C, :foo]], {})
 
 (=
-  :macro
+  #macro
   (=>
     ([]
       :x
@@ -654,11 +654,11 @@ Compound(Value(), [Value(A), Value(B), Compound(Value(), [Value(C), Binding("foo
 
 ---
 
-:macro = ([:x, :_] => { x })
+#macro = ([:x, :_] => { x })
 macro(::binding, {})
 
 (=
-  :macro
+  #macro
   (=>
     ([]
       :x
@@ -805,14 +805,14 @@ Foo
 
 ---
 
-:= = ([:binding, :value, :block] => {
+#= = ([:binding, :value, :block] => {
   block(value([]))
 })
 ::foo(:x, :y) = { Foo(x, y) }
 foo(Bar, Baz)
 
 (=
-  :=
+  #=
   (=>
     ([]
       :binding
@@ -965,7 +965,7 @@ Foo(Bar, Baz)
 
 ---
 
-:= = ([:binding, :value, :block] => {
+#= = ([:binding, :value, :block] => {
   __unpack(binding, [:type, :arg] => {
     __unpack(type, [:type, :f] => {
       block([] ~> value)
@@ -980,7 +980,7 @@ Foo(Bar, Baz)
 foo(Bar, Baz)
 
 (=
-  :=
+  #=
   (=>
     ([]
       :binding
@@ -1273,7 +1273,7 @@ Foo(Bar, Baz)
 
 ---
 
-:= = ([:binding, :value, :block] => {
+#= = ([:binding, :value, :block] => {
   __unpack(binding, [:type, :arg] => {
     __unpack(type, [:type, :f] => {
       block([] ~> value)
@@ -1294,7 +1294,7 @@ Foo(Bar, Baz)
 fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 
 (=
-  :=
+  #=
   (=>
     ([]
       :binding
@@ -1717,12 +1717,12 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 
 ---
 
-:macro = ([:x, :_] => { x })
+#macro = ([:x, :_] => { x })
 macro(:x)
 x
 
 (=
-  :macro
+  #macro
   (=>
     ([]
       :x
@@ -1811,7 +1811,7 @@ Binding("x")
 
 ---
 
-:= = ([:binding, :value, :block] => {
+#= = ([:binding, :value, :block] => {
   __unpack(binding, [:type, :arg] => {
     __unpack(type, [:type, :f] => {
       block([] ~> value)
@@ -1834,7 +1834,7 @@ Binding("x")
 foo
 
 (=
-  :=
+  #=
   (=>
     ([]
       :binding

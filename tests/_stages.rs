@@ -1,7 +1,7 @@
 use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use kombucha::{
-    bytecode::{Bytecode, Ctx, NIL, Op},
+    bytecode::{BindType, Bytecode, Ctx, NIL, Op},
     compile::{A, Ast, Expr, codegen, desugar, parse},
     run::State,
 };
@@ -14,7 +14,8 @@ fn pretty_ast<'c>(prg: &[Ast]) -> String {
             A::Atom(s) if s == NIL => buf.push_str("[]"),
             A::Atom(s) => buf.push_str(s),
             A::String(s) => buf.push_str(&format!("\"{s}\"")),
-            A::Binding(lvl, s) => buf.push_str(&(":".repeat(lvl + 1) + s)),
+            A::Binding(lvl, BindType::Variable, s) => buf.push_str(&(":".repeat(lvl + 1) + s)),
+            A::Binding(lvl, BindType::Macro, s) => buf.push_str(&("#".repeat(lvl + 1) + s)),
             A::Block(items) => {
                 buf.push_str("{ ");
                 for (i, item) in items.iter().enumerate() {

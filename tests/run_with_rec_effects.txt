@@ -229,8 +229,7 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
                                 3 ) ) ) ) ) ) ) )
   =>
     ( ( 0
-        ( Value
-          False ) )
+        False )
       =>
         ( ( ( List
               ( toggle!
@@ -373,24 +372,22 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00130: AppFnToArg
 00131:   Return
 00132: LoadVar(00000)
-00133: PushString("Value")
-00134: PushString("False")
-00135: AppFnToArg
+00133: PushString("False")
+00134: AppFnToArg
+00135: LoadFn { code: 00118, fvars: 00000 }
 00136: AppFnToArg
-00137: LoadFn { code: 00118, fvars: 00000 }
-00138: AppFnToArg
-00139:   Return
-00140: LoadFn { code: 00016, fvars: 00000 }
-00141: PushString(""with-toggle"")
-00142: AppFnToArg
-00143: LoadFn { code: 00022, fvars: 00000 }
-00144: PushString(""loop"")
+00137:   Return
+00138: LoadFn { code: 00016, fvars: 00000 }
+00139: PushString(""with-toggle"")
+00140: AppFnToArg
+00141: LoadFn { code: 00022, fvars: 00000 }
+00142: PushString(""loop"")
+00143: AppFnToArg
+00144: LoadFn { code: 00112, fvars: 00000 }
 00145: AppFnToArg
-00146: LoadFn { code: 00112, fvars: 00000 }
-00147: AppFnToArg
+00146: AppFnToArg
+00147: LoadFn { code: 00132, fvars: 00000 }
 00148: AppFnToArg
-00149: LoadFn { code: 00132, fvars: 00000 }
-00150: AppFnToArg
-00151:   Return
+00149:   Return
 
 List(True, False, True)

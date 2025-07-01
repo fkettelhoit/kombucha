@@ -33,7 +33,7 @@
         [compound, reverse(acc)]
     })
 } })([])
-:-> = ([:pattern, :body, :value] => {
+#-> = ([:pattern, :body, :value] => {
     :== = (:== ~> { [:a, :b] => {
         __unpack(a, [:xs, :x] => {
             __unpack(b, [:ys, :y] => {
@@ -165,7 +165,7 @@
 :third = (:xs => {
     first(rest(rest(xs)))
 })
-:= = ([:binding, :value, :block] => {
+#= = ([:binding, :value, :block] => {
   __unpack(binding, [:type, :arg] => {
     __unpack(type, [:type, :f] => {
       block([] ~> value)
