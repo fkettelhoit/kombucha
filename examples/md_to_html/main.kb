@@ -115,4 +115,4 @@ print!("Extracting title...")
 print!("Generating body...")
 :body = parse-body(reverse(lines))
 
-html("en", "styles/style.css", date, title, body) |> deep-flatten
+html("en", "../styles/style.css", date, title, body) |> deep-flatten
