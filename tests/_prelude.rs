@@ -1,7 +1,7 @@
 use kombucha::{compile::compile, run::State};
 
 #[test]
-fn prelude_arrow() -> Result<(), String> {
+fn prelude_arrow_match() -> Result<(), String> {
     let code = "
 [
     (Bar -> { Foo })(Bar)
@@ -9,6 +9,7 @@ fn prelude_arrow() -> Result<(), String> {
     (:x -> { Foo })(Bar)
     (Pair(Foo, Bar) -> { Foo })(Pair(Foo, Bar))
     (Pair(:x, :y) -> { y })(Pair(Bar, Foo))
+    (Triple(:x, :y, :z) -> { z })(Triple(Baz, Bar, Foo))
     (Pair(:x, Bar) -> { x })(Pair(Foo, Bar))
     (Pair(:x, :x) -> { x })(Pair(Foo, Foo))
     (:foo(:x, :y) -> { x })(Pair(Foo, Bar))
@@ -19,7 +20,31 @@ fn prelude_arrow() -> Result<(), String> {
 ";
     match compile(code)?.run().unwrap() {
         State::Done(v) => {
-            assert_eq!(v.to_string(), format!("[{}]", ["Foo"; 11].join(", ")))
+            assert_eq!(v.to_string(), format!("[{}]", ["Match(Foo)"; 12].join(", ")))
+        }
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
+    }
+    Ok(())
+}
+
+#[test]
+fn prelude_arrow_no_match() -> Result<(), String> {
+    let code = "
+[
+    (Bar -> { Foo })(Foo)
+    (Pair(Foo, Bar) -> { Foo })(Pair(Bar, Foo))
+    (Pair(:x, :y) -> { y })(Pair(Baz, Bar, Foo))
+    (Pair(:x, Bar) -> { x })(Pair(Foo, Foo))
+    (Pair(:x, :x) -> { x })(Pair(Foo, Bar))
+    (:foo(:x, :y) -> { x })(Triple(Foo, Bar, Baz))
+    ([:x, :y] -> { y })([Baz, Bar, Foo])
+    (Foo(Bar(:x, :y)) -> { x })(Baz(Qux(Foo, Bar)))
+    ([[:x, :y]] -> { y })([[Baz, Bar, Foo]])
+]
+";
+    match compile(code)?.run().unwrap() {
+        State::Done(v) => {
+            assert_eq!(v.to_string(), format!("[{}]", ["NoMatch"; 9].join(", ")))
         }
         State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
     }
@@ -29,11 +54,11 @@ fn prelude_arrow() -> Result<(), String> {
 #[test]
 fn prelude_match() -> Result<(), String> {
     let code = "
-match (Pair first: Foo second: Bar) with: [
+match (Pair first: Foo second: Bar) [
     Pair([[\"twice\", :x]]) -> { Twice(x) }
     Pair([[\"first\", :x], [\"second\", :x]]) -> { Twice(x) }
     Pair([[\"first\", :x], [\"second\", :y]]) -> { Different(x, y) }
-    Pair([[\"first\", :x], [\"second\", :y]]) -> { invalid-pair!() }
+    Pair([[\"first\", :x], [\"second\", :y]]) -> { InvalidPair }
 ]
 ";
     match compile(code)?.run().unwrap() {

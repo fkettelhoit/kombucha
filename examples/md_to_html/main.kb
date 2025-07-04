@@ -6,7 +6,7 @@
 ::print(:strs) = { reverse(strs) |> join! |> print! }
 
 ::lines(:ls, :l, :chars) = {
-    match (first(chars)) with: [
+    match (first(chars)) [
         [] -> { reverse(ls(l)) }
         newline -> { lines(ls(l), [], rest(chars)) }
         :c -> { lines(ls, l(c), rest(chars)) }
@@ -14,7 +14,7 @@
 }
 
 ::parse-until(:end, :acc, :l) = {
-    match (first(l)) with: [
+    match (first(l)) [
         [] -> { [acc, []] }
         end -> { [acc, rest(l)] }
         :c -> { parse-until(end, acc(c), rest(l)) }
@@ -22,7 +22,7 @@
 }
 
 ::parse-inline(:style, :acc, :l) = {
-    match [first(l), second(l), style] with: [
+    match [first(l), second(l), style] [
         ["`", :y, []] -> { [acc, parse-inline(Code, [], rest(l))] }
         ["`", :y, Code] -> { ["<code>", acc, "</code>", parse-inline([], [], rest(l))] }
         ["_", :y, []] -> { [acc, parse-inline(Em, [], rest(l))] }
@@ -31,7 +31,7 @@
         ["*", "*", Strong] -> { ["<strong>", acc, "</strong>", parse-inline([], [], rest(rest(l)))] }
         ["[", :y, []] -> { [acc, parse-inline(Link, [], rest(l))] }
         ["]", "(", Link] -> {
-            match (parse-until(")", [], rest(rest(l)))) with: [
+            match (parse-until(")", [], rest(rest(l)))) [
                 [:href, :l] -> { [#"<a href=""#, href, #"">"#, acc, "</a>", parse-inline([], [], l)] }
             ]
         }
@@ -43,7 +43,7 @@
 :parse-inline = parse-inline([], [])
 
 ::parse-block(:tag, :l) = {
-    match [first(l), second(l), third(l)] with: [
+    match [first(l), second(l), third(l)] [
         ["#", " ", :z] -> { ["<h1>", rest(rest(l)) |> parse-inline, "</h1>"] }
         ["#", "#", " "] -> {
             print(l)
@@ -59,10 +59,10 @@
 }
 
 ::parse-body(:mode, :acc, :lines) = {
-    match [first(lines), rest(lines)] with: [
+    match [first(lines), rest(lines)] [
         [[], []] -> { acc }
         [:l, :lines] -> {
-            match [mode, first(l), second(l), third(l)] with: [
+            match [mode, first(l), second(l), third(l)] [
                 [List, [], [], []] -> { parse-body([], acc("</ul>"), lines) }
                 [List, "-", " ", :z] -> { parse-body(List, acc(parse-block("li", rest(rest(l)))), lines) }
                 [Code, "`", "`", "`"] -> { parse-body([], acc("</code></pre>"), lines) }
@@ -78,7 +78,7 @@
 :parse-body = parse-body([], [])
 
 ::title(:l) = {
-    match [first(l), second(l), third(l)] with: [
+    match [first(l), second(l), third(l)] [
         ["#", " ", :z] -> { rest(rest(l)) |> parse-inline }        
         :else -> { throw!("expected a h1 heading to be the first line") }
     ]

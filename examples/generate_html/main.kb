@@ -3,7 +3,7 @@
 ::escape(:str) = { escape!(str) }
 
 ::gen-inline(:inline) = {
-    match(inline) with: [
+    match(inline) [
         Em(:content) -> { ["<em>", escape(content), "</em>"] }
         Strong(:content) -> { ["<strong>", escape(content), "</strong>"] }
         Code(:content) -> { ["<code>", escape(content), "</code>"] }
@@ -13,7 +13,7 @@
 }
 
 ::gen-block(:pre, :post, :block) = {
-    match (block) with: [
+    match (block) [
         Subsection([["title", :title], ["blocks", :blocks]]) -> { [
             "<h3>", escape(title), "</h3>"
             blocks |> map(gen-block(pre, post))
@@ -27,7 +27,7 @@
 }
 
 ::gen-section(:title, :section) = {
-    match (section) with: [
+    match (section) [
         Note([["date", [:yy, :mm, :dd]]]) -> { [
             #"<p><a href="..#notes">Notes</a><br />"#, yy, "/", mm, "/", dd, "</p>"
             "<h1>", escape(title), "</h1>"
@@ -47,7 +47,7 @@
 }
 
 ::gen-html(:page) = {
-    match (page) with: [
+    match (page) [
         Html([["lang", :lang], ["stylesheet", :stylesheet], ["title", :title], ["sections", :sections]]) -> { [
             "<!DOCTYPE html>"
             #"<html lang=""#, escape(lang), #"">"#
