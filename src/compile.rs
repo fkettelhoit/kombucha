@@ -116,6 +116,11 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
         Box::new(Ast(pos, A::Atom(NIL.to_string())))
     }
     fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast, E<'c>> {
+        if let Some((Tok::Keyword(k), i, _)) = toks.peek().copied() {
+            toks.next();
+            let expr = _expr(toks)?;
+            return Ok(Ast(i, A::Call(_nil(i), vec![Ast(i, A::String(k.to_string())), expr])));
+        }
         let Some((Tok::Ident(_) | Tok::Atom(_), _, _)) = toks.peek().copied() else {
             let expr = _prefix(toks)?;
             return _infix(toks, expr);

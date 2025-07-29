@@ -228,3 +228,23 @@ X + Y + Z
     X
     Y)
   Z)
+
+---
+
+foo: bar
+
+([]
+  "foo"
+  bar)
+
+---
+
+[foo: bar, baz: qux]
+
+([]
+  ([]
+    "foo"
+    bar)
+  ([]
+    "baz"
+    qux))

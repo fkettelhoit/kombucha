@@ -118,12 +118,6 @@ Expected the '[' at line 1, col 1 to be closed with ']', but the code just ended
 
 ---
 
-foo: bar
-
-Expected an expression, but found 'foo:' at line 1, col 1
-
----
-
 f("foo)
 
 Found an unclosed string literal at line 1, col 3
