@@ -2,6 +2,10 @@
 name = "kombucha"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "A minimal and malleable programming language for symbiotic end-user programming"
+repository = "https://github.com/fkettelhoit/kombucha"
+readme = "README.md"
 
 [dependencies]
 serde = "1.0.219"
