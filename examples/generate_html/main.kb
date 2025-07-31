@@ -3,7 +3,7 @@
 ::escape(:str) = { escape!(str) }
 
 ::gen-inline(:inline) = {
-    match(inline) [
+    match (inline) [
         Em(:content) -> { ["<em>", escape(content), "</em>"] }
         Strong(:content) -> { ["<strong>", escape(content), "</strong>"] }
         Code(:content) -> { ["<code>", escape(content), "</code>"] }

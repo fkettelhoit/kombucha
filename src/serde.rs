@@ -1,10 +1,11 @@
 use std::rc::Rc;
 
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
+use serde_json::Value;
 
 use crate::{
     bytecode::{Bytecode, Str},
-    run::{Resumable, Val, Value},
+    run::{Resumable, Val},
 };
 
 pub mod de;
@@ -12,25 +13,23 @@ pub mod ser;
 
 impl Bytecode {
     pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val, ser::Error> {
-        fn json_to_kombucha(bytecode: &mut Bytecode, value: serde_json::Value) -> Val {
+        fn json_to_kombucha(bytecode: &mut Bytecode, value: Value) -> Val {
             match value {
-                serde_json::Value::Null => Val::String(Str::Nil as usize),
-                serde_json::Value::Bool(b) => {
+                Value::Null => Val::String(Str::Nil as usize),
+                Value::Bool(b) => {
                     let s = if b { "True" } else { "False" };
                     Val::String(intern(&mut bytecode.ctx.strs, s.to_string()))
                 }
-                serde_json::Value::Number(_) => todo!(),
-                serde_json::Value::String(s) => {
-                    Val::String(intern(&mut bytecode.ctx.strs, format!("\"{s}\"")))
-                }
-                serde_json::Value::Array(values) => Val::Struct(
+                Value::Number(_) => todo!(),
+                Value::String(s) => Val::String(intern(&mut bytecode.ctx.strs, format!("\"{s}\""))),
+                Value::Array(values) => Val::Struct(
                     Str::Nil as usize,
                     values
                         .into_iter()
                         .map(|v| Rc::new(json_to_kombucha(bytecode, v)))
                         .collect::<Vec<_>>(),
                 ),
-                serde_json::Value::Object(map) => Val::Struct(
+                Value::Object(map) => Val::Struct(
                     Str::Nil as usize,
                     map.into_iter()
                         .map(|(k, v)| {
@@ -52,9 +51,24 @@ impl Bytecode {
         Ok(json_to_kombucha(self, serde_json::to_value(value)?))
     }
 
-    pub fn deserialize<'a, T: Deserialize<'a>>(&'a self, v: &'a Val) -> Result<T, de::Error> {
-        let mut deserializer = de::Deserializer::new(&self.ctx.strs, v);
-        T::deserialize(&mut deserializer)
+    pub fn deserialize<T: DeserializeOwned>(&self, v: &Val) -> Result<T, de::Error> {
+        fn kombucha_to_json(bytecode: &Bytecode, v: &Val) -> Value {
+            match v {
+                Val::String(s) if bytecode.ctx.strs[*s] == "True" => true.into(),
+                Val::String(s) if bytecode.ctx.strs[*s] == "False" => false.into(),
+                Val::String(s) | Val::Effect(s) => bytecode.ctx.strs[*s].to_string().into(),
+                Val::Struct(_, vals) => vals
+                    .into_iter()
+                    .map(|v| kombucha_to_json(bytecode, v))
+                    .collect::<Vec<_>>()
+                    .into(),
+                Val::Closure(_, _) | Val::Resumable(_, _) => {
+                    panic!("Can't deserialize closures or resumables")
+                }
+            }
+        }
+        let value = kombucha_to_json(self, v);
+        Ok(serde_json::from_value(value)?)
     }
 }
 
@@ -65,8 +79,8 @@ pub(crate) fn intern(strs: &mut Vec<String>, s: String) -> usize {
     })
 }
 
-impl Value {
-    pub fn deserialize<'a, T: Deserialize<'a>>(&'a self) -> Result<T, de::Error> {
+impl crate::run::Value {
+    pub fn deserialize<T: DeserializeOwned>(&self) -> Result<T, de::Error> {
         self.bytecode.deserialize(&self.val)
     }
 }

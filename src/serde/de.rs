@@ -19,6 +19,12 @@ impl Error {
     }
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Self { cause: E::Custom(format!("{e}")), value: None }
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.value {
@@ -671,8 +677,9 @@ impl<'de, 'a> de::EnumAccess<'de> for EnumDeserializer<'a, 'de> {
         if !self.variants.contains(&variant_name) {
             return Err(self.deserializer.err(E::UnknownVariant));
         }
-        let variant = seed.deserialize(variant_name.into_deserializer())?;
-        Ok((variant, self))
+        let variant: std::result::Result<_, Error> =
+            seed.deserialize(variant_name.into_deserializer());
+        Ok((variant?, self))
     }
 }
 
