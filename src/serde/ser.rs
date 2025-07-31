@@ -28,6 +28,12 @@ pub enum Error {
     Custom(String),
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(value: serde_json::Error) -> Self {
+        Self::Custom(format!("{value}"))
+    }
+}
+
 impl std::error::Error for Error {}
 
 impl Display for Error {
