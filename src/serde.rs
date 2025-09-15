@@ -8,11 +8,8 @@ use crate::{
     run::{Resumable, Val},
 };
 
-pub mod de;
-pub mod ser;
-
 impl Bytecode {
-    pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val, ser::Error> {
+    pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val, serde_json::Error> {
         fn json_to_kombucha(bytecode: &mut Bytecode, value: Value) -> Val {
             match value {
                 Value::Null => Val::String(Str::Nil as usize),
@@ -51,7 +48,7 @@ impl Bytecode {
         Ok(json_to_kombucha(self, serde_json::to_value(value)?))
     }
 
-    pub fn deserialize<T: DeserializeOwned>(&self, v: &Val) -> Result<T, de::Error> {
+    pub fn deserialize<T: DeserializeOwned>(&self, v: &Val) -> Result<T, serde_json::Error> {
         fn kombucha_to_json(bytecode: &Bytecode, v: &Val) -> Value {
             match v {
                 Val::String(s) if *s == Str::Nil as usize => Value::Null,
@@ -142,13 +139,13 @@ pub(crate) fn intern(strs: &mut Vec<String>, s: String) -> usize {
 }
 
 impl crate::run::Value {
-    pub fn deserialize<T: DeserializeOwned>(&self) -> Result<T, de::Error> {
+    pub fn deserialize<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
         self.bytecode.deserialize(&self.val)
     }
 }
 
 impl Resumable {
-    pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val, ser::Error> {
+    pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val, serde_json::Error> {
         self.arg.bytecode.serialize(value)
     }
 }

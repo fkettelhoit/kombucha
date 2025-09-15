@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
-use kombucha::{bytecode::Bytecode, serde::ser::Error};
+use kombucha::bytecode::Bytecode;
 use serde::Serialize;
+use serde_json::Error;
 
 fn serialize<T: Serialize>(v: &T) -> Result<String, Error> {
     let mut bytecode = Bytecode::default();

@@ -261,14 +261,6 @@ impl Resumable {
     }
 }
 
-pub(crate) fn intern_atom(strs: &mut Vec<String>, s: String) -> Val {
-    Val::String(intern(strs, s))
-}
-
-pub(crate) fn intern_string(strs: &mut Vec<String>, s: impl AsRef<str>) -> Val {
-    Val::String(intern(strs, format!("\"{}\"", s.as_ref())))
-}
-
 pub(crate) fn intern(strs: &mut Vec<String>, s: String) -> usize {
     strs.iter().position(|x| *x == s).unwrap_or_else(|| {
         strs.push(s);

@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use kombucha::{
     compile::compile,
     run::{State, Value},
-    serde::de::Error,
 };
 use serde::Deserialize;
+use serde_json::Error;
 
 fn run(code: &str) -> Option<Value> {
     match compile(code).unwrap().run().unwrap() {
