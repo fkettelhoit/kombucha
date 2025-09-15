@@ -1,4 +1,4 @@
-use crate::bytecode::{Bytecode, NIL, Op, Str};
+use crate::bytecode::{Bytecode, LIST, NULL, Op, Str};
 use std::{rc::Rc, usize};
 
 impl Bytecode {
@@ -135,8 +135,11 @@ impl Vm {
                     ip = ret
                 }
                 Op::Type => match temps.pop().ok_or(i)? {
-                    Val::String(s) if s == Str::Nil as usize => {
-                        temps.push(Val::String(Str::TyNil as usize))
+                    Val::String(s) if s == Str::Null as usize => {
+                        temps.push(Val::String(Str::TyNull as usize))
+                    }
+                    Val::String(s) if s == Str::List as usize => {
+                        temps.push(Val::String(Str::TyList as usize))
                     }
                     Val::String(_) => temps.push(Val::String(Str::TyString as usize)),
                     Val::Struct(_, _) => temps.push(Val::String(Str::TyStruct as usize)),
@@ -157,7 +160,7 @@ impl Vm {
                             temps.push(t);
                         }
                         (f, _, _) => {
-                            temps.push(Val::String(Str::Nil as usize));
+                            temps.push(Val::String(Str::Null as usize));
                             temps.push(f);
                             ip += 1;
                         }
@@ -169,7 +172,7 @@ impl Vm {
                     let state = (vars.len(), temps.len(), frames.len());
                     let ret = ip + 2; // skip apply + unwind
                     handlers.push(Handler { handler, state, ret });
-                    temps.push(Val::String(Str::Nil as usize));
+                    temps.push(Val::String(Str::Null as usize));
                     temps.push(v);
                 }
                 Op::Unwind => {
@@ -188,7 +191,7 @@ impl Vm {
                         (Val::Effect(a), Val::Effect(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
-                    temps.push(Val::String(Str::Nil as usize));
+                    temps.push(Val::String(Str::Null as usize));
                     temps.push(branch);
                 }
             }
@@ -199,18 +202,17 @@ impl Vm {
 impl Val {
     pub fn pretty(&self, strs: &Vec<String>) -> String {
         match self {
-            Val::String(s) if strs[*s] == NIL => "[]".to_string(),
             Val::String(s) => strs[*s].to_string(),
             Val::Effect(s) => format!("{}!", strs[*s]),
             Val::Closure(c, _) => format!("#fn-{c}"),
-            Val::Struct(s, vs) if strs[*s] == NIL => {
+            Val::Struct(s, vs) if strs[*s] == LIST => {
                 let items = vs.iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
                 format!("[{}]", items.join(", "))
             }
             Val::Struct(s, vs) => {
                 if vs.len() == 1 {
                     match *vs[0] {
-                        Val::String(v) if strs[v] == NIL => {
+                        Val::String(v) if strs[v] == NULL => {
                             return format!("{}()", Val::String(*s).pretty(strs));
                         }
                         _ => {}

@@ -96,7 +96,7 @@
 00044: LoadFn { code: 00025, fvars: 00000 }
 00045: AppFnToArg
 00046: LoadFn { code: 00031, fvars: 00000 }
-00047: PushString("")
+00047: PushString("[]")
 00048: PushString(""r"")
 00049: AppFnToArg
 00050: PushString(""eff"")
@@ -233,11 +233,11 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
       =>
         ( ( ( List
               ( toggle!
-                [] ) )
+                () ) )
             ( toggle!
-              [] ) )
+              () ) )
           ( toggle!
-            [] ) ) ) )
+            () ) ) ) )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -333,7 +333,7 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00091: LoadFn { code: 00043, fvars: 00002 }
 00092: AppFnToArg
 00093: LoadFn { code: 00049, fvars: 00000 }
-00094: PushString("")
+00094: PushString("[]")
 00095: PushString(""r"")
 00096: AppFnToArg
 00097: PushString(""eff"")
@@ -359,15 +359,15 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00117:   Return
 00118: PushString("List")
 00119: PushEffect("toggle")
-00120: PushString("")
+00120: PushString("()")
 00121: AppFnToArg
 00122: AppFnToArg
 00123: PushEffect("toggle")
-00124: PushString("")
+00124: PushString("()")
 00125: AppFnToArg
 00126: AppFnToArg
 00127: PushEffect("toggle")
-00128: PushString("")
+00128: PushString("()")
 00129: AppFnToArg
 00130: AppFnToArg
 00131:   Return

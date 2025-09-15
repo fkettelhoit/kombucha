@@ -22,7 +22,7 @@ print!(Foo)
 00013:   Return
 
 "Foo"
-[]
+()
 
 ---
 
@@ -74,7 +74,7 @@ print!(Foo), print!(Bar), print!(FooBar)
 "Foo"
 "Bar"
 "FooBar"
-[]
+()
 
 ---
 
@@ -331,7 +331,7 @@ __handle({ Foo }, [:r, :eff, :arg] => { Error })
 00034: LoadFn { code: 00021, fvars: 00000 }
 00035: AppFnToArg
 00036: LoadFn { code: 00025, fvars: 00000 }
-00037: PushString("")
+00037: PushString("[]")
 00038: PushString(""r"")
 00039: AppFnToArg
 00040: PushString(""eff"")
@@ -427,7 +427,7 @@ __handle({ effect!(Foo) }, [:r, :eff, :arg] => { arg(r(Bar)) })
 00040: LoadFn { code: 00021, fvars: 00000 }
 00041: AppFnToArg
 00042: LoadFn { code: 00027, fvars: 00000 }
-00043: PushString("")
+00043: PushString("[]")
 00044: PushString(""r"")
 00045: AppFnToArg
 00046: PushString(""eff"")
@@ -472,7 +472,7 @@ __handle({
     =>
       ( Foo
         ( eff!
-          [] ) ) )
+          () ) ) )
   ( ( =>
         =>
           0
@@ -512,7 +512,7 @@ __handle({
 00020:   Return
 00021: PushString("Foo")
 00022: PushEffect("eff")
-00023: PushString("")
+00023: PushString("()")
 00024: AppFnToArg
 00025: AppFnToArg
 00026:   Return
@@ -538,7 +538,7 @@ __handle({
 00046: LoadFn { code: 00021, fvars: 00000 }
 00047: AppFnToArg
 00048: LoadFn { code: 00029, fvars: 00000 }
-00049: PushString("")
+00049: PushString("[]")
 00050: PushString(""r"")
 00051: AppFnToArg
 00052: PushString(""eff"")
@@ -670,7 +670,7 @@ __handle({ List(elems!(foo)) }, [:r, :eff, :x] => { Twice(r(x, x), r(Baz)) })
 00056: LoadFn { code: 00029, fvars: 00001 }
 00057: AppFnToArg
 00058: LoadFn { code: 00037, fvars: 00000 }
-00059: PushString("")
+00059: PushString("[]")
 00060: PushString(""r"")
 00061: AppFnToArg
 00062: PushString(""eff"")
@@ -724,9 +724,9 @@ Foo(__handle({
       =>
         ( ( Baz
             ( effect!
-              [] ) )
+              () ) )
           ( effect!
-            [] ) ) )
+            () ) ) )
     ( ( =>
           =>
             0
@@ -764,11 +764,11 @@ Foo(__handle({
 00020:   Return
 00021: PushString("Baz")
 00022: PushEffect("effect")
-00023: PushString("")
+00023: PushString("()")
 00024: AppFnToArg
 00025: AppFnToArg
 00026: PushEffect("effect")
-00027: PushString("")
+00027: PushString("()")
 00028: AppFnToArg
 00029: AppFnToArg
 00030:   Return
@@ -791,7 +791,7 @@ Foo(__handle({
 00047: LoadFn { code: 00021, fvars: 00000 }
 00048: AppFnToArg
 00049: LoadFn { code: 00033, fvars: 00000 }
-00050: PushString("")
+00050: PushString("[]")
 00051: PushString(""r"")
 00052: AppFnToArg
 00053: PushString(""eff"")
@@ -805,7 +805,7 @@ Foo(__handle({
 00061: AppFnToArg
 00062:   Return
 
-effect!([])
+effect!(())
 
 ---
 
@@ -847,9 +847,9 @@ __handle({
     =>
       ( ( List
           ( get!
-            [] ) )
+            () ) )
         ( get!
-          [] ) ) )
+          () ) ) )
   ( ( =>
         =>
           0
@@ -904,11 +904,11 @@ __handle({
 00020:   Return
 00021: PushString("List")
 00022: PushEffect("get")
-00023: PushString("")
+00023: PushString("()")
 00024: AppFnToArg
 00025: AppFnToArg
 00026: PushEffect("get")
-00027: PushString("")
+00027: PushString("()")
 00028: AppFnToArg
 00029: AppFnToArg
 00030:   Return
@@ -947,7 +947,7 @@ __handle({
 00063: LoadFn { code: 00046, fvars: 00003 }
 00064: AppFnToArg
 00065: LoadFn { code: 00052, fvars: 00000 }
-00066: PushString("")
+00066: PushString("[]")
 00067: PushString(""r"")
 00068: AppFnToArg
 00069: PushString(""eff"")
@@ -967,7 +967,7 @@ __handle({
 00083: LoadFn { code: 00021, fvars: 00000 }
 00084: AppFnToArg
 00085: LoadFn { code: 00033, fvars: 00000 }
-00086: PushString("")
+00086: PushString("[]")
 00087: PushString(""r"")
 00088: AppFnToArg
 00089: PushString(""eff"")
@@ -1014,7 +1014,7 @@ __handle({
     =>
       ( =>
           ( throw!
-            [] )
+            () )
         ( ( =>
               =>
                 ( try
@@ -1022,7 +1022,7 @@ __handle({
                   0 )
             =>
               ( throw!
-                [] ) )
+                () ) )
           ( ( =>
                 =>
                   0
@@ -1033,7 +1033,7 @@ __handle({
             =>
               =>
                 =>
-                  [] ) ) ) )
+                  () ) ) ) )
   ( ( =>
         =>
           0
@@ -1044,7 +1044,7 @@ __handle({
     =>
       =>
         =>
-          [] ) )
+          () ) )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -1068,7 +1068,7 @@ __handle({
 00019: LoadFn { code: 00010, fvars: 00001 }
 00020:   Return
 00021: PushEffect("throw")
-00022: PushString("")
+00022: PushString("()")
 00023: AppFnToArg
 00024:   Return
 00025: LoadVar(00001)
@@ -1083,14 +1083,14 @@ __handle({
 00034: LoadFn { code: 00025, fvars: 00001 }
 00035:   Return
 00036: PushEffect("throw")
-00037: PushString("")
+00037: PushString("()")
 00038: AppFnToArg
 00039:   Return
 00040: LoadVar(00000)
 00041:   Return
 00042: LoadFn { code: 00040, fvars: 00000 }
 00043:   Return
-00044: PushString("")
+00044: PushString("()")
 00045:   Return
 00046: LoadFn { code: 00044, fvars: 00000 }
 00047:   Return
@@ -1101,7 +1101,7 @@ __handle({
 00052: LoadFn { code: 00036, fvars: 00000 }
 00053: AppFnToArg
 00054: LoadFn { code: 00042, fvars: 00000 }
-00055: PushString("")
+00055: PushString("[]")
 00056: PushString(""r"")
 00057: AppFnToArg
 00058: PushString(""eff"")
@@ -1118,7 +1118,7 @@ __handle({
 00069:   Return
 00070: LoadFn { code: 00068, fvars: 00000 }
 00071:   Return
-00072: PushString("")
+00072: PushString("()")
 00073:   Return
 00074: LoadFn { code: 00072, fvars: 00000 }
 00075:   Return
@@ -1128,7 +1128,7 @@ __handle({
 00079: LoadFn { code: 00050, fvars: 00000 }
 00080: AppFnToArg
 00081: LoadFn { code: 00070, fvars: 00000 }
-00082: PushString("")
+00082: PushString("[]")
 00083: PushString(""r"")
 00084: AppFnToArg
 00085: PushString(""eff"")
@@ -1141,7 +1141,7 @@ __handle({
 00092: AppFnToArg
 00093:   Return
 
-[]
+()
 
 ---
 

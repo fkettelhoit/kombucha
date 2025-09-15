@@ -15,7 +15,7 @@ impl Bytecode {
     pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val, serde_json::Error> {
         fn json_to_kombucha(bytecode: &mut Bytecode, value: Value) -> Val {
             match value {
-                Value::Null => Val::String(Str::Nil as usize),
+                Value::Null => Val::String(Str::Null as usize),
                 Value::Bool(b) => {
                     let s = if b { "True" } else { "False" };
                     Val::String(intern(&mut bytecode.ctx.strs, s.to_string()))
@@ -23,18 +23,18 @@ impl Bytecode {
                 Value::Number(_) => todo!(),
                 Value::String(s) => Val::String(intern(&mut bytecode.ctx.strs, format!("\"{s}\""))),
                 Value::Array(values) => Val::Struct(
-                    Str::Nil as usize,
+                    Str::List as usize,
                     values
                         .into_iter()
                         .map(|v| Rc::new(json_to_kombucha(bytecode, v)))
                         .collect::<Vec<_>>(),
                 ),
                 Value::Object(map) => Val::Struct(
-                    Str::Nil as usize,
+                    Str::List as usize,
                     map.into_iter()
                         .map(|(k, v)| {
                             Rc::new(Val::Struct(
-                                Str::Nil as usize,
+                                Str::List as usize,
                                 vec![
                                     Rc::new(Val::String(intern(
                                         &mut bytecode.ctx.strs,
@@ -54,7 +54,8 @@ impl Bytecode {
     pub fn deserialize<T: DeserializeOwned>(&self, v: &Val) -> Result<T, serde_json::Error> {
         fn kombucha_to_json(bytecode: &Bytecode, v: &Val) -> Result<Value, serde_json::Error> {
             match v {
-                Val::String(s) if *s == Str::Nil as usize => Ok(Value::Null),
+                Val::String(s) if *s == Str::Null as usize => Ok(Value::Null),
+                Val::String(s) if *s == Str::List as usize => Ok(Value::Array(vec![])),
                 Val::String(s) if bytecode.ctx.strs[*s] == "None" => Ok(Value::Null),
                 Val::String(s) if bytecode.ctx.strs[*s] == "True" => Ok(true.into()),
                 Val::String(s) if bytecode.ctx.strs[*s] == "False" => Ok(false.into()),
@@ -66,10 +67,10 @@ impl Bytecode {
                         Ok(s.as_str().into())
                     }
                 }
-                Val::Struct(s, vals) if *s == Str::Nil as usize => {
+                Val::Struct(s, vals) if *s == Str::List as usize => {
                     fn is_pair(bytecode: &Bytecode, val: &Val) -> bool {
                         match val {
-                            Val::Struct(s, vals) if *s == Str::Nil as usize && vals.len() == 2 => {
+                            Val::Struct(s, vals) if *s == Str::List as usize && vals.len() == 2 => {
                                 match vals.first().unwrap().as_ref() {
                                     Val::String(s) => {
                                         let s = &bytecode.ctx.strs[*s];

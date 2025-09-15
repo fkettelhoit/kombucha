@@ -1,16 +1,19 @@
 // The order mirrors their position in the bytecode header:
 pub enum Str {
-    Nil = 0,
-    Value = 1,
-    Binding = 2,
-    Compound = 3,
-    TyString = 4,
-    TyFunction = 5,
-    TyStruct = 6,
-    TyNil = 7,
+    Null = 0,
+    List = 1,
+    Value = 2,
+    Binding = 3,
+    Compound = 4,
+    TyString = 5,
+    TyFunction = 6,
+    TyStruct = 7,
+    TyNull = 8,
+    TyList = 9,
 }
 
-pub const NIL: &str = "";
+pub const NULL: &str = "()";
+pub const LIST: &str = "[]";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BindType {
@@ -34,9 +37,13 @@ pub struct Ctx {
 
 impl Default for Ctx {
     fn default() -> Self {
-        let strs = [NIL, "Value", "Binding", "Compound", "String", "Function", "Struct", "Nil"]
-            .map(|s| s.to_string())
-            .to_vec();
+        let strs = [
+            NULL, LIST, // data constructors
+            "Value", "Binding", "Compound", // macro tags
+            "String", "Function", "Struct", "Null", "List", // types
+        ]
+        .map(|s| s.to_string())
+        .to_vec();
         Ctx { bindings: vec![], vars: vec![], strs }
     }
 }

@@ -169,7 +169,7 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00060: LoadVar(00000)
 00061: AppFnToArg
 00062: LoadFn { code: 00041, fvars: 00000 }
-00063: PushString("")
+00063: PushString("[]")
 00064: PushString(""xs"")
 00065: AppFnToArg
 00066: PushString(""x"")
@@ -186,7 +186,7 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00077: LoadFn { code: 00075, fvars: 00002 }
 00078:   Return
 00079: LoadFn { code: 00026, fvars: 00000 }
-00080: PushString("")
+00080: PushString("[]")
 00081: PushString(""f"")
 00082: AppFnToArg
 00083: PushString(""acc"")
@@ -209,7 +209,7 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00100:   Return
 00101: LoadVar(00000)
 00102: LoadFn { code: 00093, fvars: 00000 }
-00103: PushString("")
+00103: PushString("[]")
 00104: PushString(""acc"")
 00105: AppFnToArg
 00106: PushString(""x"")
@@ -218,9 +218,9 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
 00109: LoadFn { code: 00099, fvars: 00000 }
 00110: AppFnToArg
 00111: AppFnToArg
-00112: PushString("")
+00112: PushString("[]")
 00113: AppFnToArg
-00114: PushString("")
+00114: PushString("[]")
 00115: PushString("A")
 00116: AppFnToArg
 00117: PushString("B")
@@ -440,7 +440,7 @@ reverse([A, B, C])
 00060: LoadVar(00000)
 00061: AppFnToArg
 00062: LoadFn { code: 00041, fvars: 00000 }
-00063: PushString("")
+00063: PushString("[]")
 00064: PushString(""xs"")
 00065: AppFnToArg
 00066: PushString(""x"")
@@ -457,7 +457,7 @@ reverse([A, B, C])
 00077: LoadFn { code: 00075, fvars: 00002 }
 00078:   Return
 00079: LoadFn { code: 00026, fvars: 00000 }
-00080: PushString("")
+00080: PushString("[]")
 00081: PushString(""f"")
 00082: AppFnToArg
 00083: PushString(""acc"")
@@ -492,7 +492,7 @@ reverse([A, B, C])
 00112:   Return
 00113: LoadVar(00001)
 00114: LoadFn { code: 00105, fvars: 00000 }
-00115: PushString("")
+00115: PushString("[]")
 00116: PushString(""xs"")
 00117: AppFnToArg
 00118: PushString(""x"")
@@ -501,13 +501,13 @@ reverse([A, B, C])
 00121: LoadFn { code: 00111, fvars: 00000 }
 00122: AppFnToArg
 00123: AppFnToArg
-00124: PushString("")
+00124: PushString("[]")
 00125: AppFnToArg
 00126: LoadVar(00000)
 00127: AppFnToArg
 00128:   Return
 00129: LoadVar(00000)
-00130: PushString("")
+00130: PushString("[]")
 00131: PushString("A")
 00132: AppFnToArg
 00133: PushString("B")
@@ -810,7 +810,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00060: LoadVar(00000)
 00061: AppFnToArg
 00062: LoadFn { code: 00041, fvars: 00000 }
-00063: PushString("")
+00063: PushString("[]")
 00064: PushString(""xs"")
 00065: AppFnToArg
 00066: PushString(""x"")
@@ -827,7 +827,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00077: LoadFn { code: 00075, fvars: 00002 }
 00078:   Return
 00079: LoadFn { code: 00026, fvars: 00000 }
-00080: PushString("")
+00080: PushString("[]")
 00081: PushString(""f"")
 00082: AppFnToArg
 00083: PushString(""acc"")
@@ -862,7 +862,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00112:   Return
 00113: LoadVar(00001)
 00114: LoadFn { code: 00105, fvars: 00000 }
-00115: PushString("")
+00115: PushString("[]")
 00116: PushString(""xs"")
 00117: AppFnToArg
 00118: PushString(""x"")
@@ -871,7 +871,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00121: LoadFn { code: 00111, fvars: 00000 }
 00122: AppFnToArg
 00123: AppFnToArg
-00124: PushString("")
+00124: PushString("[]")
 00125: AppFnToArg
 00126: LoadVar(00000)
 00127: AppFnToArg
@@ -900,7 +900,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00150:   Return
 00151: LoadVar(00003)
 00152: LoadFn { code: 00143, fvars: 00000 }
-00153: PushString("")
+00153: PushString("[]")
 00154: PushString(""f"")
 00155: AppFnToArg
 00156: PushString(""x"")
@@ -936,7 +936,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00186:   Return
 00187: LoadVar(00000)
 00188: LoadFn { code: 00173, fvars: 00000 }
-00189: PushString("")
+00189: PushString("[]")
 00190: PushString(""x"")
 00191: AppFnToArg
 00192: PushString(""y"")
@@ -947,7 +947,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00197: LoadFn { code: 00185, fvars: 00000 }
 00198: AppFnToArg
 00199: AppFnToArg
-00200: PushString("")
+00200: PushString("[]")
 00201: PushString("A")
 00202: AppFnToArg
 00203: PushString("B")
@@ -960,7 +960,7 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00210: PushString(""apply"")
 00211: AppFnToArg
 00212: LoadFn { code: 00139, fvars: 00000 }
-00213: PushString("")
+00213: PushString("[]")
 00214: PushString(""f"")
 00215: AppFnToArg
 00216: PushString(""xs"")
@@ -1256,7 +1256,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00060: LoadVar(00000)
 00061: AppFnToArg
 00062: LoadFn { code: 00041, fvars: 00000 }
-00063: PushString("")
+00063: PushString("[]")
 00064: PushString(""xs"")
 00065: AppFnToArg
 00066: PushString(""x"")
@@ -1273,7 +1273,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00077: LoadFn { code: 00075, fvars: 00002 }
 00078:   Return
 00079: LoadFn { code: 00026, fvars: 00000 }
-00080: PushString("")
+00080: PushString("[]")
 00081: PushString(""f"")
 00082: AppFnToArg
 00083: PushString(""acc"")
@@ -1308,7 +1308,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00112:   Return
 00113: LoadVar(00001)
 00114: LoadFn { code: 00105, fvars: 00000 }
-00115: PushString("")
+00115: PushString("[]")
 00116: PushString(""xs"")
 00117: AppFnToArg
 00118: PushString(""x"")
@@ -1317,7 +1317,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00121: LoadFn { code: 00111, fvars: 00000 }
 00122: AppFnToArg
 00123: AppFnToArg
-00124: PushString("")
+00124: PushString("[]")
 00125: AppFnToArg
 00126: LoadVar(00000)
 00127: AppFnToArg
@@ -1348,7 +1348,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00152:   Return
 00153: LoadVar(00003)
 00154: LoadFn { code: 00143, fvars: 00000 }
-00155: PushString("")
+00155: PushString("[]")
 00156: PushString(""xs"")
 00157: AppFnToArg
 00158: PushString(""x"")
@@ -1357,7 +1357,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00161: LoadFn { code: 00151, fvars: 00002 }
 00162: AppFnToArg
 00163: AppFnToArg
-00164: PushString("")
+00164: PushString("[]")
 00165: AppFnToArg
 00166: LoadVar(00002)
 00167: LoadVar(00000)
@@ -1381,7 +1381,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00185: LoadFn { code: 00177, fvars: 00000 }
 00186: AppFnToArg
 00187: AppFnToArg
-00188: PushString("")
+00188: PushString("[]")
 00189: PushString("A")
 00190: AppFnToArg
 00191: PushString("B")
@@ -1394,7 +1394,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00198: PushString(""map"")
 00199: AppFnToArg
 00200: LoadFn { code: 00139, fvars: 00000 }
-00201: PushString("")
+00201: PushString("[]")
 00202: PushString(""f"")
 00203: AppFnToArg
 00204: PushString(""xs"")
@@ -1714,7 +1714,7 @@ map(:x => { Foo(x) }, [A, B, C])
                                                 3 )
                                               1 ) ) )
                                     =>
-                                      [] ) ) )
+                                      () ) ) )
                           =>
                             ( ( ( =>
                                     =>
@@ -1732,7 +1732,7 @@ map(:x => { Foo(x) }, [A, B, C])
                                       "y" ) )
                                   =>
                                     =>
-                                      [] ) )
+                                      () ) )
                               =>
                                 4 ) ) ) ) )
           =>
@@ -1855,7 +1855,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00060: LoadVar(00000)
 00061: AppFnToArg
 00062: LoadFn { code: 00041, fvars: 00000 }
-00063: PushString("")
+00063: PushString("[]")
 00064: PushString(""xs"")
 00065: AppFnToArg
 00066: PushString(""x"")
@@ -1872,7 +1872,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00077: LoadFn { code: 00075, fvars: 00002 }
 00078:   Return
 00079: LoadFn { code: 00026, fvars: 00000 }
-00080: PushString("")
+00080: PushString("[]")
 00081: PushString(""f"")
 00082: AppFnToArg
 00083: PushString(""acc"")
@@ -1907,7 +1907,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00112:   Return
 00113: LoadVar(00001)
 00114: LoadFn { code: 00105, fvars: 00000 }
-00115: PushString("")
+00115: PushString("[]")
 00116: PushString(""xs"")
 00117: AppFnToArg
 00118: PushString(""x"")
@@ -1916,7 +1916,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00121: LoadFn { code: 00111, fvars: 00000 }
 00122: AppFnToArg
 00123: AppFnToArg
-00124: PushString("")
+00124: PushString("[]")
 00125: AppFnToArg
 00126: LoadVar(00000)
 00127: AppFnToArg
@@ -1971,7 +1971,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00176:   Return
 00177: LoadVar(00007)
 00178: LoadVar(00006)
-00179: PushString("")
+00179: PushString("[]")
 00180: LoadVar(00002)
 00181: AppFnToArg
 00182: LoadVar(00000)
@@ -1985,13 +1985,13 @@ map(:x => { Foo(x) }, [A, B, C])
 00190:   Return
 00191: LoadFn { code: 00177, fvars: 00007 }
 00192:   Return
-00193: PushString("")
+00193: PushString("()")
 00194:   Return
 00195: LoadFn { code: 00171, fvars: 00000 }
 00196: LoadVar(00002)
 00197: AppFnToArg
 00198: LoadFn { code: 00175, fvars: 00000 }
-00199: PushString("")
+00199: PushString("[]")
 00200: PushString(""ys"")
 00201: AppFnToArg
 00202: PushString(""y"")
@@ -2020,7 +2020,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00225:   Return
 00226: LoadFn { code: 00224, fvars: 00000 }
 00227:   Return
-00228: PushString("")
+00228: PushString("()")
 00229:   Return
 00230: LoadFn { code: 00228, fvars: 00000 }
 00231:   Return
@@ -2030,7 +2030,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00235: LoadVar(00001)
 00236: AppFnToArg
 00237: LoadFn { code: 00226, fvars: 00000 }
-00238: PushString("")
+00238: PushString("[]")
 00239: PushString(""ys"")
 00240: AppFnToArg
 00241: PushString(""y"")
@@ -2046,7 +2046,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00251: LoadVar(00001)
 00252: AppFnToArg
 00253: LoadFn { code: 00160, fvars: 00000 }
-00254: PushString("")
+00254: PushString("[]")
 00255: PushString(""xs"")
 00256: AppFnToArg
 00257: PushString(""x"")
@@ -2063,7 +2063,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00268: LoadFn { code: 00266, fvars: 00002 }
 00269:   Return
 00270: LoadFn { code: 00145, fvars: 00000 }
-00271: PushString("")
+00271: PushString("[]")
 00272: PushString(""acc"")
 00273: AppFnToArg
 00274: PushString(""xs"")
@@ -2088,7 +2088,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00293:   Return
 00294: LoadVar(00003)
 00295: LoadVar(00002)
-00296: PushString("")
+00296: PushString("[]")
 00297: AppFnToArg
 00298: LoadVar(00001)
 00299: AppFnToArg
@@ -2098,9 +2098,9 @@ map(:x => { Foo(x) }, [A, B, C])
 00303:   Return
 00304: LoadFn { code: 00294, fvars: 00003 }
 00305:   Return
-00306: PushString("")
+00306: PushString("[]")
 00307: LoadVar(00000)
-00308: PushString("")
+00308: PushString("[]")
 00309: PushString("A")
 00310: AppFnToArg
 00311: PushString("B")
@@ -2108,7 +2108,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00313: PushString("C")
 00314: AppFnToArg
 00315: AppFnToArg
-00316: PushString("")
+00316: PushString("[]")
 00317: PushString("X")
 00318: AppFnToArg
 00319: PushString("Y")
@@ -2118,7 +2118,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00323: AppFnToArg
 00324: AppFnToArg
 00325: LoadVar(00000)
-00326: PushString("")
+00326: PushString("[]")
 00327: PushString("A")
 00328: AppFnToArg
 00329: PushString("B")
@@ -2126,7 +2126,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00331: PushString("C")
 00332: AppFnToArg
 00333: AppFnToArg
-00334: PushString("")
+00334: PushString("[]")
 00335: PushString("X")
 00336: AppFnToArg
 00337: PushString("Y")
@@ -2134,13 +2134,13 @@ map(:x => { Foo(x) }, [A, B, C])
 00339: AppFnToArg
 00340: AppFnToArg
 00341: LoadVar(00000)
-00342: PushString("")
+00342: PushString("[]")
 00343: PushString("A")
 00344: AppFnToArg
 00345: PushString("B")
 00346: AppFnToArg
 00347: AppFnToArg
-00348: PushString("")
+00348: PushString("[]")
 00349: PushString("X")
 00350: AppFnToArg
 00351: PushString("Y")
@@ -2152,7 +2152,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00357: LoadVar(00000)
 00358: PushString("Foo")
 00359: AppFnToArg
-00360: PushString("")
+00360: PushString("[]")
 00361: PushString("X")
 00362: AppFnToArg
 00363: PushString("Y")
@@ -2172,7 +2172,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00377: PushString(""zip"")
 00378: AppFnToArg
 00379: LoadFn { code: 00292, fvars: 00000 }
-00380: PushString("")
+00380: PushString("[]")
 00381: PushString(""xs"")
 00382: AppFnToArg
 00383: PushString(""ys"")
@@ -2541,7 +2541,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00098: LoadVar(00002)
 00099: AppFnToArg
 00100: LoadFn { code: 00056, fvars: 00000 }
-00101: PushString("")
+00101: PushString("[]")
 00102: PushString(""ys"")
 00103: AppFnToArg
 00104: PushString(""y"")
@@ -2586,7 +2586,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00143: LoadVar(00001)
 00144: AppFnToArg
 00145: LoadFn { code: 00041, fvars: 00000 }
-00146: PushString("")
+00146: PushString("[]")
 00147: PushString(""xs"")
 00148: AppFnToArg
 00149: PushString(""x"")
@@ -2601,7 +2601,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00158: LoadFn { code: 00142, fvars: 00002 }
 00159:   Return
 00160: LoadFn { code: 00026, fvars: 00000 }
-00161: PushString("")
+00161: PushString("[]")
 00162: PushString(""a"")
 00163: AppFnToArg
 00164: PushString(""b"")
@@ -2610,7 +2610,7 @@ map(:x => { Foo(x) }, [A, B, C])
 00167: LoadFn { code: 00158, fvars: 00001 }
 00168: AppFnToArg
 00169:   Return
-00170: PushString("")
+00170: PushString("[]")
 00171: LoadVar(00000)
 00172: PushString("Foo")
 00173: AppFnToArg
@@ -2956,7 +2956,7 @@ flatten([[A, B], [C, D]])
 00060: LoadVar(00000)
 00061: AppFnToArg
 00062: LoadFn { code: 00041, fvars: 00000 }
-00063: PushString("")
+00063: PushString("[]")
 00064: PushString(""xs"")
 00065: AppFnToArg
 00066: PushString(""x"")
@@ -2973,7 +2973,7 @@ flatten([[A, B], [C, D]])
 00077: LoadFn { code: 00075, fvars: 00002 }
 00078:   Return
 00079: LoadFn { code: 00026, fvars: 00000 }
-00080: PushString("")
+00080: PushString("[]")
 00081: PushString(""f"")
 00082: AppFnToArg
 00083: PushString(""acc"")
@@ -3008,7 +3008,7 @@ flatten([[A, B], [C, D]])
 00112:   Return
 00113: LoadVar(00001)
 00114: LoadFn { code: 00105, fvars: 00000 }
-00115: PushString("")
+00115: PushString("[]")
 00116: PushString(""xs"")
 00117: AppFnToArg
 00118: PushString(""x"")
@@ -3017,7 +3017,7 @@ flatten([[A, B], [C, D]])
 00121: LoadFn { code: 00111, fvars: 00000 }
 00122: AppFnToArg
 00123: AppFnToArg
-00124: PushString("")
+00124: PushString("[]")
 00125: AppFnToArg
 00126: LoadVar(00000)
 00127: AppFnToArg
@@ -3050,7 +3050,7 @@ flatten([[A, B], [C, D]])
 00154:   Return
 00155: LoadVar(00004)
 00156: LoadFn { code: 00147, fvars: 00000 }
-00157: PushString("")
+00157: PushString("[]")
 00158: PushString(""acc"")
 00159: AppFnToArg
 00160: PushString(""x"")
@@ -3069,7 +3069,7 @@ flatten([[A, B], [C, D]])
 00173: LoadVar(00001)
 00174: LoadVar(00002)
 00175: LoadFn { code: 00143, fvars: 00000 }
-00176: PushString("")
+00176: PushString("[]")
 00177: PushString(""acc"")
 00178: AppFnToArg
 00179: PushString(""x"")
@@ -3078,21 +3078,21 @@ flatten([[A, B], [C, D]])
 00182: LoadFn { code: 00171, fvars: 00003 }
 00183: AppFnToArg
 00184: AppFnToArg
-00185: PushString("")
+00185: PushString("[]")
 00186: AppFnToArg
 00187: LoadVar(00000)
 00188: AppFnToArg
 00189: AppFnToArg
 00190:   Return
 00191: LoadVar(00000)
-00192: PushString("")
-00193: PushString("")
+00192: PushString("[]")
+00193: PushString("[]")
 00194: PushString("A")
 00195: AppFnToArg
 00196: PushString("B")
 00197: AppFnToArg
 00198: AppFnToArg
-00199: PushString("")
+00199: PushString("[]")
 00200: PushString("C")
 00201: AppFnToArg
 00202: PushString("D")
@@ -3412,7 +3412,7 @@ destructure(Foo(Bar, Baz, Qux))
 00060: LoadVar(00000)
 00061: AppFnToArg
 00062: LoadFn { code: 00041, fvars: 00000 }
-00063: PushString("")
+00063: PushString("[]")
 00064: PushString(""xs"")
 00065: AppFnToArg
 00066: PushString(""x"")
@@ -3429,7 +3429,7 @@ destructure(Foo(Bar, Baz, Qux))
 00077: LoadFn { code: 00075, fvars: 00002 }
 00078:   Return
 00079: LoadFn { code: 00026, fvars: 00000 }
-00080: PushString("")
+00080: PushString("[]")
 00081: PushString(""f"")
 00082: AppFnToArg
 00083: PushString(""acc"")
@@ -3464,7 +3464,7 @@ destructure(Foo(Bar, Baz, Qux))
 00112:   Return
 00113: LoadVar(00001)
 00114: LoadFn { code: 00105, fvars: 00000 }
-00115: PushString("")
+00115: PushString("[]")
 00116: PushString(""xs"")
 00117: AppFnToArg
 00118: PushString(""x"")
@@ -3473,7 +3473,7 @@ destructure(Foo(Bar, Baz, Qux))
 00121: LoadFn { code: 00111, fvars: 00000 }
 00122: AppFnToArg
 00123: AppFnToArg
-00124: PushString("")
+00124: PushString("[]")
 00125: AppFnToArg
 00126: LoadVar(00000)
 00127: AppFnToArg
@@ -3521,7 +3521,7 @@ destructure(Foo(Bar, Baz, Qux))
 00169:   Return
 00170: LoadFn { code: 00162, fvars: 00004 }
 00171:   Return
-00172: PushString("")
+00172: PushString("[]")
 00173: LoadVar(00001)
 00174: AppFnToArg
 00175: LoadVar(00004)
@@ -3533,7 +3533,7 @@ destructure(Foo(Bar, Baz, Qux))
 00181: LoadVar(00000)
 00182: AppFnToArg
 00183: LoadFn { code: 00160, fvars: 00000 }
-00184: PushString("")
+00184: PushString("[]")
 00185: PushString(""xs"")
 00186: AppFnToArg
 00187: PushString(""x"")
@@ -3548,7 +3548,7 @@ destructure(Foo(Bar, Baz, Qux))
 00196: LoadFn { code: 00180, fvars: 00003 }
 00197:   Return
 00198: LoadFn { code: 00145, fvars: 00000 }
-00199: PushString("")
+00199: PushString("[]")
 00200: PushString(""acc"")
 00201: AppFnToArg
 00202: PushString(""compound"")
@@ -3575,7 +3575,7 @@ destructure(Foo(Bar, Baz, Qux))
 00223: AppFnToArg
 00224: LoadFn { code: 00198, fvars: 00001 }
 00225: AppFnToArg
-00226: PushString("")
+00226: PushString("[]")
 00227: AppFnToArg
 00228: AppFnToArg
 00229: LoadFn { code: 00208, fvars: 00000 }

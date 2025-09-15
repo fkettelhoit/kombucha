@@ -32,22 +32,19 @@ fn serialize_str() -> Result<(), Error> {
 
 #[test]
 fn serialize_none() -> Result<(), Error> {
-    // assert_eq!(serialize::<Option<bool>>(&None)?, "None");
-    // TODO:
-    assert_eq!(serialize::<Option<bool>>(&None)?, "[]");
+    assert_eq!(serialize::<Option<bool>>(&None)?, "()");
     Ok(())
 }
 
 #[test]
 fn serialize_some() -> Result<(), Error> {
-    // assert_eq!(serialize::<Option<bool>>(&Some(true))?, "Some(True)");
     assert_eq!(serialize::<Option<bool>>(&Some(true))?, "True");
     Ok(())
 }
 
 #[test]
 fn serialize_unit() -> Result<(), Error> {
-    assert_eq!(serialize(&())?, "[]");
+    assert_eq!(serialize(&())?, "()");
     Ok(())
 }
 
@@ -56,8 +53,7 @@ struct Foo;
 
 #[test]
 fn serialize_unit_struct() -> Result<(), Error> {
-    // assert_eq!(serialize(&Foo)?, "Foo");
-    assert_eq!(serialize(&Foo)?, "[]");
+    assert_eq!(serialize(&Foo)?, "()");
     Ok(())
 }
 
@@ -66,7 +62,6 @@ struct Bar(bool);
 
 #[test]
 fn serialize_newtype_struct() -> Result<(), Error> {
-    // assert_eq!(serialize(&Bar(true))?, "Bar(True)");
     assert_eq!(serialize(&Bar(true))?, "True");
     Ok(())
 }
@@ -102,7 +97,6 @@ struct Baz(bool, char);
 
 #[test]
 fn serialize_tuple_struct() -> Result<(), Error> {
-    // assert_eq!(serialize(&Baz(true, 'X'))?, "Baz(True, \"X\")");
     assert_eq!(serialize(&Baz(true, 'X'))?, "[True, \"X\"]");
     Ok(())
 }

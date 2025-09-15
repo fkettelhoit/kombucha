@@ -37,7 +37,6 @@ fn deserialize_string() -> Result<(), Error> {
     assert_eq!(run("::foo").unwrap().deserialize::<String>()?, "foo");
     assert_eq!(run("foo!").unwrap().deserialize::<String>()?, "foo");
     assert_eq!(run("\"\"").unwrap().deserialize::<String>()?, "");
-    // assert_eq!(run("[]").unwrap().deserialize::<String>()?, "");
     Ok(())
 }
 
@@ -45,14 +44,14 @@ fn deserialize_string() -> Result<(), Error> {
 fn deserialize_option() -> Result<(), Error> {
     assert_eq!(run("None").unwrap().deserialize::<Option<bool>>()?, None);
     assert_eq!(run("Some(True)").unwrap().deserialize::<Option<bool>>()?, Some(true));
-    assert_eq!(run("[]").unwrap().deserialize::<Option<bool>>()?, None);
+    assert_eq!(run("()").unwrap().deserialize::<Option<bool>>()?, None);
     assert_eq!(run("True").unwrap().deserialize::<Option<bool>>()?, Some(true));
     Ok(())
 }
 
 #[test]
 fn deserialize_unit() -> Result<(), Error> {
-    assert_eq!(run("[]").unwrap().deserialize::<()>()?, ());
+    assert_eq!(run("()").unwrap().deserialize::<()>()?, ());
     Ok(())
 }
 
@@ -80,7 +79,7 @@ fn deserialize_newtype_struct() -> Result<(), Error> {
 fn deserialize_seq() -> Result<(), Error> {
     assert_eq!(run("[Foo, Bar]").unwrap().deserialize::<Vec<String>>()?, vec!["Foo", "Bar"]);
     // assert_eq!(run("[Foo, Foo]").unwrap().deserialize::<Vec<Foo>>()?, vec![Foo, Foo]);
-    assert_eq!(run("[[], None]").unwrap().deserialize::<Vec<Foo>>()?, vec![Foo, Foo]);
+    assert_eq!(run("[(), None]").unwrap().deserialize::<Vec<Foo>>()?, vec![Foo, Foo]);
     // TODO:
     // assert_eq!(run("[]").unwrap().deserialize::<Vec<Foo>>()?, vec![]);
     Ok(())

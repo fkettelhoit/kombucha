@@ -1,7 +1,7 @@
 use std::{env, fs, io::Write, iter::once, path::PathBuf};
 
 use kombucha::{
-    bytecode::{BindType, Bytecode, Ctx, NIL, Op},
+    bytecode::{BindType, Bytecode, Ctx, Op},
     compile::{A, Ast, Expr, codegen, desugar, parse},
     run::State,
 };
@@ -11,7 +11,6 @@ fn pretty_ast<'c>(prg: &[Ast]) -> String {
         let indent = "  ";
         match &ast.1 {
             A::Var(s) => buf.push_str(s),
-            A::Atom(s) if s == NIL => buf.push_str("[]"),
             A::Atom(s) => buf.push_str(s),
             A::String(s) => buf.push_str(&format!("\"{s}\"")),
             A::Binding(lvl, BindType::Variable, s) => buf.push_str(&(":".repeat(lvl + 1) + s)),
@@ -52,7 +51,6 @@ fn pretty_expr(expr: &Expr, strs: &Vec<String>) -> String {
         let indent = "  ";
         match expr {
             Expr::Var(v) => buf.push_str(&v.to_string()),
-            Expr::String(s) if strs[*s] == NIL => buf.push_str("[]"),
             Expr::String(s) => buf.push_str(&strs[*s]),
             Expr::Effect(eff) => buf.push_str(&format!("{}!", strs[*eff])),
             Expr::Abs(expr) => {

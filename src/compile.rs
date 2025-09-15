@@ -1,6 +1,6 @@
 use std::{cmp::max, iter, mem, usize, vec::IntoIter};
 
-use crate::bytecode::{BindType, Bytecode, Ctx, NIL, Op, Str};
+use crate::bytecode::{BindType, Bytecode, Ctx, LIST, NULL, Op, Str};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tok<'code> {
@@ -100,7 +100,7 @@ fn pos_at(i: usize, code: &str) -> String {
 }
 
 pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
-    struct E<'c>(usize, Option<(usize, &'c str)>, _E<'c>);
+    struct E<'c>(usize, Option<(Tok<'c>, usize, &'c str)>, _E<'c>);
     enum _E<'c> {
         RParen,
         RBracket,
@@ -112,14 +112,14 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
         KeywordArg(&'c str),
     }
     type Toks<'c> = iter::Peekable<IntoIter<(Tok<'c>, usize, &'c str)>>;
-    fn _nil(pos: usize) -> Box<Ast> {
-        Box::new(Ast(pos, A::Atom(NIL.to_string())))
+    fn _list(pos: usize) -> Box<Ast> {
+        Box::new(Ast(pos, A::Atom(LIST.to_string())))
     }
     fn _expr<'c>(toks: &mut Toks<'c>) -> Result<Ast, E<'c>> {
         if let Some((Tok::Keyword(k), i, _)) = toks.peek().copied() {
             toks.next();
             let expr = _expr(toks)?;
-            return Ok(Ast(i, A::Call(_nil(i), vec![Ast(i, A::String(k.to_string())), expr])));
+            return Ok(Ast(i, A::Call(_list(i), vec![Ast(i, A::String(k.to_string())), expr])));
         }
         let Some((Tok::Ident(_) | Tok::Atom(_), _, _)) = toks.peek().copied() else {
             let expr = _prefix(toks)?;
@@ -136,14 +136,14 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
             let kw = Ast(i, A::String(s.to_string()));
             match _prefix(toks) {
                 Ok(expr) => {
-                    keyword_args.push(Ast(i, A::Call(_nil(i), vec![kw, _infix(toks, expr)?])))
+                    keyword_args.push(Ast(i, A::Call(_list(i), vec![kw, _infix(toks, expr)?])))
                 }
                 Err(E(_, tok, _E::Value)) => return Err(E(i, tok, _E::KeywordArg(tok_s))),
                 Err(e) => return Err(e),
             }
         }
         if let Some(Ast(i, _)) = keyword_args.first() {
-            trailing.push(Ast(*i, A::Call(_nil(*i), keyword_args)));
+            trailing.push(Ast(*i, A::Call(_list(*i), keyword_args)));
         }
         match (expr, trailing.len()) {
             (expr, 0) => _infix(toks, expr),
@@ -160,7 +160,7 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
         while let Some((Tok::Ident(s), j, _)) = toks.peek().copied() {
             toks.next();
             if f != s {
-                return Err(E(i, Some((j, s)), _E::InfixFn(f)));
+                return Err(E(i, Some((Tok::Ident(s), j, s)), _E::InfixFn(f)));
             }
             match _prefix(toks) {
                 Ok(y) => x = Ast(j, A::Call(Box::new(Ast(j, A::Var(f.to_string()))), vec![x, y])),
@@ -189,20 +189,23 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
                 Tok::String(s) => Ok(Ast(i, A::String(s.to_string()))),
                 Tok::Binding(lvl, c, s) => Ok(Ast(i, A::Binding(lvl, c, s.to_string()))),
                 Tok::LParen => match _expr(toks) {
+                    Err(E(i, Some((Tok::RParen, _, _)), _E::Value)) => {
+                        Ok(Ast(i, A::Atom(NULL.to_string())))
+                    }
                     Err(E(i, tok, _E::Value)) => Err(E(i, tok, _E::RParen)),
                     Err(e) => Err(e),
                     Ok(expr) => match toks.next() {
                         Some((Tok::RParen, _, _)) => Ok(expr),
-                        tok => Err(E(i, tok.map(|(_, i, s)| (i, s)), _E::RParen)),
+                        tok => Err(E(i, tok, _E::RParen)),
                     },
                 },
                 Tok::LBracket => match _exprs(toks, i, Some(Tok::RBracket))? {
-                    items if items.is_empty() => Ok(*_nil(i)),
-                    items => Ok(Ast(i, A::Call(_nil(i), items))),
+                    items if items.is_empty() => Ok(*_list(i)),
+                    items => Ok(Ast(i, A::Call(_list(i), items))),
                 },
                 Tok::LBrace => Ok(Ast(i, A::Block(_exprs(toks, i, Some(Tok::RBrace))?))),
                 Tok::RParen | Tok::RBracket | Tok::RBrace | Tok::Separator | Tok::Keyword(_) => {
-                    Err(E(i, Some((i, tok_s)), _E::Value))
+                    Err(E(i, Some((t, i, tok_s)), _E::Value))
                 }
             },
         }
@@ -220,7 +223,7 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
                     toks.next();
                     needs_sep = false;
                 }
-                Some((_, j, s)) if needs_sep => return Err(E(i + 1, Some((j, s)), _E::Sep)),
+                Some((t, j, s)) if needs_sep => return Err(E(i + 1, Some((t, j, s)), _E::Sep)),
                 _ => match _expr(toks) {
                     Ok(expr) => {
                         exprs.push(expr);
@@ -255,7 +258,7 @@ pub fn parse(code: &str) -> Result<Vec<Ast>, String> {
             };
             let instead = match actual {
                 None => "but the code just ended".to_string(),
-                Some((j, s)) => format!("but found '{s}' at {}", pos_at(j, code)),
+                Some((_, j, s)) => format!("but found '{s}' at {}", pos_at(j, code)),
             };
             Err(format!("Expected {expected}, {instead}"))
         }
@@ -282,10 +285,6 @@ pub fn abs(body: Expr) -> Expr {
 
 pub fn app(f: Expr, arg: Expr) -> Expr {
     Expr::App(Box::new(f), Box::new(arg))
-}
-
-pub fn nil() -> Expr {
-    Expr::String(Str::Nil as usize)
 }
 
 pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr, String> {
@@ -323,7 +322,8 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
             A::Call(f, args) if has_bindings(&ast, ctx) => {
                 let f = desug_macro(*f, ctx)?;
                 let args = desug_all(args, ctx)?;
-                let list = args.into_iter().fold(nil(), |l, x| app(l, x));
+                let empty = Expr::String(Str::List as usize);
+                let list = args.into_iter().fold(empty, |l, x| app(l, x));
                 Ok(app(app(Expr::String(Str::Compound as usize), f), list))
             }
             A::Var(_) | A::Atom(_) | A::String(_) | A::Call(_, _) => {
@@ -366,7 +366,7 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
             A::Block(mut items) => {
                 let mut desugared = vec![];
                 if items.is_empty() {
-                    items.push(Ast(pos, A::Atom(NIL.to_string())));
+                    items.push(Ast(pos, A::Atom(NULL.to_string())));
                 }
                 for ast in items {
                     let bindings = ctx.bindings.len();
@@ -394,7 +394,7 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                 let is_macro = is_macro(&f, ctx);
                 let mut f = desug_val(*f, ctx)?;
                 if args.is_empty() {
-                    f = app(f, nil());
+                    f = app(f, Expr::String(Str::Null as usize));
                 }
                 for x in args {
                     f = app(f, if is_macro { desug_macro(x, ctx)? } else { desug_val(x, ctx)? })

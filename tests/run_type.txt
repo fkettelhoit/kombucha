@@ -71,7 +71,7 @@ type({})
     ( type
       0 )
   =>
-    [] )
+    () )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -86,7 +86,7 @@ type({})
 00010: LoadVar(00000)
 00011: Type
 00012:   Return
-00013: PushString("")
+00013: PushString("()")
 00014:   Return
 00015: LoadFn { code: 00010, fvars: 00000 }
 00016: LoadFn { code: 00013, fvars: 00000 }
@@ -238,7 +238,7 @@ type([A, B])
 00011: Type
 00012:   Return
 00013: LoadFn { code: 00010, fvars: 00000 }
-00014: PushString("")
+00014: PushString("[]")
 00015: PushString("A")
 00016: AppFnToArg
 00017: PushString("B")
@@ -257,7 +257,7 @@ type()
 ( =>
     ( type
       0 )
-  [] )
+  () )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -273,11 +273,11 @@ type()
 00011: Type
 00012:   Return
 00013: LoadFn { code: 00010, fvars: 00000 }
-00014: PushString("")
+00014: PushString("()")
 00015: AppFnToArg
 00016:   Return
 
-Nil
+Null
 
 ---
 
@@ -305,11 +305,11 @@ type([])
 00011: Type
 00012:   Return
 00013: LoadFn { code: 00010, fvars: 00000 }
-00014: PushString("")
+00014: PushString("[]")
 00015: AppFnToArg
 00016:   Return
 
-Nil
+List
 
 ---
 
@@ -368,7 +368,7 @@ __handle({
           0 )
     =>
       ( foo!
-        [] ) )
+        () ) )
   ( ( =>
         =>
           0
@@ -406,7 +406,7 @@ __handle({
 00019: LoadFn { code: 00010, fvars: 00001 }
 00020:   Return
 00021: PushEffect("foo")
-00022: PushString("")
+00022: PushString("()")
 00023: AppFnToArg
 00024:   Return
 00025: LoadVar(00000)
@@ -428,7 +428,7 @@ __handle({
 00041: LoadFn { code: 00021, fvars: 00000 }
 00042: AppFnToArg
 00043: LoadFn { code: 00027, fvars: 00000 }
-00044: PushString("")
+00044: PushString("[]")
 00045: PushString(""r"")
 00046: AppFnToArg
 00047: PushString(""eff"")

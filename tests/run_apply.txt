@@ -69,7 +69,7 @@ Foo()
 (Foo)
 
 ( Foo
-  [] )
+  () )
 
 00000: LoadFn { code: 00002, fvars: 00001 }
 00001:   Return
@@ -82,7 +82,7 @@ Foo()
 00008: AppArgToFn
 00009:   Return
 00010: PushString("Foo")
-00011: PushString("")
+00011: PushString("()")
 00012: AppFnToArg
 00013:   Return
 
@@ -111,7 +111,7 @@ Foo([], Bar)
 00008: AppArgToFn
 00009:   Return
 00010: PushString("Foo")
-00011: PushString("")
+00011: PushString("[]")
 00012: AppFnToArg
 00013: PushString("Bar")
 00014: AppFnToArg
@@ -143,7 +143,7 @@ Foo([], Bar)
 00007: AppArgToFn
 00008: AppArgToFn
 00009:   Return
-00010: PushString("")
+00010: PushString("[]")
 00011: PushString("A")
 00012: AppFnToArg
 00013: PushString("B")
@@ -178,7 +178,7 @@ Foo([], Bar)
 00007: AppArgToFn
 00008: AppArgToFn
 00009:   Return
-00010: PushString("")
+00010: PushString("[]")
 00011: PushString("A")
 00012: AppFnToArg
 00013: PushString("B")
@@ -216,8 +216,8 @@ Foo bar: Baz
 00008: AppArgToFn
 00009:   Return
 00010: PushString("Foo")
-00011: PushString("")
-00012: PushString("")
+00011: PushString("[]")
+00012: PushString("[]")
 00013: PushString(""bar"")
 00014: AppFnToArg
 00015: PushString("Baz")

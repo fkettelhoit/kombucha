@@ -21,9 +21,9 @@
 })
 :zip = (:zip ~> { [:acc, :xs, :ys] => {
     __unpack(xs, [:xs, :x] => {
-        __unpack(ys, [:ys, :y] => { zip(acc([x, y]), xs, ys) }, {})
+        __unpack(ys, [:ys, :y] => { zip(acc([x, y]), xs, ys) }, { [] })
     }, {
-        __unpack(ys, [:ys, :y] => {}, { acc })
+        __unpack(ys, [:ys, :y] => { [] }, { acc })
     })
 }})([])
 :destructure = (:destructure ~> { [:acc, :compound] => {
