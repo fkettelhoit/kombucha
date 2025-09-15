@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{
+    Serialize,
+    de::{DeserializeOwned, Error},
+};
 use serde_json::{Map, Value};
 
 use crate::{
@@ -49,18 +52,18 @@ impl Bytecode {
     }
 
     pub fn deserialize<T: DeserializeOwned>(&self, v: &Val) -> Result<T, serde_json::Error> {
-        fn kombucha_to_json(bytecode: &Bytecode, v: &Val) -> Value {
+        fn kombucha_to_json(bytecode: &Bytecode, v: &Val) -> Result<Value, serde_json::Error> {
             match v {
-                Val::String(s) if *s == Str::Nil as usize => Value::Null,
-                Val::String(s) if bytecode.ctx.strs[*s] == "None" => Value::Null,
-                Val::String(s) if bytecode.ctx.strs[*s] == "True" => true.into(),
-                Val::String(s) if bytecode.ctx.strs[*s] == "False" => false.into(),
+                Val::String(s) if *s == Str::Nil as usize => Ok(Value::Null),
+                Val::String(s) if bytecode.ctx.strs[*s] == "None" => Ok(Value::Null),
+                Val::String(s) if bytecode.ctx.strs[*s] == "True" => Ok(true.into()),
+                Val::String(s) if bytecode.ctx.strs[*s] == "False" => Ok(false.into()),
                 Val::String(s) | Val::Effect(s) => {
                     let s = &bytecode.ctx.strs[*s];
                     if s.starts_with('"') && s.ends_with('"') {
-                        s[1..s.len() - 1].into()
+                        Ok(s[1..s.len() - 1].into())
                     } else {
-                        s.as_str().into()
+                        Ok(s.as_str().into())
                     }
                 }
                 Val::Struct(s, vals) if *s == Str::Nil as usize => {
@@ -92,42 +95,43 @@ impl Bytecode {
                             };
                             let k = &bytecode.ctx.strs[*k];
                             let k = k[1..k.len() - 1].to_string();
-                            let v = kombucha_to_json(bytecode, v);
+                            let v = kombucha_to_json(bytecode, v)?;
                             map.insert(k, v);
                         }
-                        Value::Object(map)
+                        Ok(Value::Object(map))
                     } else {
-                        vals.into_iter()
+                        Ok(vals
+                            .into_iter()
                             .map(|v| kombucha_to_json(bytecode, v))
-                            .collect::<Vec<_>>()
-                            .into()
+                            .collect::<Result<Vec<_>, _>>()?
+                            .into())
                     }
                 }
                 Val::Struct(s, vals) if bytecode.ctx.strs[*s] == "Some" && vals.len() == 1 => {
                     kombucha_to_json(bytecode, vals.into_iter().next().unwrap())
                 }
                 Val::Struct(s, vals) if vals.len() == 1 => {
-                    let val = kombucha_to_json(bytecode, vals.into_iter().next().unwrap());
+                    let val = kombucha_to_json(bytecode, vals.into_iter().next().unwrap())?;
                     let mut map = Map::new();
                     map.insert(bytecode.ctx.strs[*s].to_string(), val);
-                    Value::Object(map)
+                    Ok(Value::Object(map))
                 }
                 Val::Struct(s, vals) => {
                     let vals = vals
                         .into_iter()
                         .map(|v| kombucha_to_json(bytecode, v))
-                        .collect::<Vec<_>>()
+                        .collect::<Result<Vec<_>, _>>()?
                         .into();
                     let mut map = Map::new();
                     map.insert(bytecode.ctx.strs[*s].to_string(), vals);
-                    Value::Object(map)
+                    Ok(Value::Object(map))
                 }
                 Val::Closure(_, _) | Val::Resumable(_, _) => {
-                    panic!("Can't deserialize closures or resumables")
+                    Err(serde_json::Error::custom("Can't deserialize closures or resumables"))
                 }
             }
         }
-        Ok(serde_json::from_value(kombucha_to_json(self, v))?)
+        Ok(serde_json::from_value(kombucha_to_json(self, v)?)?)
     }
 }
 
