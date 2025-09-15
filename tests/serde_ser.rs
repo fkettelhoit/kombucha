@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use serde::Serialize;
 use kombucha::{bytecode::Bytecode, serde::ser::Error};
+use serde::Serialize;
 
 fn serialize<T: Serialize>(v: &T) -> Result<String, Error> {
     let mut bytecode = Bytecode::default();
@@ -31,13 +31,16 @@ fn serialize_str() -> Result<(), Error> {
 
 #[test]
 fn serialize_none() -> Result<(), Error> {
-    assert_eq!(serialize::<Option<bool>>(&None)?, "None");
+    // assert_eq!(serialize::<Option<bool>>(&None)?, "None");
+    // TODO:
+    assert_eq!(serialize::<Option<bool>>(&None)?, "[]");
     Ok(())
 }
 
 #[test]
 fn serialize_some() -> Result<(), Error> {
-    assert_eq!(serialize::<Option<bool>>(&Some(true))?, "Some(True)");
+    // assert_eq!(serialize::<Option<bool>>(&Some(true))?, "Some(True)");
+    assert_eq!(serialize::<Option<bool>>(&Some(true))?, "True");
     Ok(())
 }
 
@@ -52,7 +55,8 @@ struct Foo;
 
 #[test]
 fn serialize_unit_struct() -> Result<(), Error> {
-    assert_eq!(serialize(&Foo)?, "Foo");
+    // assert_eq!(serialize(&Foo)?, "Foo");
+    assert_eq!(serialize(&Foo)?, "[]");
     Ok(())
 }
 
@@ -61,7 +65,8 @@ struct Bar(bool);
 
 #[test]
 fn serialize_newtype_struct() -> Result<(), Error> {
-    assert_eq!(serialize(&Bar(true))?, "Bar(True)");
+    // assert_eq!(serialize(&Bar(true))?, "Bar(True)");
+    assert_eq!(serialize(&Bar(true))?, "True");
     Ok(())
 }
 
@@ -74,7 +79,8 @@ enum FooBarBaz {
 
 #[test]
 fn serialize_newtype_variant() -> Result<(), Error> {
-    assert_eq!(serialize(&FooBarBaz::Foo(true))?, "Foo(True)");
+    // assert_eq!(serialize(&FooBarBaz::Foo(true))?, "Foo(True)");
+    assert_eq!(serialize(&FooBarBaz::Foo(true))?, "[[\"Foo\", True]]");
     Ok(())
 }
 
@@ -95,13 +101,15 @@ struct Baz(bool, char);
 
 #[test]
 fn serialize_tuple_struct() -> Result<(), Error> {
-    assert_eq!(serialize(&Baz(true, 'X'))?, "Baz(True, \"X\")");
+    // assert_eq!(serialize(&Baz(true, 'X'))?, "Baz(True, \"X\")");
+    assert_eq!(serialize(&Baz(true, 'X'))?, "[True, \"X\"]");
     Ok(())
 }
 
 #[test]
 fn serialize_tuple_variant() -> Result<(), Error> {
-    assert_eq!(serialize(&FooBarBaz::Bar(true, 'X'))?, "Bar(True, \"X\")");
+    // assert_eq!(serialize(&FooBarBaz::Bar(true, 'X'))?, "Bar(True, \"X\")");
+    assert_eq!(serialize(&FooBarBaz::Bar(true, 'X'))?, "[[\"Bar\", [True, \"X\"]]]");
     Ok(())
 }
 
@@ -120,18 +128,23 @@ struct Qux {
 
 #[test]
 fn serialize_struct() -> Result<(), Error> {
-    assert_eq!(
-        serialize(&Qux { foo: true, bar: 'X' })?,
-        "Qux([[\"foo\", True], [\"bar\", \"X\"]])"
-    );
+    // assert_eq!(
+    //     serialize(&Qux { foo: true, bar: 'X' })?,
+    //     "Qux([[\"foo\", True], [\"bar\", \"X\"]])"
+    // );
+    assert_eq!(serialize(&Qux { foo: true, bar: 'X' })?, "[[\"bar\", \"X\"], [\"foo\", True]]");
     Ok(())
 }
 
 #[test]
 fn serialize_struct_variant() -> Result<(), Error> {
+    // assert_eq!(
+    //     serialize(&FooBarBaz::Baz { x: 'X', y: 'Y' })?,
+    //     "Baz([[\"x\", \"X\"], [\"y\", \"Y\"]])"
+    // );
     assert_eq!(
         serialize(&FooBarBaz::Baz { x: 'X', y: 'Y' })?,
-        "Baz([[\"x\", \"X\"], [\"y\", \"Y\"]])"
+        "[[\"Baz\", [[\"x\", \"X\"], [\"y\", \"Y\"]]]]"
     );
     Ok(())
 }

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use serde::{Serialize, de::DeserializeOwned};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::{
     bytecode::{Bytecode, Str},
@@ -54,21 +54,83 @@ impl Bytecode {
     pub fn deserialize<T: DeserializeOwned>(&self, v: &Val) -> Result<T, de::Error> {
         fn kombucha_to_json(bytecode: &Bytecode, v: &Val) -> Value {
             match v {
+                Val::String(s) if *s == Str::Nil as usize => Value::Null,
+                Val::String(s) if bytecode.ctx.strs[*s] == "None" => Value::Null,
                 Val::String(s) if bytecode.ctx.strs[*s] == "True" => true.into(),
                 Val::String(s) if bytecode.ctx.strs[*s] == "False" => false.into(),
-                Val::String(s) | Val::Effect(s) => bytecode.ctx.strs[*s].to_string().into(),
-                Val::Struct(_, vals) => vals
-                    .into_iter()
-                    .map(|v| kombucha_to_json(bytecode, v))
-                    .collect::<Vec<_>>()
-                    .into(),
+                Val::String(s) | Val::Effect(s) => {
+                    let s = &bytecode.ctx.strs[*s];
+                    if s.starts_with('"') && s.ends_with('"') {
+                        s[1..s.len() - 1].into()
+                    } else {
+                        s.as_str().into()
+                    }
+                }
+                Val::Struct(s, vals) if *s == Str::Nil as usize => {
+                    fn is_pair(bytecode: &Bytecode, val: &Val) -> bool {
+                        match val {
+                            Val::Struct(s, vals) if *s == Str::Nil as usize && vals.len() == 2 => {
+                                match vals.first().unwrap().as_ref() {
+                                    Val::String(s) => {
+                                        let s = &bytecode.ctx.strs[*s];
+                                        s.starts_with('"') && s.ends_with('"')
+                                    }
+                                    _ => false,
+                                }
+                            }
+                            _ => false,
+                        }
+                    }
+                    let is_map = vals.iter().all(|v| is_pair(bytecode, v.as_ref()));
+                    if is_map {
+                        let mut map = Map::new();
+                        for v in vals {
+                            let Val::Struct(_, vals) = v.as_ref() else {
+                                unreachable!("this should have been a pair");
+                            };
+                            let k = &vals[0];
+                            let v = &vals[1];
+                            let Val::String(k) = k.as_ref() else {
+                                unreachable!("this should have been a string key");
+                            };
+                            let k = &bytecode.ctx.strs[*k];
+                            let k = k[1..k.len() - 1].to_string();
+                            let v = kombucha_to_json(bytecode, v);
+                            map.insert(k, v);
+                        }
+                        Value::Object(map)
+                    } else {
+                        vals.into_iter()
+                            .map(|v| kombucha_to_json(bytecode, v))
+                            .collect::<Vec<_>>()
+                            .into()
+                    }
+                }
+                Val::Struct(s, vals) if bytecode.ctx.strs[*s] == "Some" && vals.len() == 1 => {
+                    kombucha_to_json(bytecode, vals.into_iter().next().unwrap())
+                }
+                Val::Struct(s, vals) if vals.len() == 1 => {
+                    let val = kombucha_to_json(bytecode, vals.into_iter().next().unwrap());
+                    let mut map = Map::new();
+                    map.insert(bytecode.ctx.strs[*s].to_string(), val);
+                    Value::Object(map)
+                }
+                Val::Struct(s, vals) => {
+                    let vals = vals
+                        .into_iter()
+                        .map(|v| kombucha_to_json(bytecode, v))
+                        .collect::<Vec<_>>()
+                        .into();
+                    let mut map = Map::new();
+                    map.insert(bytecode.ctx.strs[*s].to_string(), vals);
+                    Value::Object(map)
+                }
                 Val::Closure(_, _) | Val::Resumable(_, _) => {
                     panic!("Can't deserialize closures or resumables")
                 }
             }
         }
-        let value = kombucha_to_json(self, v);
-        Ok(serde_json::from_value(value)?)
+        Ok(serde_json::from_value(kombucha_to_json(self, v))?)
     }
 }
 
