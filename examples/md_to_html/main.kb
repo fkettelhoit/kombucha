@@ -44,6 +44,7 @@
 
 ::parse-block(:tag, :l) = {
     match [first(l), second(l), third(l)] [
+        [">", " ", :z] -> { ["<blockquote>", rest(rest(l)) |> parse-inline, "</blockquote>"] }
         ["#", " ", :z] -> { ["<h1>", rest(rest(l)) |> parse-inline, "</h1>"] }
         ["#", "#", " "] -> {
             print(l)
