@@ -13,9 +13,35 @@ impl Bytecode {
 pub enum Val {
     String(usize),
     Effect(usize),
-    Struct(usize, Vec<Rc<Val>>),
+    Struct(usize, Rc<List>),
     Closure(usize, Rc<Vec<Val>>),
     Resumable(usize, Rc<Vm>),
+}
+
+#[derive(Debug, Clone)]
+pub enum List {
+    Val(Val),
+    Cons(Rc<List>, Val),
+}
+
+impl List {
+    pub(crate) fn to_vec(&self) -> Vec<&Val> {
+        let mut vals = vec![];
+        let mut list = self;
+        loop {
+            match list {
+                List::Val(val) => {
+                    vals.push(val);
+                    vals.reverse();
+                    return vals;
+                }
+                List::Cons(l, val) => {
+                    vals.push(val);
+                    list = l;
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -118,10 +144,11 @@ impl Vm {
                             vars.push(arg);
                             ip = c;
                         }
-                        (Val::String(s), arg) => temps.push(Val::Struct(s, vec![Rc::new(arg)])),
-                        (Val::Struct(s, mut items), arg) => {
-                            items.push(Rc::new(arg));
-                            temps.push(Val::Struct(s, items))
+                        (Val::String(s), arg) => {
+                            temps.push(Val::Struct(s, Rc::new(List::Val(arg))))
+                        }
+                        (Val::Struct(s, items), arg) => {
+                            temps.push(Val::Struct(s, Rc::new(List::Cons(items, arg))))
                         }
                     }
                 }
@@ -149,16 +176,18 @@ impl Vm {
                 },
                 Op::Unpack => {
                     match (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
-                        (_, t, Val::Struct(f, mut xs)) => {
-                            let x = xs.pop().ok_or(i)?;
-                            temps.push(x.as_ref().clone());
-                            temps.push(if xs.is_empty() {
-                                Val::String(f)
-                            } else {
-                                Val::Struct(f, xs)
-                            });
-                            temps.push(t);
-                        }
+                        (_, t, Val::Struct(f, xs)) => match xs.as_ref() {
+                            List::Val(x) => {
+                                temps.push(x.clone());
+                                temps.push(Val::String(f));
+                                temps.push(t);
+                            }
+                            List::Cons(xs, x) => {
+                                temps.push(x.clone());
+                                temps.push(Val::Struct(f, Rc::clone(xs)));
+                                temps.push(t);
+                            }
+                        },
                         (f, _, _) => {
                             temps.push(Val::String(Str::Null as usize));
                             temps.push(f);
@@ -206,21 +235,18 @@ impl Val {
             Val::Effect(s) => format!("{}!", strs[*s]),
             Val::Closure(c, _) => format!("#fn-{c}"),
             Val::Struct(s, vs) if strs[*s] == LIST => {
-                let items = vs.iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
+                let items = vs.to_vec().iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
                 format!("[{}]", items.join(", "))
             }
-            Val::Struct(s, vs) => {
-                if vs.len() == 1 {
-                    match *vs[0] {
-                        Val::String(v) if strs[v] == NULL => {
-                            return format!("{}()", Val::String(*s).pretty(strs));
-                        }
-                        _ => {}
-                    }
+            Val::Struct(s, vs) => match vs.as_ref() {
+                List::Val(Val::String(v)) if strs[*v] == NULL => {
+                    format!("{}()", Val::String(*s).pretty(strs))
                 }
-                let items = vs.iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
-                format!("{}({})", strs[*s].to_string(), items.join(", "))
-            }
+                _ => {
+                    let items = vs.to_vec().iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
+                    format!("{}({})", strs[*s].to_string(), items.join(", "))
+                }
+            },
             Val::Resumable(_, _) => format!("#resumable"),
         }
     }
