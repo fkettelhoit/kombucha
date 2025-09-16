@@ -123,10 +123,6 @@ struct Qux {
 
 #[test]
 fn serialize_struct() -> Result<(), Error> {
-    // assert_eq!(
-    //     serialize(&Qux { foo: true, bar: 'X' })?,
-    //     "Qux([[\"foo\", True], [\"bar\", \"X\"]])"
-    // );
     assert_eq!(serialize(&Qux { foo: true, bar: 'X' })?, "[[\"bar\", \"X\"], [\"foo\", True]]");
     Ok(())
 }

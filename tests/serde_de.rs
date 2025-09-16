@@ -70,7 +70,6 @@ struct Bar(bool);
 
 #[test]
 fn deserialize_newtype_struct() -> Result<(), Error> {
-    // assert_eq!(run("Bar(True)").unwrap().deserialize::<Bar>()?, Bar(true));
     assert_eq!(run("True").unwrap().deserialize::<Bar>()?, Bar(true));
     Ok(())
 }
@@ -78,10 +77,8 @@ fn deserialize_newtype_struct() -> Result<(), Error> {
 #[test]
 fn deserialize_seq() -> Result<(), Error> {
     assert_eq!(run("[Foo, Bar]").unwrap().deserialize::<Vec<String>>()?, vec!["Foo", "Bar"]);
-    // assert_eq!(run("[Foo, Foo]").unwrap().deserialize::<Vec<Foo>>()?, vec![Foo, Foo]);
     assert_eq!(run("[(), None]").unwrap().deserialize::<Vec<Foo>>()?, vec![Foo, Foo]);
-    // TODO:
-    // assert_eq!(run("[]").unwrap().deserialize::<Vec<Foo>>()?, vec![]);
+    assert_eq!(run("[]").unwrap().deserialize::<Vec<Foo>>()?, vec![]);
     Ok(())
 }
 
@@ -96,7 +93,6 @@ struct Baz(bool, char);
 
 #[test]
 fn deserialize_tuple_struct() -> Result<(), Error> {
-    // assert_eq!(run("Baz(True, X)").unwrap().deserialize::<Baz>()?, Baz(true, 'X'));
     assert_eq!(run("[True, X]").unwrap().deserialize::<Baz>()?, Baz(true, 'X'));
     Ok(())
 }
@@ -113,8 +109,8 @@ fn deserialize_map() -> Result<(), Error> {
             .deserialize::<HashMap<String, String>>()?,
         HashMap::from_iter(vec![("A".into(), "X".into()), ("B".into(), "Y".into())]),
     );
-    // TODO:
-    // assert_eq!(run("[]").unwrap().deserialize::<HashMap<String, String>>()?, HashMap::new(),);
+    // The following is not possible because both empty arrays and objects are mapped to []
+    // assert_eq!(run("[]").unwrap().deserialize::<HashMap<String, String>>()?, HashMap::new());
     Ok(())
 }
 
@@ -126,12 +122,6 @@ struct Qux {
 
 #[test]
 fn deserialize_struct() -> Result<(), Error> {
-    // assert_eq!(
-    //     run("Qux foo: True bar: X").unwrap().deserialize::<Qux>()?,
-    //     Qux { foo: true, bar: 'X' }
-    // );
-    // assert!(run("Qux baz: True bar: X").unwrap().deserialize::<Qux>().is_err());
-    // assert_eq!(run("Qux(True, \"X\")").unwrap().deserialize::<Qux>()?, Qux { foo: true, bar: 'X' });
     assert_eq!(
         run("[foo: True, bar: X]").unwrap().deserialize::<Qux>()?,
         Qux { foo: true, bar: 'X' }
@@ -149,6 +139,7 @@ enum FooBarBaz {
 
 #[test]
 fn deserialize_enum() -> Result<(), Error> {
+    assert_eq!(run("[[\"Foo\", True]]").unwrap().deserialize::<FooBarBaz>()?, FooBarBaz::Foo(true));
     assert_eq!(run("Foo(True)").unwrap().deserialize::<FooBarBaz>()?, FooBarBaz::Foo(true));
     assert_eq!(
         run("Bar(False, X)").unwrap().deserialize::<FooBarBaz>()?,
@@ -159,9 +150,5 @@ fn deserialize_enum() -> Result<(), Error> {
         FooBarBaz::Baz { x: 'X', y: 'Y' }
     );
     assert!(run("Baz x: X z: Z").unwrap().deserialize::<FooBarBaz>().is_err());
-    // assert_eq!(
-    //     run("Baz(X, Y)").unwrap().deserialize::<FooBarBaz>()?,
-    //     FooBarBaz::Baz { x: 'X', y: 'Y' }
-    // );
     Ok(())
 }
