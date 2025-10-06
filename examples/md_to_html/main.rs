@@ -99,6 +99,7 @@ fn main() -> ExitCode {
                         }
                     },
                     Ok(State::Done(v)) => {
+                        println!("{}", v.profiler);
                         let result: Vec<String> = v.deserialize().expect("Expected a Vec<String>");
                         match fs::write(&output_file, result.join("")) {
                             Ok(_) => return ExitCode::SUCCESS,

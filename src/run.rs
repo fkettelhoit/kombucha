@@ -1,11 +1,11 @@
 use crate::bytecode::{Bytecode, LIST, NULL, Op, Str};
-use std::{rc::Rc, usize};
+use std::{rc::Rc, time::Instant, usize};
 
 impl Bytecode {
     pub fn run(self) -> Result<State, usize> {
         let mut vm = Vm::default();
         vm.ip = self.start;
-        vm.run(self)
+        vm.run(self, Profiler::default())
     }
 }
 
@@ -54,6 +54,7 @@ pub enum State {
 pub struct Value {
     pub bytecode: Bytecode,
     pub val: Val,
+    pub profiler: Profiler,
 }
 
 #[derive(Debug)]
@@ -78,11 +79,87 @@ struct Handler {
     ret: usize,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct Profiler([Metric; 14]);
+
+#[derive(Debug, Clone, Default)]
+pub struct Metric {
+    elapsed: u128,
+    count: u128,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Measure {
+    LoadVar,
+    LoadFn,
+    AppEffectHandler,
+    AppEffectPause,
+    AppResumable,
+    AppClosure,
+    AppString,
+    AppStruct,
+    Return,
+    Type,
+    Unpack,
+    Try,
+    Unwind,
+    Compare,
+}
+
+impl Profiler {
+    fn clock(&mut self, time: Instant, m: Measure) {
+        let elapsed = time.elapsed().as_nanos();
+        let m = m as usize;
+        self.0[m].elapsed += elapsed;
+        self.0[m].count += 1;
+    }
+}
+
+impl std::fmt::Display for Profiler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("\n### PROFILE ###\n")?;
+        let measurements = [
+            Measure::LoadVar,
+            Measure::LoadFn,
+            Measure::AppEffectHandler,
+            Measure::AppEffectPause,
+            Measure::AppResumable,
+            Measure::AppClosure,
+            Measure::AppString,
+            Measure::AppStruct,
+            Measure::Return,
+            Measure::Type,
+            Measure::Unpack,
+            Measure::Try,
+            Measure::Unwind,
+            Measure::Compare,
+        ];
+        let mut total = 0;
+        for m in measurements {
+            let Metric { elapsed, count } = self.0[m as usize];
+            if count > 0 {
+                writeln!(
+                    f,
+                    "{:20} {:>10.3} ns (avg) * {:>10} = {:>10} ms",
+                    format!("{:?}", m),
+                    elapsed as f64 / count as f64,
+                    count,
+                    elapsed / 1000_000
+                )?;
+            }
+            total += elapsed;
+        }
+        write!(f, "total: {} ms", total / 1000_000)?;
+        Ok(())
+    }
+}
+
 impl Vm {
-    fn run(self, bytecode: Bytecode) -> Result<State, usize> {
+    fn run(self, bytecode: Bytecode, mut profiler: Profiler) -> Result<State, usize> {
         let Vm { mut ip, mut vars, mut temps, mut frames } = self;
         let mut handlers: Vec<Handler> = vec![];
         loop {
+            let time = Instant::now();
             let op = bytecode.ops.get(ip).copied().ok_or(ip)?;
             let i = ip;
             ip += 1;
@@ -90,13 +167,15 @@ impl Vm {
                 Op::LoadVar(v) => {
                     let v: &Val = &vars[vars.len() - 1 - v];
                     temps.push(v.clone());
+                    profiler.clock(time, Measure::LoadVar);
                 }
                 Op::LoadString(s) => temps.push(Val::String(s)),
                 Op::LoadEffect(eff) => temps.push(Val::Effect(eff)),
                 Op::LoadFn { code: _, fvars } if fvars > vars.len() => return Err(ip),
                 Op::LoadFn { code, fvars } => {
                     let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                    temps.push(Val::Closure(code, captured))
+                    temps.push(Val::Closure(code, captured));
+                    profiler.clock(time, Measure::LoadFn);
                 }
                 Op::AppFnToArg | Op::AppArgToFn => {
                     let (arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
@@ -116,10 +195,12 @@ impl Vm {
                                 temps.push(Val::Resumable(v, Rc::new(vm)));
                                 temps.push(handler.handler);
                                 ip = handler.ret;
+                                profiler.clock(time, Measure::AppEffectHandler);
                             }
                             None => {
+                                profiler.clock(time, Measure::AppEffectPause);
                                 let vm = Vm { ip, vars, temps, frames };
-                                let arg = Value { bytecode, val: arg };
+                                let arg = Value { bytecode, val: arg, profiler };
                                 let r = Resumable { effect, arg, vm };
                                 return Ok(State::Resumable(r));
                             }
@@ -136,6 +217,7 @@ impl Vm {
                             );
                             temps.push(arg);
                             ip = vm.ip;
+                            profiler.clock(time, Measure::AppResumable);
                         }
                         (Val::Closure(c, captured), arg) => {
                             // TODO: if the next op is an Op::Return, we might want to do TCO
@@ -143,37 +225,44 @@ impl Vm {
                             vars.extend(captured.iter().cloned());
                             vars.push(arg);
                             ip = c;
+                            profiler.clock(time, Measure::AppClosure);
                         }
                         (Val::String(s), arg) => {
-                            temps.push(Val::Struct(s, Rc::new(List::Val(arg))))
+                            temps.push(Val::Struct(s, Rc::new(List::Val(arg))));
+                            profiler.clock(time, Measure::AppString);
                         }
                         (Val::Struct(s, items), arg) => {
-                            temps.push(Val::Struct(s, Rc::new(List::Cons(items, arg))))
+                            temps.push(Val::Struct(s, Rc::new(List::Cons(items, arg))));
+                            profiler.clock(time, Measure::AppStruct);
                         }
                     }
                 }
                 Op::Return if frames.is_empty() => {
                     let val = temps.pop().ok_or(ip)?;
-                    return Ok(State::Done(Value { val, bytecode }));
+                    return Ok(State::Done(Value { val, bytecode, profiler }));
                 }
                 Op::Return => {
                     let (frame, ret) = frames.pop().ok_or(i)?;
                     vars.truncate(frame);
-                    ip = ret
+                    ip = ret;
+                    profiler.clock(time, Measure::Return);
                 }
-                Op::Type => match temps.pop().ok_or(i)? {
-                    Val::String(s) if s == Str::Null as usize => {
-                        temps.push(Val::String(Str::TyNull as usize))
+                Op::Type => {
+                    match temps.pop().ok_or(i)? {
+                        Val::String(s) if s == Str::Null as usize => {
+                            temps.push(Val::String(Str::TyNull as usize))
+                        }
+                        Val::String(s) if s == Str::List as usize => {
+                            temps.push(Val::String(Str::TyList as usize))
+                        }
+                        Val::String(_) => temps.push(Val::String(Str::TyString as usize)),
+                        Val::Struct(_, _) => temps.push(Val::String(Str::TyStruct as usize)),
+                        Val::Effect(_) | Val::Closure(_, _) | Val::Resumable(_, _) => {
+                            temps.push(Val::String(Str::TyFunction as usize))
+                        }
                     }
-                    Val::String(s) if s == Str::List as usize => {
-                        temps.push(Val::String(Str::TyList as usize))
-                    }
-                    Val::String(_) => temps.push(Val::String(Str::TyString as usize)),
-                    Val::Struct(_, _) => temps.push(Val::String(Str::TyStruct as usize)),
-                    Val::Effect(_) | Val::Closure(_, _) | Val::Resumable(_, _) => {
-                        temps.push(Val::String(Str::TyFunction as usize))
-                    }
-                },
+                    profiler.clock(time, Measure::Type);
+                }
                 Op::Unpack => {
                     match (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
                         (_, t, Val::Struct(f, xs)) => match xs.as_ref() {
@@ -194,6 +283,7 @@ impl Vm {
                             ip += 1;
                         }
                     }
+                    profiler.clock(time, Measure::Unpack);
                 }
                 Op::Try => {
                     let handler = temps.pop().ok_or(i)?;
@@ -203,10 +293,12 @@ impl Vm {
                     handlers.push(Handler { handler, state, ret });
                     temps.push(Val::String(Str::Null as usize));
                     temps.push(v);
+                    profiler.clock(time, Measure::Try);
                 }
                 Op::Unwind => {
                     handlers.pop();
                     ip += 3;
+                    profiler.clock(time, Measure::Unwind);
                 }
                 Op::Compare => {
                     let (f, t, b, a) = (
@@ -222,6 +314,7 @@ impl Vm {
                     };
                     temps.push(Val::String(Str::Null as usize));
                     temps.push(branch);
+                    profiler.clock(time, Measure::Compare);
                 }
             }
         }
@@ -279,13 +372,13 @@ impl Resumable {
 
     pub fn resume(mut self, arg: Val) -> Result<State, usize> {
         self.vm.temps.push(arg);
-        self.vm.run(self.arg.bytecode)
+        self.vm.run(self.arg.bytecode, self.arg.profiler)
     }
 
     pub fn resume_at(mut self, start: usize) -> Result<State, usize> {
         self.vm.frames.push((self.vm.vars.len(), self.vm.ip));
         self.vm.ip = start;
-        self.vm.run(self.arg.bytecode)
+        self.vm.run(self.arg.bytecode, self.arg.profiler)
     }
 }
 
