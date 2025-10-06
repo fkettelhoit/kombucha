@@ -29,7 +29,13 @@
         ["_", :y, Em] -> { ["<em>", acc, "</em>", parse-inline([], [], rest(l))] }
         ["*", "*", []] -> { [acc, parse-inline(Strong, [], rest(rest(l)))] }
         ["*", "*", Strong] -> { ["<strong>", acc, "</strong>", parse-inline([], [], rest(rest(l)))] }
+        ["!", "[", []] -> { [acc, parse-inline(Img, [], rest(rest(l)))] }
         ["[", :y, []] -> { [acc, parse-inline(Link, [], rest(l))] }
+        ["]", "(", Img] -> {
+            match (parse-until(")", [], rest(rest(l)))) [
+                [:src, :l] -> { [#"<img alt=""#, acc, #"" src=""#, src, #""/>"#, parse-inline([], [], l)] }
+            ]
+        }
         ["]", "(", Link] -> {
             match (parse-until(")", [], rest(rest(l)))) [
                 [:href, :l] -> { [#"<a href=""#, href, #"">"#, acc, "</a>", parse-inline([], [], l)] }
@@ -54,6 +60,7 @@
             print(l)
             ["<h3>", rest(rest(rest(rest(l)))) |> parse-inline, "</h3>"]
         }
+        ["!", "[", :z] -> { parse-inline(l) }
         [[], [], []] -> { [] }
         :else -> { ["<", tag, ">", parse-inline(l), "</", tag, ">"] }
     ]
