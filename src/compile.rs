@@ -270,21 +270,14 @@ pub enum Expr {
     Var(usize),
     String(usize),
     Effect(usize),
-    Abs(Box<Expr>),
+    Abs(usize, Box<Expr>),
     Rec(Box<Expr>),
-    App(Box<Expr>, Box<Expr>),
+    App(Box<Expr>, Vec<Expr>),
+    Seq(Box<Expr>, Box<Expr>),
     Type(Box<Expr>),
     Unpack([Box<Expr>; 3]),
     Handle([Box<Expr>; 2]),
     Compare([Box<Expr>; 4]),
-}
-
-pub fn abs(body: Expr) -> Expr {
-    Expr::Abs(Box::new(body))
-}
-
-pub fn app(f: Expr, arg: Expr) -> Expr {
-    Expr::App(Box::new(f), Box::new(arg))
 }
 
 pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr, String> {
@@ -321,17 +314,16 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
         match ast.1 {
             A::Call(f, args) if has_bindings(&ast, ctx) => {
                 let f = desug_macro(*f, ctx)?;
-                let args = desug_all(args, ctx)?;
-                let empty = Expr::String(Str::List as usize);
-                let list = args.into_iter().fold(empty, |l, x| app(l, x));
-                Ok(app(app(Expr::String(Str::Compound as usize), f), list))
+                let l = Expr::App(Expr::String(Str::List as usize).into(), desug_all(args, ctx)?);
+                Ok(Expr::App(Expr::String(Str::Compound as usize).into(), vec![f, l]))
             }
             A::Var(_) | A::Atom(_) | A::String(_) | A::Call(_, _) => {
-                Ok(app(Expr::String(Str::Value as usize), desug_val(ast, ctx)?))
+                Ok(Expr::App(Expr::String(Str::Value as usize).into(), vec![desug_val(ast, ctx)?]))
             }
-            A::Binding(_, _, _) => {
-                Ok(app(Expr::String(Str::Binding as usize), desug_val(ast, ctx)?))
-            }
+            A::Binding(_, _, _) => Ok(Expr::App(
+                Expr::String(Str::Binding as usize).into(),
+                vec![desug_val(ast, ctx)?],
+            )),
             A::Block(_) => desug_val(ast, ctx),
         }
     }
@@ -343,17 +335,23 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
             A::Var(v) => match resolve_var(&v, ctx) {
                 Some(v) => Ok(Expr::Var(v)),
                 None => match v.as_str() {
-                    "=" => Ok(abs(abs(abs(app(Expr::Var(0), Expr::Var(1)))))),
-                    "=>" => Ok(abs(abs(Expr::Var(0)))),
-                    "~>" => Ok(abs(abs(Expr::Rec(Box::new(Expr::Var(0)))))),
-                    "type" => Ok(abs(Expr::Type(Box::new(Expr::Var(0))))),
-                    "__compare" => Ok(abs(abs(abs(abs(Expr::Compare(
-                        [3, 2, 1, 0].map(|v| Expr::Var(v).into()),
-                    )))))),
-                    "__unpack" => {
-                        Ok(abs(abs(abs(Expr::Unpack([2, 1, 0].map(|v| Expr::Var(v).into()))))))
+                    "=" => {
+                        Ok(Expr::Abs(3, Expr::App(Expr::Var(0).into(), vec![Expr::Var(1)]).into()))
                     }
-                    "__handle" => Ok(abs(abs(Expr::Handle([1, 0].map(|v| Expr::Var(v).into()))))),
+                    "=>" => Ok(Expr::Abs(2, Expr::Var(0).into())),
+                    "~>" => Ok(Expr::Abs(2, Expr::Rec(Expr::Var(0).into()).into())),
+                    "type" => Ok(Expr::Abs(1, Expr::Type(Box::new(Expr::Var(0))).into())),
+                    "__compare" => Ok(Expr::Abs(
+                        4,
+                        Expr::Compare([3, 2, 1, 0].map(|v| Expr::Var(v).into())).into(),
+                    )),
+                    "__unpack" => Ok(Expr::Abs(
+                        3,
+                        Expr::Unpack([2, 1, 0].map(|v| Expr::Var(v).into())).into(),
+                    )),
+                    "__handle" => {
+                        Ok(Expr::Abs(2, Expr::Handle([1, 0].map(|v| Expr::Var(v).into())).into()))
+                    }
                     _ => Err((pos, v.to_string())),
                 },
             },
@@ -372,42 +370,51 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
                     let bindings = ctx.bindings.len();
                     let drained = ctx.drain_bindings();
                     ctx.vars.extend(drained);
-                    if bindings == 0 {
-                        ctx.vars.push((BindType::Variable, String::new()))
-                    }
                     desugared.push((bindings, desug_val(ast, ctx)?));
                 }
                 let (mut bindings, mut expr) = desugared.pop().unwrap();
-                expr = (0..max(1, bindings)).fold(expr, |x, _| abs(x));
+                expr = Expr::Abs(bindings, expr.into());
                 for (prev_bindings, x) in desugared.into_iter().rev() {
-                    let (f, arg) = if bindings == 0 { (expr, x) } else { (x, expr) };
-                    expr = (0..max(1, prev_bindings)).fold(app(f, arg), |x, _| abs(x));
-                    ctx.vars.truncate(ctx.vars.len() - max(1, bindings));
+                    if bindings == 0 {
+                        expr = Expr::Seq(x.into(), expr.into())
+                    } else {
+                        match x {
+                            Expr::App(f, mut args) => {
+                                args.push(expr);
+                                expr = Expr::App(f, args);
+                            }
+                            _ => expr = Expr::App(x.into(), vec![expr]),
+                        }
+                    }
+                    expr = Expr::Abs(prev_bindings, expr.into());
+                    ctx.vars.truncate(ctx.vars.len() - bindings);
                     bindings = prev_bindings;
                 }
-                ctx.vars.truncate(ctx.vars.len() - max(1, bindings));
+                ctx.vars.truncate(ctx.vars.len() - bindings);
                 ctx.clear_bindings();
                 Ok(expr)
             }
             A::Call(f, args) => {
                 let bindings = mem::replace(&mut ctx.bindings, vec![]);
                 let is_macro = is_macro(&f, ctx);
-                let mut f = desug_val(*f, ctx)?;
-                if args.is_empty() {
-                    f = app(f, Expr::String(Str::Null as usize));
-                }
+                let f = desug_val(*f, ctx)?;
+                let mut desug_args = vec![];
                 for x in args {
-                    f = app(f, if is_macro { desug_macro(x, ctx)? } else { desug_val(x, ctx)? })
+                    desug_args.push(if is_macro {
+                        desug_macro(x, ctx)?
+                    } else {
+                        desug_val(x, ctx)?
+                    });
                 }
                 ctx.bindings.splice(0..0, bindings);
-                Ok(f)
+                Ok(Expr::App(f.into(), desug_args))
             }
         }
     }
     match desug_val(Ast(0, A::Block(block)), ctx) {
         Err((i, v)) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
-        Ok(Expr::Abs(body)) => Ok(*body),
-        Ok(_) => unreachable!("Expected the main block to be desugared to an abstraction!"),
+        Ok(Expr::Abs(0, body)) => Ok(*body),
+        Ok(_) => unreachable!("Expected the main block to be desugared to a zero arg abstraction!"),
     }
 }
 
@@ -417,50 +424,56 @@ fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             Expr::Var(v) => ops.push(Op::LoadVar(*v)),
             Expr::String(s) => ops.push(Op::LoadString(*s)),
             Expr::Effect(e) => ops.push(Op::LoadEffect(*e)),
-            Expr::Abs(body) => {
+            Expr::Abs(params, body) => {
                 let mut f = vec![];
                 emit(&[body], &mut f, fns);
                 f.push(Op::Return);
                 let fvars = f.iter().fold(0, |captured, op| match *op {
-                    Op::LoadVar(v) if v > captured => v,
-                    Op::LoadFn { fvars, .. } if fvars > captured => fvars - 1,
+                    Op::LoadVar(v) if v >= captured + params => v - params,
+                    Op::LoadFn { fvars, .. } if fvars > captured => fvars - params,
                     _ => captured,
                 });
                 let code = fns.len();
-                ops.push(Op::LoadFn { code, fvars });
+                ops.push(Op::LoadFn { code, params: *params, fvars });
                 fns.extend(f);
             }
-            Expr::App(f, arg) => {
-                emit(&[f, arg], ops, fns);
-                ops.push(Op::AppFnToArg);
+            Expr::App(f, args) => {
+                emit(&args.iter().collect::<Vec<_>>(), ops, fns);
+                emit(&[f], ops, fns);
+                ops.push(Op::App(args.len()));
             }
             Expr::Rec(body) => {
                 emit(&[body], ops, fns);
-                // Fn at code 0 is the built-in fixed-point combinator:
-                ops.extend([Op::LoadFn { code: 0, fvars: 0 }, Op::AppArgToFn]);
+                ops.extend([Op::Fix, Op::App(1)]);
             }
+            Expr::Seq(a, b) => emit(&[a, b], ops, fns),
             Expr::Type(body) => {
                 emit(&[body], ops, fns);
                 ops.push(Op::Type);
             }
             Expr::Compare([a, b, if_t, if_f]) => {
                 emit(&[a, b, if_t, if_f], ops, fns);
-                ops.extend([Op::Compare, Op::AppArgToFn]);
+                ops.extend([Op::Compare, Op::App(0)]);
             }
             Expr::Unpack([val, if_t, if_f]) => {
-                emit(&[val, if_t, if_f], ops, fns);
-                ops.extend([Op::Unpack, Op::AppArgToFn, Op::AppArgToFn]);
+                let mut fn_t = vec![];
+                emit(&[if_t], &mut fn_t, fns);
+                fn_t.extend([Op::App(2), Op::Return]);
+                let code_t = fns.len();
+                fns.extend(fn_t);
+
+                let mut fn_f = vec![];
+                emit(&[if_f], &mut fn_f, fns);
+                fn_f.extend([Op::App(0), Op::Return]);
+                let code_f = fns.len();
+                fns.extend(fn_f);
+
+                emit(&[val], ops, fns);
+                ops.push(Op::Unpack { if_true: code_t, if_false: code_f });
             }
             Expr::Handle([val, handler]) => {
                 emit(&[val, handler], ops, fns);
-                ops.extend([
-                    Op::Try,
-                    Op::AppArgToFn,
-                    Op::Unwind,
-                    Op::AppArgToFn,
-                    Op::AppArgToFn,
-                    Op::AppArgToFn,
-                ]);
+                ops.extend([Op::Try, Op::App(0), Op::Unwind, Op::App(3)]);
             }
         }
     }
@@ -468,22 +481,7 @@ fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
 
 pub fn codegen(expr: Expr, ctx: Ctx) -> Bytecode {
     let mut main = vec![];
-
-    // fix = f => x => f(fix(f))(x)
-    let mut bytecode = vec![
-        // 0: f => ...
-        Op::LoadFn { code: 2, fvars: 1 },
-        Op::Return,
-        // 2: ... x => f(fix(f))(x)
-        Op::LoadVar(0),                   // x
-        Op::LoadVar(1),                   // x, f
-        Op::LoadFn { code: 0, fvars: 0 }, // x, f, fix
-        Op::AppArgToFn,                   // x, fix(f)
-        Op::LoadVar(1),                   // x, fix(f), f
-        Op::AppArgToFn,                   // x, f(fix(f))
-        Op::AppArgToFn,                   // f(fix(f))(x)
-        Op::Return,
-    ];
+    let mut bytecode = vec![];
     emit(&[&expr], &mut main, &mut bytecode);
     main.push(Op::Return);
     let start = bytecode.len();

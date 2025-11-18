@@ -101,7 +101,7 @@ impl Bytecode {
                         Ok(Value::Object(map))
                     }
                 },
-                Val::Closure(_, _) | Val::Resumable(_, _) => {
+                Val::Fn { .. } | Val::Closure { .. } | Val::Resumable(_, _) => {
                     Err(serde_json::Error::custom("Can't deserialize closures or resumables"))
                 }
             }
@@ -139,6 +139,6 @@ impl crate::run::Value {
 
 impl Resumable {
     pub fn serialize<T: Serialize>(&mut self, value: &T) -> Result<Val, serde_json::Error> {
-        self.arg.bytecode.serialize(value)
+        self.bytecode.serialize(value)
     }
 }

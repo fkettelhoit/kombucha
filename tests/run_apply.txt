@@ -4,26 +4,14 @@ Foo(Bar, Baz)
   Bar
   Baz)
 
-( ( Foo
-    Bar )
-  Baz )
+( Foo
+  Bar, Baz )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: PushString("Foo")
-00011: PushString("Bar")
-00012: AppFnToArg
-00013: PushString("Baz")
-00014: AppFnToArg
-00015:   Return
+00000: PushString("Bar")
+00001: PushString("Baz")
+00002: PushString("Foo")
+00003: App(00002)
+00004:   Return
 
 Foo(Bar, Baz)
 
@@ -36,29 +24,17 @@ Foo(Bar, Baz(Qux))
   (Baz
     Qux))
 
-( ( Foo
-    Bar )
-  ( Baz
+( Foo
+  Bar, ( Baz
     Qux ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: PushString("Foo")
-00011: PushString("Bar")
-00012: AppFnToArg
-00013: PushString("Baz")
-00014: PushString("Qux")
-00015: AppFnToArg
-00016: AppFnToArg
-00017:   Return
+00000: PushString("Bar")
+00001: PushString("Qux")
+00002: PushString("Baz")
+00003: App(00001)
+00004: PushString("Foo")
+00005: App(00002)
+00006:   Return
 
 Foo(Bar, Baz(Qux))
 
@@ -69,24 +45,13 @@ Foo()
 (Foo)
 
 ( Foo
-  () )
+   )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: PushString("Foo")
-00011: PushString("()")
-00012: AppFnToArg
-00013:   Return
+00000: PushString("Foo")
+00001: App(00000)
+00002:   Return
 
-Foo()
+Foo
 
 ---
 
@@ -96,26 +61,14 @@ Foo([], Bar)
   []
   Bar)
 
-( ( Foo
-    [] )
-  Bar )
+( Foo
+  [], Bar )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: PushString("Foo")
-00011: PushString("[]")
-00012: AppFnToArg
-00013: PushString("Bar")
-00014: AppFnToArg
-00015:   Return
+00000: PushString("[]")
+00001: PushString("Bar")
+00002: PushString("Foo")
+00003: App(00002)
+00004:   Return
 
 Foo([], Bar)
 
@@ -128,29 +81,15 @@ Foo([], Bar)
   B
   C)
 
-( ( ( []
-      A )
-    B )
-  C )
+( []
+  A, B, C )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: PushString("[]")
-00011: PushString("A")
-00012: AppFnToArg
-00013: PushString("B")
-00014: AppFnToArg
-00015: PushString("C")
-00016: AppFnToArg
-00017:   Return
+00000: PushString("A")
+00001: PushString("B")
+00002: PushString("C")
+00003: PushString("[]")
+00004: App(00003)
+00005:   Return
 
 [A, B, C]
 
@@ -168,24 +107,14 @@ Foo([], Bar)
     B )
   C )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: PushString("[]")
-00011: PushString("A")
-00012: AppFnToArg
-00013: PushString("B")
-00014: AppFnToArg
-00015: PushString("C")
-00016: AppFnToArg
-00017:   Return
+00000: PushString("C")
+00001: PushString("B")
+00002: PushString("A")
+00003: PushString("[]")
+00004: App(00001)
+00005: App(00001)
+00006: App(00001)
+00007:   Return
 
 [A, B, C]
 
@@ -201,29 +130,17 @@ Foo bar: Baz
 
 ( Foo
   ( []
-    ( ( []
-        "bar" )
-      Baz ) ) )
+    ( []
+      "bar", Baz ) ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: PushString("Foo")
-00011: PushString("[]")
-00012: PushString("[]")
-00013: PushString(""bar"")
-00014: AppFnToArg
-00015: PushString("Baz")
-00016: AppFnToArg
-00017: AppFnToArg
-00018: AppFnToArg
-00019:   Return
+00000: PushString(""bar"")
+00001: PushString("Baz")
+00002: PushString("[]")
+00003: App(00002)
+00004: PushString("[]")
+00005: App(00001)
+00006: PushString("Foo")
+00007: App(00001)
+00008:   Return
 
 Foo([["bar", Baz]])

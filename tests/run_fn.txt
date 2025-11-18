@@ -5,38 +5,23 @@
   { Bar })
   Foo)
 
-( ( ( =>
-        =>
-          0
-      "x" )
-    =>
+( ( (_, _) =>
+      0
+    "x", (_) =>
       Bar )
   Foo )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: PushString("Bar")
 00001:   Return
 00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: LoadVar(00000)
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013:   Return
-00014: PushString("Bar")
-00015:   Return
-00016: LoadFn { code: 00012, fvars: 00000 }
-00017: PushString(""x"")
-00018: AppFnToArg
-00019: LoadFn { code: 00014, fvars: 00000 }
-00020: AppFnToArg
-00021: PushString("Foo")
-00022: AppFnToArg
-00023:   Return
+00003:   Return
+00004: PushString("Foo")
+00005: PushString(""x"")
+00006: LoadFn { code: 00000, params: 00001, fvars: 00000 }
+00007: LoadFn { code: 00002, params: 00002, fvars: 00000 }
+00008: App(00002)
+00009: App(00001)
+00010:   Return
 
 Bar
 
@@ -49,200 +34,108 @@ Bar
   { x })
   Foo)
 
-( ( ( =>
-        =>
-          0
-      "x" )
-    =>
+( ( (_, _) =>
+      0
+    "x", (_) =>
       0 )
   Foo )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadVar(00000)
 00001:   Return
 00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: LoadVar(00000)
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013:   Return
-00014: LoadVar(00000)
-00015:   Return
-00016: LoadFn { code: 00012, fvars: 00000 }
-00017: PushString(""x"")
-00018: AppFnToArg
-00019: LoadFn { code: 00014, fvars: 00000 }
-00020: AppFnToArg
-00021: PushString("Foo")
-00022: AppFnToArg
-00023:   Return
+00003:   Return
+00004: PushString("Foo")
+00005: PushString(""x"")
+00006: LoadFn { code: 00000, params: 00001, fvars: 00000 }
+00007: LoadFn { code: 00002, params: 00002, fvars: 00000 }
+00008: App(00002)
+00009: App(00001)
+00010:   Return
 
 Foo
 
 ---
 
-(:x => { :y => { x } })(Foo, Bar)
+([:x, :y] => { x })(Foo, Bar)
 
 ((=>
-  :x
-  { (=>
-      :y
-      { x }) })
+  ([]
+    :x
+    :y)
+  { x })
   Foo
   Bar)
 
-( ( ( ( =>
-          =>
-            0
-        "x" )
-      =>
-        ( ( =>
-              =>
-                0
-            "y" )
-          =>
-            1 ) )
-    Foo )
-  Bar )
+( ( (_, _) =>
+      0
+    ( []
+      "x", "y" ), (_, _) =>
+      1 )
+  Foo, Bar )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadVar(00001)
 00001:   Return
 00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: LoadVar(00000)
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013:   Return
-00014: LoadVar(00000)
-00015:   Return
-00016: LoadFn { code: 00014, fvars: 00000 }
-00017:   Return
-00018: LoadVar(00001)
-00019:   Return
-00020: LoadFn { code: 00016, fvars: 00000 }
-00021: PushString(""y"")
-00022: AppFnToArg
-00023: LoadFn { code: 00018, fvars: 00001 }
-00024: AppFnToArg
-00025:   Return
-00026: LoadFn { code: 00012, fvars: 00000 }
-00027: PushString(""x"")
-00028: AppFnToArg
-00029: LoadFn { code: 00020, fvars: 00000 }
-00030: AppFnToArg
-00031: PushString("Foo")
-00032: AppFnToArg
-00033: PushString("Bar")
-00034: AppFnToArg
-00035:   Return
+00003:   Return
+00004: PushString("Foo")
+00005: PushString("Bar")
+00006: PushString(""x"")
+00007: PushString(""y"")
+00008: PushString("[]")
+00009: App(00002)
+00010: LoadFn { code: 00000, params: 00002, fvars: 00000 }
+00011: LoadFn { code: 00002, params: 00002, fvars: 00000 }
+00012: App(00002)
+00013: App(00002)
+00014:   Return
 
 Foo
 
 ---
 
-(:x => { :y => { :z => { Vec(z, x, z) } } })(Foo, Bar, Baz)
+([:x, :y, :z] => { Vec(z, x, z) })(Foo, Bar, Baz)
 
 ((=>
-  :x
-  { (=>
-      :y
-      { (=>
-          :z
-          { (Vec
-              z
-              x
-              z) }) }) })
+  ([]
+    :x
+    :y
+    :z)
+  { (Vec
+      z
+      x
+      z) })
   Foo
   Bar
   Baz)
 
-( ( ( ( ( =>
-            =>
-              0
-          "x" )
-        =>
-          ( ( =>
-                =>
-                  0
-              "y" )
-            =>
-              ( ( =>
-                    =>
-                      0
-                  "z" )
-                =>
-                  ( ( ( Vec
-                        0 )
-                      2 )
-                    0 ) ) ) )
-      Foo )
-    Bar )
-  Baz )
+( ( (_, _) =>
+      0
+    ( []
+      "x", "y", "z" ), (_, _, _) =>
+      ( Vec
+        0, 2, 0 ) )
+  Foo, Bar, Baz )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
+00000: LoadVar(00000)
+00001: LoadVar(00002)
 00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: AppArgToFn
-00006: LoadVar(00001)
-00007: AppArgToFn
-00008: AppArgToFn
-00009:   Return
-00010: LoadVar(00000)
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013:   Return
-00014: LoadVar(00000)
-00015:   Return
-00016: LoadFn { code: 00014, fvars: 00000 }
-00017:   Return
-00018: LoadVar(00000)
-00019:   Return
-00020: LoadFn { code: 00018, fvars: 00000 }
-00021:   Return
-00022: PushString("Vec")
-00023: LoadVar(00000)
-00024: AppFnToArg
-00025: LoadVar(00002)
-00026: AppFnToArg
-00027: LoadVar(00000)
-00028: AppFnToArg
-00029:   Return
-00030: LoadFn { code: 00020, fvars: 00000 }
-00031: PushString(""z"")
-00032: AppFnToArg
-00033: LoadFn { code: 00022, fvars: 00002 }
-00034: AppFnToArg
-00035:   Return
-00036: LoadFn { code: 00016, fvars: 00000 }
-00037: PushString(""y"")
-00038: AppFnToArg
-00039: LoadFn { code: 00030, fvars: 00001 }
-00040: AppFnToArg
-00041:   Return
-00042: LoadFn { code: 00012, fvars: 00000 }
-00043: PushString(""x"")
-00044: AppFnToArg
-00045: LoadFn { code: 00036, fvars: 00000 }
-00046: AppFnToArg
-00047: PushString("Foo")
-00048: AppFnToArg
-00049: PushString("Bar")
-00050: AppFnToArg
-00051: PushString("Baz")
-00052: AppFnToArg
-00053:   Return
+00003: PushString("Vec")
+00004: App(00003)
+00005:   Return
+00006: LoadVar(00000)
+00007:   Return
+00008: PushString("Foo")
+00009: PushString("Bar")
+00010: PushString("Baz")
+00011: PushString(""x"")
+00012: PushString(""y"")
+00013: PushString(""z"")
+00014: PushString("[]")
+00015: App(00003)
+00016: LoadFn { code: 00000, params: 00003, fvars: 00000 }
+00017: LoadFn { code: 00006, params: 00002, fvars: 00000 }
+00018: App(00002)
+00019: App(00003)
+00020:   Return
 
 Vec(Baz, Foo, Baz)

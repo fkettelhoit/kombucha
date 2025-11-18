@@ -14,7 +14,8 @@ pub enum Val {
     String(usize),
     Effect(usize),
     Struct(usize, Rc<List>),
-    Closure(usize, Rc<Vec<Val>>),
+    Fn { code: usize, params: usize },
+    Closure { code: usize, params: usize, env: Rc<Vec<Val>> },
     Resumable(usize, Rc<Vm>),
 }
 
@@ -25,6 +26,26 @@ pub enum List {
 }
 
 impl List {
+    fn new(items: Vec<Val>) -> Option<List> {
+        let mut items = items.into_iter();
+        let Some(first) = items.next() else {
+            return None;
+        };
+        let mut l = List::Val(first);
+        for item in items {
+            l = List::Cons(Rc::new(l), item);
+        }
+        Some(l)
+    }
+
+    fn append(self: Rc<Self>, items: Vec<Val>) -> Rc<List> {
+        let mut l = self;
+        for item in items {
+            l = Rc::new(List::Cons(l, item))
+        }
+        l
+    }
+
     pub(crate) fn to_vec(&self) -> Vec<&Val> {
         let mut vals = vec![];
         let mut list = self;
@@ -60,8 +81,10 @@ pub struct Value {
 #[derive(Debug)]
 pub struct Resumable {
     pub effect: usize,
-    pub arg: Value,
+    pub bytecode: Bytecode,
+    pub args: Vec<Val>,
     pub vm: Vm,
+    pub profiler: Profiler,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -80,7 +103,7 @@ struct Handler {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Profiler([Metric; 14]);
+pub struct Profiler([Metric; 16]);
 
 #[derive(Debug, Clone, Default)]
 pub struct Metric {
@@ -92,9 +115,11 @@ pub struct Metric {
 enum Measure {
     LoadVar,
     LoadFn,
+    LoadClosure,
     AppEffectHandler,
     AppEffectPause,
     AppResumable,
+    AppFn,
     AppClosure,
     AppString,
     AppStruct,
@@ -121,9 +146,11 @@ impl std::fmt::Display for Profiler {
         let measurements = [
             Measure::LoadVar,
             Measure::LoadFn,
+            Measure::LoadClosure,
             Measure::AppEffectHandler,
             Measure::AppEffectPause,
             Measure::AppResumable,
+            Measure::AppFn,
             Measure::AppClosure,
             Measure::AppString,
             Measure::AppStruct,
@@ -156,6 +183,7 @@ impl std::fmt::Display for Profiler {
 
 impl Vm {
     fn run(self, bytecode: Bytecode, mut profiler: Profiler) -> Result<State, usize> {
+        println!("\n\n");
         let Vm { mut ip, mut vars, mut temps, mut frames } = self;
         let mut handlers: Vec<Handler> = vec![];
         loop {
@@ -163,6 +191,10 @@ impl Vm {
             let op = bytecode.ops.get(ip).copied().ok_or(ip)?;
             let i = ip;
             ip += 1;
+            for v in temps.iter() {
+                println!("  {}", v.pretty(&bytecode.ctx.strs));
+            }
+            println!("{i}: {op:?}");
             match op {
                 Op::LoadVar(v) => {
                     let v: &Val = &vars[vars.len() - 1 - v];
@@ -171,26 +203,32 @@ impl Vm {
                 }
                 Op::LoadString(s) => temps.push(Val::String(s)),
                 Op::LoadEffect(eff) => temps.push(Val::Effect(eff)),
-                Op::LoadFn { code: _, fvars } if fvars > vars.len() => return Err(ip),
-                Op::LoadFn { code, fvars } => {
-                    let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                    temps.push(Val::Closure(code, captured));
+                Op::LoadFn { code: _, params: _, fvars } if fvars > vars.len() => return Err(i),
+                Op::LoadFn { code, params, fvars: 0 } => {
+                    temps.push(Val::Fn { code, params });
                     profiler.clock(time, Measure::LoadFn);
                 }
-                Op::AppFnToArg | Op::AppArgToFn => {
-                    let (arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
-                        (Op::AppFnToArg, b, a) => (b, a),
-                        (_, b, a) => (a, b),
-                    };
-                    match (f, arg) {
-                        (Val::Effect(effect), arg) => match handlers.pop() {
+                Op::LoadFn { code, params, fvars } => {
+                    let env = Rc::new(vars[vars.len() - fvars..].to_vec());
+                    temps.push(Val::Closure { code, params, env });
+                    profiler.clock(time, Measure::LoadClosure);
+                }
+                Op::App(params) => {
+                    let f = temps.pop().ok_or(i)?;
+                    if temps.len() < params {
+                        return Err(i);
+                    }
+                    // TODO: do we need to reverse these?
+                    let args: Vec<_> = temps.drain(temps.len() - params..).collect();
+                    match f {
+                        Val::Effect(effect) => match handlers.pop() {
                             Some(handler) => {
                                 let (v, t, f) = handler.state;
                                 let r_vars = vars.drain(v..).collect::<Vec<_>>();
                                 let r_temps = temps.drain(t..).collect::<Vec<_>>();
                                 let r_frames = frames.drain(f..).collect::<Vec<_>>();
                                 let vm = Vm { ip, vars: r_vars, temps: r_temps, frames: r_frames };
-                                temps.push(arg);
+                                temps.extend(args);
                                 temps.push(Val::Effect(effect));
                                 temps.push(Val::Resumable(v, Rc::new(vm)));
                                 temps.push(handler.handler);
@@ -200,12 +238,11 @@ impl Vm {
                             None => {
                                 profiler.clock(time, Measure::AppEffectPause);
                                 let vm = Vm { ip, vars, temps, frames };
-                                let arg = Value { bytecode, val: arg, profiler };
-                                let r = Resumable { effect, arg, vm };
+                                let r = Resumable { effect, bytecode, args, vm, profiler };
                                 return Ok(State::Resumable(r));
                             }
                         },
-                        (Val::Resumable(v, vm), arg) => {
+                        Val::Resumable(v, vm) => {
                             let offset = vars.len() as i64 - v as i64;
                             frames.push((vars.len(), ip));
                             vars.extend(vm.vars.clone());
@@ -215,28 +252,45 @@ impl Vm {
                                     .iter()
                                     .map(|(v, ret)| ((*v as i64 + offset) as usize, *ret)),
                             );
-                            temps.push(arg);
+                            temps.extend(args);
                             ip = vm.ip;
                             profiler.clock(time, Measure::AppResumable);
                         }
-                        (Val::Closure(c, captured), arg) => {
+                        Val::Fn { code, params } => {
+                            if params != args.len() {
+                                return Err(i);
+                            }
                             // TODO: if the next op is an Op::Return, we might want to do TCO
                             frames.push((vars.len(), ip));
-                            vars.extend(captured.iter().cloned());
-                            vars.push(arg);
-                            ip = c;
+                            vars.extend(args);
+                            ip = code;
+                            profiler.clock(time, Measure::AppFn);
+                        }
+                        Val::Closure { code, params, env } => {
+                            if params != args.len() {
+                                return Err(i);
+                            }
+                            // TODO: if the next op is an Op::Return, we might want to do TCO
+                            frames.push((vars.len(), ip));
+                            vars.extend(env.iter().cloned());
+                            vars.extend(args);
+                            ip = code;
                             profiler.clock(time, Measure::AppClosure);
                         }
-                        (Val::String(s), arg) => {
-                            temps.push(Val::Struct(s, Rc::new(List::Val(arg))));
+                        Val::String(s) => {
+                            match List::new(args) {
+                                None => temps.push(Val::String(s)),
+                                Some(args) => temps.push(Val::Struct(s, Rc::new(args))),
+                            }
                             profiler.clock(time, Measure::AppString);
                         }
-                        (Val::Struct(s, items), arg) => {
-                            temps.push(Val::Struct(s, Rc::new(List::Cons(items, arg))));
+                        Val::Struct(s, items) => {
+                            temps.push(Val::Struct(s, List::append(items, args)));
                             profiler.clock(time, Measure::AppStruct);
                         }
                     }
                 }
+                Op::Fix => todo!(),
                 Op::Return if frames.is_empty() => {
                     let val = temps.pop().ok_or(ip)?;
                     return Ok(State::Done(Value { val, bytecode, profiler }));
@@ -257,30 +311,28 @@ impl Vm {
                         }
                         Val::String(_) => temps.push(Val::String(Str::TyString as usize)),
                         Val::Struct(_, _) => temps.push(Val::String(Str::TyStruct as usize)),
-                        Val::Effect(_) | Val::Closure(_, _) | Val::Resumable(_, _) => {
-                            temps.push(Val::String(Str::TyFunction as usize))
-                        }
+                        Val::Effect(_)
+                        | Val::Fn { .. }
+                        | Val::Closure { .. }
+                        | Val::Resumable(_, _) => temps.push(Val::String(Str::TyFunction as usize)),
                     }
                     profiler.clock(time, Measure::Type);
                 }
-                Op::Unpack => {
-                    match (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
-                        (_, t, Val::Struct(f, xs)) => match xs.as_ref() {
-                            List::Val(x) => {
-                                temps.push(x.clone());
-                                temps.push(Val::String(f));
-                                temps.push(t);
-                            }
-                            List::Cons(xs, x) => {
-                                temps.push(x.clone());
-                                temps.push(Val::Struct(f, Rc::clone(xs)));
-                                temps.push(t);
-                            }
-                        },
-                        (f, _, _) => {
-                            temps.push(Val::String(Str::Null as usize));
-                            temps.push(f);
-                            ip += 1;
+                Op::Unpack { if_true, if_false } => {
+                    match temps.pop().ok_or(i)? {
+                        Val::Struct(f, xs) => {
+                            println!("unpack true");
+                            let (rest, x) = match xs.as_ref() {
+                                List::Val(x) => (Val::String(f), x),
+                                List::Cons(xs, x) => (Val::Struct(f, Rc::clone(xs)), x),
+                            };
+                            temps.extend([rest, x.clone()]);
+                            frames.push((vars.len(), ip));
+                            ip = if_true;
+                        }
+                        _ => {
+                            frames.push((vars.len(), ip));
+                            ip = if_false
                         }
                     }
                     profiler.clock(time, Measure::Unpack);
@@ -312,7 +364,6 @@ impl Vm {
                         (Val::Effect(a), Val::Effect(b), t, _) if a == b => t,
                         (_, _, _, f) => f,
                     };
-                    temps.push(Val::String(Str::Null as usize));
                     temps.push(branch);
                     profiler.clock(time, Measure::Compare);
                 }
@@ -326,7 +377,8 @@ impl Val {
         match self {
             Val::String(s) => strs[*s].to_string(),
             Val::Effect(s) => format!("{}!", strs[*s]),
-            Val::Closure(c, _) => format!("#fn-{c}"),
+            Val::Fn { code, params } => format!("#fn/{params}@{code}"),
+            Val::Closure { code, params, .. } => format!("#closure/{params}@{code}"),
             Val::Struct(s, vs) if strs[*s] == LIST => {
                 let items = vs.to_vec().iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
                 format!("[{}]", items.join(", "))
@@ -359,26 +411,30 @@ impl std::fmt::Display for Value {
 
 impl Resumable {
     pub fn effect(&self) -> &str {
-        self.arg.bytecode.ctx.strs.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
+        self.bytecode.ctx.strs.get(self.effect).map(|s| s.as_ref()).unwrap_or_default()
     }
 
     pub fn intern_atom(&mut self, s: String) -> Val {
-        Val::String(intern(&mut self.arg.bytecode.ctx.strs, s))
+        Val::String(intern(&mut self.bytecode.ctx.strs, s))
     }
 
     pub fn intern_string(&mut self, s: impl AsRef<str>) -> Val {
-        Val::String(intern(&mut self.arg.bytecode.ctx.strs, format!("\"{}\"", s.as_ref())))
+        Val::String(intern(&mut self.bytecode.ctx.strs, format!("\"{}\"", s.as_ref())))
     }
 
-    pub fn resume(mut self, arg: Val) -> Result<State, usize> {
-        self.vm.temps.push(arg);
-        self.vm.run(self.arg.bytecode, self.arg.profiler)
+    pub fn args_pretty(&self) -> Vec<String> {
+        self.args.iter().map(|arg| arg.pretty(&self.bytecode.ctx.strs)).collect()
+    }
+
+    pub fn resume(mut self, args: Vec<Val>) -> Result<State, usize> {
+        self.vm.temps.extend(args);
+        self.vm.run(self.bytecode, self.profiler)
     }
 
     pub fn resume_at(mut self, start: usize) -> Result<State, usize> {
         self.vm.frames.push((self.vm.vars.len(), self.vm.ip));
         self.vm.ip = start;
-        self.vm.run(self.arg.bytecode, self.arg.profiler)
+        self.vm.run(self.bytecode, self.profiler)
     }
 }
 
