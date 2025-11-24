@@ -101,7 +101,7 @@ impl Bytecode {
                         Ok(Value::Object(map))
                     }
                 },
-                Val::Closure(_, _) | Val::Resumable(_, _) => {
+                Val::Fn(_) | Val::Closure(_, _) | Val::Resumable(_, _) => {
                     Err(serde_json::Error::custom("Can't deserialize closures or resumables"))
                 }
             }

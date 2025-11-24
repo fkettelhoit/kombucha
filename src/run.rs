@@ -13,6 +13,7 @@ impl Bytecode {
 pub enum Val {
     String(usize),
     Effect(usize),
+    Fn(usize),
     Struct(usize, Rc<List>),
     Closure(usize, Rc<Vec<Val>>),
     Resumable(usize, Rc<Vm>),
@@ -80,7 +81,7 @@ struct Handler {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Profiler([Metric; 16]);
+pub struct Profiler([Metric; 18]);
 
 #[derive(Debug, Clone, Default)]
 pub struct Metric {
@@ -96,7 +97,9 @@ enum Measure {
     AppEffectHandler,
     AppEffectPause,
     AppResumable,
-    AppTailCall,
+    AppTailFn,
+    AppTailClosure,
+    AppFn,
     AppClosure,
     AppString,
     AppStruct,
@@ -127,7 +130,9 @@ impl std::fmt::Display for Profiler {
             Measure::AppEffectHandler,
             Measure::AppEffectPause,
             Measure::AppResumable,
-            Measure::AppTailCall,
+            Measure::AppTailFn,
+            Measure::AppTailClosure,
+            Measure::AppFn,
             Measure::AppClosure,
             Measure::AppString,
             Measure::AppStruct,
@@ -194,12 +199,20 @@ impl Vm {
                                 ip = code;
                                 profiler.clock(time, Measure::LoadFn);
                             }
+                            _ if fvars == 0 => {
+                                temps.push(Val::Fn(code));
+                                profiler.clock(time, Measure::LoadFn);
+                            }
                             _ => {
                                 let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
                                 temps.push(Val::Closure(code, captured));
                                 profiler.clock(time, Measure::LoadClosure);
                             }
                         }
+                    }
+                    _ if fvars == 0 => {
+                        temps.push(Val::Fn(code));
+                        profiler.clock(time, Measure::LoadFn);
                     }
                     _ => {
                         let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
@@ -246,12 +259,24 @@ impl Vm {
                             ip = vm.ip;
                             profiler.clock(time, Measure::AppResumable);
                         }
+                        (Val::Fn(c), arg) => {
+                            if let Some(Op::Return) = bytecode.ops.get(i + 1) {
+                                vars.push(arg);
+                                ip = c;
+                                profiler.clock(time, Measure::AppTailFn);
+                            } else {
+                                frames.push((vars.len(), ip));
+                                vars.push(arg);
+                                ip = c;
+                                profiler.clock(time, Measure::AppFn);
+                            }
+                        }
                         (Val::Closure(c, captured), arg) => {
                             if let Some(Op::Return) = bytecode.ops.get(i + 1) {
                                 vars.extend(captured.iter().cloned());
                                 vars.push(arg);
                                 ip = c;
-                                profiler.clock(time, Measure::AppTailCall);
+                                profiler.clock(time, Measure::AppTailClosure);
                             } else {
                                 frames.push((vars.len(), ip));
                                 vars.extend(captured.iter().cloned());
@@ -290,7 +315,7 @@ impl Vm {
                         }
                         Val::String(_) => temps.push(Val::String(Str::TyString as usize)),
                         Val::Struct(_, _) => temps.push(Val::String(Str::TyStruct as usize)),
-                        Val::Effect(_) | Val::Closure(_, _) | Val::Resumable(_, _) => {
+                        Val::Effect(_) | Val::Fn(_) | Val::Closure(_, _) | Val::Resumable(_, _) => {
                             temps.push(Val::String(Str::TyFunction as usize))
                         }
                     }
@@ -359,7 +384,7 @@ impl Val {
         match self {
             Val::String(s) => strs[*s].to_string(),
             Val::Effect(s) => format!("{}!", strs[*s]),
-            Val::Closure(c, _) => format!("#fn-{c}"),
+            Val::Fn(c) | Val::Closure(c, _) => format!("#fn-{c}"),
             Val::Struct(s, vs) if strs[*s] == LIST => {
                 let items = vs.to_vec().iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
                 format!("[{}]", items.join(", "))
