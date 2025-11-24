@@ -80,7 +80,7 @@ struct Handler {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Profiler([Metric; 15]);
+pub struct Profiler([Metric; 16]);
 
 #[derive(Debug, Clone, Default)]
 pub struct Metric {
@@ -96,6 +96,7 @@ enum Measure {
     AppEffectHandler,
     AppEffectPause,
     AppResumable,
+    AppTailCall,
     AppClosure,
     AppString,
     AppStruct,
@@ -126,6 +127,7 @@ impl std::fmt::Display for Profiler {
             Measure::AppEffectHandler,
             Measure::AppEffectPause,
             Measure::AppResumable,
+            Measure::AppTailCall,
             Measure::AppClosure,
             Measure::AppString,
             Measure::AppStruct,
@@ -245,12 +247,18 @@ impl Vm {
                             profiler.clock(time, Measure::AppResumable);
                         }
                         (Val::Closure(c, captured), arg) => {
-                            // TODO: if the next op is an Op::Return, we might want to do TCO
-                            frames.push((vars.len(), ip));
-                            vars.extend(captured.iter().cloned());
-                            vars.push(arg);
-                            ip = c;
-                            profiler.clock(time, Measure::AppClosure);
+                            if let Some(Op::Return) = bytecode.ops.get(i + 1) {
+                                vars.extend(captured.iter().cloned());
+                                vars.push(arg);
+                                ip = c;
+                                profiler.clock(time, Measure::AppTailCall);
+                            } else {
+                                frames.push((vars.len(), ip));
+                                vars.extend(captured.iter().cloned());
+                                vars.push(arg);
+                                ip = c;
+                                profiler.clock(time, Measure::AppClosure);
+                            }
                         }
                         (Val::String(s), arg) => {
                             temps.push(Val::Struct(s, Rc::new(List::Val(arg))));
