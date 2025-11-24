@@ -78,8 +78,7 @@ pub enum Op {
     LoadString(usize),
     LoadEffect(usize),
     LoadVar(usize),
-    AppFnToArg,
-    AppArgToFn,
+    Apply,
     Return,
     Compare,
     Unpack,
@@ -148,14 +147,13 @@ impl Bytecode {
                     buf.push(4 << tag_shift | ((v >> 8 & 0x0F) as u8));
                     buf.push((v & 0xFF) as u8);
                 }
-                Op::AppFnToArg => buf.push(5 << tag_shift),
-                Op::AppArgToFn => buf.push(6 << tag_shift),
-                Op::Return => buf.push(7 << tag_shift),
-                Op::Compare => buf.push(8 << tag_shift),
-                Op::Unpack => buf.push(9 << tag_shift),
-                Op::Try => buf.push(10 << tag_shift),
-                Op::Unwind => buf.push(11 << tag_shift),
-                Op::Type => buf.push(12 << tag_shift),
+                Op::Apply => buf.push(5 << tag_shift),
+                Op::Return => buf.push(6 << tag_shift),
+                Op::Compare => buf.push(7 << tag_shift),
+                Op::Unpack => buf.push(8 << tag_shift),
+                Op::Try => buf.push(9 << tag_shift),
+                Op::Unwind => buf.push(10 << tag_shift),
+                Op::Type => buf.push(11 << tag_shift),
             }
         }
         Ok(buf)
@@ -268,14 +266,13 @@ impl Bytecode {
                     ops.push(Op::LoadVar(v));
                     i += 1;
                 }
-                5 => ops.push(Op::AppFnToArg),
-                6 => ops.push(Op::AppArgToFn),
-                7 => ops.push(Op::Return),
-                8 => ops.push(Op::Compare),
-                9 => ops.push(Op::Unpack),
-                10 => ops.push(Op::Try),
-                11 => ops.push(Op::Unwind),
-                12 => ops.push(Op::Type),
+                5 => ops.push(Op::Apply),
+                6 => ops.push(Op::Return),
+                7 => ops.push(Op::Compare),
+                8 => ops.push(Op::Unpack),
+                9 => ops.push(Op::Try),
+                10 => ops.push(Op::Unwind),
+                11 => ops.push(Op::Type),
                 _ => return Err(format!("Invalid opcode {tag} at {i}")),
             }
             i += 1;

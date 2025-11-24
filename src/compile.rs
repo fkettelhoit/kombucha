@@ -18,7 +18,7 @@ enum Tok<'code> {
     Separator,
 }
 
-fn scan(code: &str) -> Result<Vec<(Tok, usize, &str)>, (usize, &str)> {
+fn scan(code: &str) -> Result<Vec<(Tok<'_>, usize, &str)>, (usize, &str)> {
     let mut toks = vec![];
     let mut i = 0;
     let mut chars = code.char_indices().chain(iter::once((code.len(), ' ')));
@@ -431,13 +431,13 @@ fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
                 fns.extend(f);
             }
             Expr::App(f, arg) => {
-                emit(&[f, arg], ops, fns);
-                ops.push(Op::AppFnToArg);
+                emit(&[arg, f], ops, fns);
+                ops.push(Op::Apply);
             }
             Expr::Rec(body) => {
                 emit(&[body], ops, fns);
                 // Fn at code 0 is the built-in fixed-point combinator:
-                ops.extend([Op::LoadFn { code: 0, fvars: 0 }, Op::AppArgToFn]);
+                ops.extend([Op::LoadFn { code: 0, fvars: 0 }, Op::Apply]);
             }
             Expr::Type(body) => {
                 emit(&[body], ops, fns);
@@ -445,22 +445,15 @@ fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             }
             Expr::Compare([a, b, if_t, if_f]) => {
                 emit(&[a, b, if_t, if_f], ops, fns);
-                ops.extend([Op::Compare, Op::AppArgToFn]);
+                ops.extend([Op::Compare, Op::Apply]);
             }
             Expr::Unpack([val, if_t, if_f]) => {
                 emit(&[val, if_t, if_f], ops, fns);
-                ops.extend([Op::Unpack, Op::AppArgToFn, Op::AppArgToFn]);
+                ops.extend([Op::Unpack, Op::Apply, Op::Apply]);
             }
             Expr::Handle([val, handler]) => {
                 emit(&[val, handler], ops, fns);
-                ops.extend([
-                    Op::Try,
-                    Op::AppArgToFn,
-                    Op::Unwind,
-                    Op::AppArgToFn,
-                    Op::AppArgToFn,
-                    Op::AppArgToFn,
-                ]);
+                ops.extend([Op::Try, Op::Apply, Op::Unwind, Op::Apply, Op::Apply, Op::Apply]);
             }
         }
     }
@@ -478,10 +471,10 @@ pub fn codegen(expr: Expr, ctx: Ctx) -> Bytecode {
         Op::LoadVar(0),                   // x
         Op::LoadVar(1),                   // x, f
         Op::LoadFn { code: 0, fvars: 0 }, // x, f, fix
-        Op::AppArgToFn,                   // x, fix(f)
+        Op::Apply,                        // x, fix(f)
         Op::LoadVar(1),                   // x, fix(f), f
-        Op::AppArgToFn,                   // x, f(fix(f))
-        Op::AppArgToFn,                   // f(fix(f))(x)
+        Op::Apply,                        // x, f(fix(f))
+        Op::Apply,                        // f(fix(f))(x)
         Op::Return,
     ];
     emit(&[&expr], &mut main, &mut bytecode);

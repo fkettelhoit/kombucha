@@ -80,7 +80,7 @@ struct Handler {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Profiler([Metric; 14]);
+pub struct Profiler([Metric; 15]);
 
 #[derive(Debug, Clone, Default)]
 pub struct Metric {
@@ -92,6 +92,7 @@ pub struct Metric {
 enum Measure {
     LoadVar,
     LoadFn,
+    LoadClosure,
     AppEffectHandler,
     AppEffectPause,
     AppResumable,
@@ -121,6 +122,7 @@ impl std::fmt::Display for Profiler {
         let measurements = [
             Measure::LoadVar,
             Measure::LoadFn,
+            Measure::LoadClosure,
             Measure::AppEffectHandler,
             Measure::AppEffectPause,
             Measure::AppResumable,
@@ -172,16 +174,39 @@ impl Vm {
                 Op::LoadString(s) => temps.push(Val::String(s)),
                 Op::LoadEffect(eff) => temps.push(Val::Effect(eff)),
                 Op::LoadFn { code: _, fvars } if fvars > vars.len() => return Err(ip),
-                Op::LoadFn { code, fvars } => {
-                    let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                    temps.push(Val::Closure(code, captured));
-                    profiler.clock(time, Measure::LoadFn);
-                }
-                Op::AppFnToArg | Op::AppArgToFn => {
-                    let (arg, f) = match (op, temps.pop().ok_or(i)?, temps.pop().ok_or(i)?) {
-                        (Op::AppFnToArg, b, a) => (b, a),
-                        (_, b, a) => (a, b),
-                    };
+                Op::LoadFn { code, fvars } => match bytecode.ops.get(i + 1).ok_or(i)? {
+                    Op::Apply => {
+                        frames.push((vars.len(), ip + 1));
+                        vars.push(temps.pop().ok_or(ip)?);
+                        ip = code;
+                        profiler.clock(time, Measure::LoadFn);
+                    }
+                    Op::Return => {
+                        let (_, ret) = *frames.last().ok_or(ip)?;
+                        match bytecode.ops.get(ret).ok_or(ip)? {
+                            Op::Apply => {
+                                let (frame, ret) = frames.pop().ok_or(ip)?;
+                                let arg = temps.pop().ok_or(ip + 1)?;
+                                frames.push((frame, ret + 1));
+                                vars.push(arg);
+                                ip = code;
+                                profiler.clock(time, Measure::LoadFn);
+                            }
+                            _ => {
+                                let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
+                                temps.push(Val::Closure(code, captured));
+                                profiler.clock(time, Measure::LoadClosure);
+                            }
+                        }
+                    }
+                    _ => {
+                        let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
+                        temps.push(Val::Closure(code, captured));
+                        profiler.clock(time, Measure::LoadClosure);
+                    }
+                },
+                Op::Apply => {
+                    let (f, arg) = (temps.pop().ok_or(i)?, temps.pop().ok_or(i)?);
                     match (f, arg) {
                         (Val::Effect(effect), arg) => match handlers.pop() {
                             Some(handler) => {
