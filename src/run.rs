@@ -13,9 +13,9 @@ impl Bytecode {
 pub enum Val {
     String(usize),
     Effect(usize),
-    Fn(usize),
     Struct(usize, Rc<List>),
-    Closure(usize, Rc<Vec<Val>>),
+    Fn { code: usize, rec: usize },
+    Closure { code: usize, rec: usize, env: Rc<Vec<Val>> },
     Resumable(usize, Rc<Vm>),
 }
 
@@ -172,6 +172,16 @@ impl Vm {
             let op = bytecode.ops.get(ip).copied().ok_or(ip)?;
             let i = ip;
             ip += 1;
+            // for (vars, ret) in frames.iter() {
+            //     println!("  <- vars: {vars}, ret: {ret}");
+            // }
+            // for (i, v) in vars.iter().rev().enumerate() {
+            //     println!("    {i}: {}", v.pretty(&bytecode.ctx.strs))
+            // }
+            // for v in temps.iter() {
+            //     println!("  {}", v.pretty(&bytecode.ctx.strs))
+            // }
+            // println!("{i}: {op:?}");
             match op {
                 Op::LoadVar(v) => {
                     let v: &Val = &vars[vars.len() - 1 - v];
@@ -200,23 +210,23 @@ impl Vm {
                                 profiler.clock(time, Measure::LoadFn);
                             }
                             _ if fvars == 0 => {
-                                temps.push(Val::Fn(code));
+                                temps.push(Val::Fn { code, rec: 0 });
                                 profiler.clock(time, Measure::LoadFn);
                             }
                             _ => {
-                                let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                                temps.push(Val::Closure(code, captured));
+                                let env = Rc::new(vars[vars.len() - fvars..].to_vec());
+                                temps.push(Val::Closure { code, env, rec: 0 });
                                 profiler.clock(time, Measure::LoadClosure);
                             }
                         }
                     }
                     _ if fvars == 0 => {
-                        temps.push(Val::Fn(code));
+                        temps.push(Val::Fn { code, rec: 0 });
                         profiler.clock(time, Measure::LoadFn);
                     }
                     _ => {
-                        let captured = Rc::new(vars[vars.len() - fvars..].to_vec());
-                        temps.push(Val::Closure(code, captured));
+                        let env = Rc::new(vars[vars.len() - fvars..].to_vec());
+                        temps.push(Val::Closure { code, env, rec: 0 });
                         profiler.clock(time, Measure::LoadClosure);
                     }
                 },
@@ -259,31 +269,52 @@ impl Vm {
                             ip = vm.ip;
                             profiler.clock(time, Measure::AppResumable);
                         }
-                        (Val::Fn(c), arg) => {
+                        (Val::Fn { code, rec: 0 }, arg) => {
                             if let Some(Op::Return) = bytecode.ops.get(i + 1) {
                                 vars.push(arg);
-                                ip = c;
+                                ip = code;
                                 profiler.clock(time, Measure::AppTailFn);
                             } else {
                                 frames.push((vars.len(), ip));
                                 vars.push(arg);
-                                ip = c;
+                                ip = code;
                                 profiler.clock(time, Measure::AppFn);
                             }
                         }
-                        (Val::Closure(c, captured), arg) => {
+                        (Val::Fn { code, rec }, arg) => {
+                            // TODO: do I need to push more than one frame?
+                            frames.push((vars.len(), ip - 1));
+                            for rec in (1..=rec).rev() {
+                                vars.push(Val::Fn { code, rec })
+                            }
+                            temps.push(arg);
+                            ip = code;
+                            profiler.clock(time, Measure::AppFn);
+                        }
+                        (Val::Closure { code, env, rec: 0 }, arg) => {
                             if let Some(Op::Return) = bytecode.ops.get(i + 1) {
-                                vars.extend(captured.iter().cloned());
+                                vars.extend(env.iter().cloned());
                                 vars.push(arg);
-                                ip = c;
+                                ip = code;
                                 profiler.clock(time, Measure::AppTailClosure);
                             } else {
                                 frames.push((vars.len(), ip));
-                                vars.extend(captured.iter().cloned());
+                                vars.extend(env.iter().cloned());
                                 vars.push(arg);
-                                ip = c;
+                                ip = code;
                                 profiler.clock(time, Measure::AppClosure);
                             }
+                        }
+                        (Val::Closure { code, env, rec }, arg) => {
+                            // TODO: do I need to push more than one frame?
+                            frames.push((vars.len(), ip - 1));
+                            vars.extend(env.iter().cloned());
+                            for rec in (1..=rec).rev() {
+                                vars.push(Val::Closure { code, rec, env: Rc::clone(&env) })
+                            }
+                            temps.push(arg);
+                            ip = code;
+                            profiler.clock(time, Measure::AppClosure);
                         }
                         (Val::String(s), arg) => {
                             temps.push(Val::Struct(s, Rc::new(List::Val(arg))));
@@ -305,6 +336,16 @@ impl Vm {
                     ip = ret;
                     profiler.clock(time, Measure::Return);
                 }
+                Op::Fix => match temps.pop().ok_or(i)? {
+                    Val::Fn { code, rec } => temps.push(Val::Fn { code, rec: rec + 1 }),
+                    Val::Closure { code, rec, env } => {
+                        temps.push(Val::Closure { code, rec: rec + 1, env })
+                    }
+                    v @ (Val::Resumable(_, _)
+                    | Val::String(_)
+                    | Val::Effect(_)
+                    | Val::Struct(_, _)) => temps.push(v),
+                },
                 Op::Type => {
                     match temps.pop().ok_or(i)? {
                         Val::String(s) if s == Str::Null as usize => {
@@ -315,9 +356,10 @@ impl Vm {
                         }
                         Val::String(_) => temps.push(Val::String(Str::TyString as usize)),
                         Val::Struct(_, _) => temps.push(Val::String(Str::TyStruct as usize)),
-                        Val::Effect(_) | Val::Fn(_) | Val::Closure(_, _) | Val::Resumable(_, _) => {
-                            temps.push(Val::String(Str::TyFunction as usize))
-                        }
+                        Val::Effect(_)
+                        | Val::Fn { .. }
+                        | Val::Closure { .. }
+                        | Val::Resumable(_, _) => temps.push(Val::String(Str::TyFunction as usize)),
                     }
                     profiler.clock(time, Measure::Type);
                 }
@@ -384,7 +426,10 @@ impl Val {
         match self {
             Val::String(s) => strs[*s].to_string(),
             Val::Effect(s) => format!("{}!", strs[*s]),
-            Val::Fn(c) | Val::Closure(c, _) => format!("#fn-{c}"),
+            Val::Fn { code, rec: 0 } => format!("#fn-{code}"),
+            Val::Closure { code, rec: 0, env } => format!("#closure-{code}::{env:?}"),
+            Val::Fn { code, rec } => format!("#fn-{code}[rec:{rec}]"),
+            Val::Closure { code, rec, env, .. } => format!("#closure-{code}[rec:{rec}]::{env:?}"),
             Val::Struct(s, vs) if strs[*s] == LIST => {
                 let items = vs.to_vec().iter().map(|v| v.pretty(strs)).collect::<Vec<_>>();
                 format!("[{}]", items.join(", "))

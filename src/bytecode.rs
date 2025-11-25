@@ -85,6 +85,7 @@ pub enum Op {
     Try,
     Unwind,
     Type,
+    Fix,
 }
 
 impl Bytecode {
@@ -154,6 +155,7 @@ impl Bytecode {
                 Op::Try => buf.push(9 << tag_shift),
                 Op::Unwind => buf.push(10 << tag_shift),
                 Op::Type => buf.push(11 << tag_shift),
+                Op::Fix => buf.push(12 << tag_shift),
             }
         }
         Ok(buf)
@@ -273,6 +275,7 @@ impl Bytecode {
                 9 => ops.push(Op::Try),
                 10 => ops.push(Op::Unwind),
                 11 => ops.push(Op::Type),
+                12 => ops.push(Op::Fix),
                 _ => return Err(format!("Invalid opcode {tag} at {i}")),
             }
             i += 1;

@@ -34,58 +34,48 @@ macro(Foo, {})
       =>
         () ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: PushString("()")
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003: PushString("Foo")
+00004: PushString("Value")
 00005: Apply
-00006: LoadVar(00001)
+00006: LoadVar(00000)
 00007: Apply
 00008: Apply
 00009:   Return
-00010: PushString("()")
+00010: LoadVar(00001)
 00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013: PushString("Foo")
-00014: PushString("Value")
-00015: Apply
-00016: LoadVar(00000)
-00017: Apply
-00018: Apply
-00019:   Return
-00020: LoadVar(00001)
+00012: LoadFn { code: 00010, fvars: 00001 }
+00013:   Return
+00014: LoadVar(00000)
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00001)
+00019: LoadVar(00000)
+00020: Apply
 00021:   Return
-00022: LoadFn { code: 00020, fvars: 00001 }
+00022: LoadFn { code: 00018, fvars: 00001 }
 00023:   Return
-00024: LoadVar(00000)
+00024: LoadFn { code: 00022, fvars: 00000 }
 00025:   Return
-00026: LoadFn { code: 00024, fvars: 00000 }
-00027:   Return
-00028: LoadVar(00001)
-00029: LoadVar(00000)
-00030: Apply
-00031:   Return
-00032: LoadFn { code: 00028, fvars: 00001 }
-00033:   Return
-00034: LoadFn { code: 00032, fvars: 00000 }
-00035:   Return
-00036: LoadFn { code: 00012, fvars: 00000 }
-00037: LoadFn { code: 00022, fvars: 00000 }
-00038: PushString(""_"")
-00039: PushString(""x"")
-00040: PushString("[]")
-00041: Apply
-00042: Apply
-00043: LoadFn { code: 00026, fvars: 00000 }
-00044: Apply
-00045: Apply
-00046: PushString(""macro"")
-00047: LoadFn { code: 00034, fvars: 00000 }
-00048: Apply
-00049: Apply
-00050: Apply
-00051:   Return
+00026: LoadFn { code: 00002, fvars: 00000 }
+00027: LoadFn { code: 00012, fvars: 00000 }
+00028: PushString(""_"")
+00029: PushString(""x"")
+00030: PushString("[]")
+00031: Apply
+00032: Apply
+00033: LoadFn { code: 00016, fvars: 00000 }
+00034: Apply
+00035: Apply
+00036: PushString(""macro"")
+00037: LoadFn { code: 00024, fvars: 00000 }
+00038: Apply
+00039: Apply
+00040: Apply
+00041:   Return
 
 Value(Foo)
 
@@ -127,58 +117,48 @@ macro(:binding, {})
       =>
         () ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: PushString("()")
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003: PushString(""binding"")
+00004: PushString("Binding")
 00005: Apply
-00006: LoadVar(00001)
+00006: LoadVar(00000)
 00007: Apply
 00008: Apply
 00009:   Return
-00010: PushString("()")
+00010: LoadVar(00001)
 00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013: PushString(""binding"")
-00014: PushString("Binding")
-00015: Apply
-00016: LoadVar(00000)
-00017: Apply
-00018: Apply
-00019:   Return
-00020: LoadVar(00001)
+00012: LoadFn { code: 00010, fvars: 00001 }
+00013:   Return
+00014: LoadVar(00000)
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00001)
+00019: LoadVar(00000)
+00020: Apply
 00021:   Return
-00022: LoadFn { code: 00020, fvars: 00001 }
+00022: LoadFn { code: 00018, fvars: 00001 }
 00023:   Return
-00024: LoadVar(00000)
+00024: LoadFn { code: 00022, fvars: 00000 }
 00025:   Return
-00026: LoadFn { code: 00024, fvars: 00000 }
-00027:   Return
-00028: LoadVar(00001)
-00029: LoadVar(00000)
-00030: Apply
-00031:   Return
-00032: LoadFn { code: 00028, fvars: 00001 }
-00033:   Return
-00034: LoadFn { code: 00032, fvars: 00000 }
-00035:   Return
-00036: LoadFn { code: 00012, fvars: 00000 }
-00037: LoadFn { code: 00022, fvars: 00000 }
-00038: PushString(""_"")
-00039: PushString(""x"")
-00040: PushString("[]")
-00041: Apply
-00042: Apply
-00043: LoadFn { code: 00026, fvars: 00000 }
-00044: Apply
-00045: Apply
-00046: PushString(""macro"")
-00047: LoadFn { code: 00034, fvars: 00000 }
-00048: Apply
-00049: Apply
-00050: Apply
-00051:   Return
+00026: LoadFn { code: 00002, fvars: 00000 }
+00027: LoadFn { code: 00012, fvars: 00000 }
+00028: PushString(""_"")
+00029: PushString(""x"")
+00030: PushString("[]")
+00031: Apply
+00032: Apply
+00033: LoadFn { code: 00016, fvars: 00000 }
+00034: Apply
+00035: Apply
+00036: PushString(""macro"")
+00037: LoadFn { code: 00024, fvars: 00000 }
+00038: Apply
+00039: Apply
+00040: Apply
+00041:   Return
 
 Binding("binding")
 
@@ -224,62 +204,52 @@ macro(Foo(Bar, Baz), {})
       =>
         () ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: PushString("()")
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: Apply
-00006: LoadVar(00001)
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003: PushString("Baz")
+00004: PushString("Bar")
+00005: PushString("Foo")
+00006: Apply
 00007: Apply
-00008: Apply
-00009:   Return
-00010: PushString("()")
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013: PushString("Baz")
-00014: PushString("Bar")
-00015: PushString("Foo")
-00016: Apply
-00017: Apply
-00018: PushString("Value")
-00019: Apply
-00020: LoadVar(00000)
-00021: Apply
-00022: Apply
-00023:   Return
-00024: LoadVar(00001)
+00008: PushString("Value")
+00009: Apply
+00010: LoadVar(00000)
+00011: Apply
+00012: Apply
+00013:   Return
+00014: LoadVar(00001)
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00001 }
+00017:   Return
+00018: LoadVar(00000)
+00019:   Return
+00020: LoadFn { code: 00018, fvars: 00000 }
+00021:   Return
+00022: LoadVar(00001)
+00023: LoadVar(00000)
+00024: Apply
 00025:   Return
-00026: LoadFn { code: 00024, fvars: 00001 }
+00026: LoadFn { code: 00022, fvars: 00001 }
 00027:   Return
-00028: LoadVar(00000)
+00028: LoadFn { code: 00026, fvars: 00000 }
 00029:   Return
-00030: LoadFn { code: 00028, fvars: 00000 }
-00031:   Return
-00032: LoadVar(00001)
-00033: LoadVar(00000)
-00034: Apply
-00035:   Return
-00036: LoadFn { code: 00032, fvars: 00001 }
-00037:   Return
-00038: LoadFn { code: 00036, fvars: 00000 }
-00039:   Return
-00040: LoadFn { code: 00012, fvars: 00000 }
-00041: LoadFn { code: 00026, fvars: 00000 }
-00042: PushString(""_"")
-00043: PushString(""x"")
-00044: PushString("[]")
-00045: Apply
-00046: Apply
-00047: LoadFn { code: 00030, fvars: 00000 }
-00048: Apply
-00049: Apply
-00050: PushString(""macro"")
-00051: LoadFn { code: 00038, fvars: 00000 }
-00052: Apply
-00053: Apply
-00054: Apply
-00055:   Return
+00030: LoadFn { code: 00002, fvars: 00000 }
+00031: LoadFn { code: 00016, fvars: 00000 }
+00032: PushString(""_"")
+00033: PushString(""x"")
+00034: PushString("[]")
+00035: Apply
+00036: Apply
+00037: LoadFn { code: 00020, fvars: 00000 }
+00038: Apply
+00039: Apply
+00040: PushString(""macro"")
+00041: LoadFn { code: 00028, fvars: 00000 }
+00042: Apply
+00043: Apply
+00044: Apply
+00045:   Return
 
 Value(Foo(Bar, Baz))
 
@@ -329,70 +299,60 @@ macro(Foo(Bar, :baz), {})
       =>
         () ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: PushString("()")
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003: PushString(""baz"")
+00004: PushString("Binding")
 00005: Apply
-00006: LoadVar(00001)
-00007: Apply
+00006: PushString("Bar")
+00007: PushString("Value")
 00008: Apply
-00009:   Return
-00010: PushString("()")
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013: PushString(""baz"")
-00014: PushString("Binding")
-00015: Apply
-00016: PushString("Bar")
-00017: PushString("Value")
-00018: Apply
-00019: PushString("[]")
+00009: PushString("[]")
+00010: Apply
+00011: Apply
+00012: PushString("Foo")
+00013: PushString("Value")
+00014: Apply
+00015: PushString("Compound")
+00016: Apply
+00017: Apply
+00018: LoadVar(00000)
+00019: Apply
 00020: Apply
-00021: Apply
-00022: PushString("Foo")
-00023: PushString("Value")
-00024: Apply
-00025: PushString("Compound")
-00026: Apply
-00027: Apply
-00028: LoadVar(00000)
-00029: Apply
-00030: Apply
-00031:   Return
-00032: LoadVar(00001)
+00021:   Return
+00022: LoadVar(00001)
+00023:   Return
+00024: LoadFn { code: 00022, fvars: 00001 }
+00025:   Return
+00026: LoadVar(00000)
+00027:   Return
+00028: LoadFn { code: 00026, fvars: 00000 }
+00029:   Return
+00030: LoadVar(00001)
+00031: LoadVar(00000)
+00032: Apply
 00033:   Return
-00034: LoadFn { code: 00032, fvars: 00001 }
+00034: LoadFn { code: 00030, fvars: 00001 }
 00035:   Return
-00036: LoadVar(00000)
+00036: LoadFn { code: 00034, fvars: 00000 }
 00037:   Return
-00038: LoadFn { code: 00036, fvars: 00000 }
-00039:   Return
-00040: LoadVar(00001)
-00041: LoadVar(00000)
-00042: Apply
-00043:   Return
-00044: LoadFn { code: 00040, fvars: 00001 }
-00045:   Return
-00046: LoadFn { code: 00044, fvars: 00000 }
-00047:   Return
-00048: LoadFn { code: 00012, fvars: 00000 }
-00049: LoadFn { code: 00034, fvars: 00000 }
-00050: PushString(""_"")
-00051: PushString(""x"")
-00052: PushString("[]")
-00053: Apply
-00054: Apply
-00055: LoadFn { code: 00038, fvars: 00000 }
-00056: Apply
-00057: Apply
-00058: PushString(""macro"")
-00059: LoadFn { code: 00046, fvars: 00000 }
-00060: Apply
-00061: Apply
-00062: Apply
-00063:   Return
+00038: LoadFn { code: 00002, fvars: 00000 }
+00039: LoadFn { code: 00024, fvars: 00000 }
+00040: PushString(""_"")
+00041: PushString(""x"")
+00042: PushString("[]")
+00043: Apply
+00044: Apply
+00045: LoadFn { code: 00028, fvars: 00000 }
+00046: Apply
+00047: Apply
+00048: PushString(""macro"")
+00049: LoadFn { code: 00036, fvars: 00000 }
+00050: Apply
+00051: Apply
+00052: Apply
+00053:   Return
 
 Compound(Value(Foo), [Value(Bar), Binding("baz")])
 
@@ -443,72 +403,62 @@ macro(:foo(Bar, :baz), {})
         =>
           () ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: PushString("()")
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: Apply
-00006: LoadVar(00001)
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003:   Return
+00004: LoadFn { code: 00002, fvars: 00000 }
+00005: PushString(""baz"")
+00006: PushString("Binding")
 00007: Apply
-00008: Apply
-00009:   Return
-00010: PushString("()")
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013:   Return
-00014: LoadFn { code: 00012, fvars: 00000 }
-00015: PushString(""baz"")
-00016: PushString("Binding")
-00017: Apply
-00018: PushString("Bar")
-00019: PushString("Value")
-00020: Apply
-00021: PushString("[]")
+00008: PushString("Bar")
+00009: PushString("Value")
+00010: Apply
+00011: PushString("[]")
+00012: Apply
+00013: Apply
+00014: PushString(""foo"")
+00015: PushString("Binding")
+00016: Apply
+00017: PushString("Compound")
+00018: Apply
+00019: Apply
+00020: LoadVar(00000)
+00021: Apply
 00022: Apply
-00023: Apply
-00024: PushString(""foo"")
-00025: PushString("Binding")
-00026: Apply
-00027: PushString("Compound")
-00028: Apply
-00029: Apply
-00030: LoadVar(00000)
-00031: Apply
-00032: Apply
-00033:   Return
-00034: LoadVar(00001)
+00023:   Return
+00024: LoadVar(00001)
+00025:   Return
+00026: LoadFn { code: 00024, fvars: 00001 }
+00027:   Return
+00028: LoadVar(00000)
+00029:   Return
+00030: LoadFn { code: 00028, fvars: 00000 }
+00031:   Return
+00032: LoadVar(00001)
+00033: LoadVar(00000)
+00034: Apply
 00035:   Return
-00036: LoadFn { code: 00034, fvars: 00001 }
+00036: LoadFn { code: 00032, fvars: 00001 }
 00037:   Return
-00038: LoadVar(00000)
+00038: LoadFn { code: 00036, fvars: 00000 }
 00039:   Return
-00040: LoadFn { code: 00038, fvars: 00000 }
-00041:   Return
-00042: LoadVar(00001)
-00043: LoadVar(00000)
-00044: Apply
-00045:   Return
-00046: LoadFn { code: 00042, fvars: 00001 }
-00047:   Return
-00048: LoadFn { code: 00046, fvars: 00000 }
-00049:   Return
-00050: LoadFn { code: 00014, fvars: 00000 }
-00051: LoadFn { code: 00036, fvars: 00000 }
-00052: PushString(""_"")
-00053: PushString(""x"")
-00054: PushString("[]")
-00055: Apply
-00056: Apply
-00057: LoadFn { code: 00040, fvars: 00000 }
-00058: Apply
-00059: Apply
-00060: PushString(""macro"")
-00061: LoadFn { code: 00048, fvars: 00000 }
-00062: Apply
-00063: Apply
-00064: Apply
-00065:   Return
+00040: LoadFn { code: 00004, fvars: 00000 }
+00041: LoadFn { code: 00026, fvars: 00000 }
+00042: PushString(""_"")
+00043: PushString(""x"")
+00044: PushString("[]")
+00045: Apply
+00046: Apply
+00047: LoadFn { code: 00030, fvars: 00000 }
+00048: Apply
+00049: Apply
+00050: PushString(""macro"")
+00051: LoadFn { code: 00038, fvars: 00000 }
+00052: Apply
+00053: Apply
+00054: Apply
+00055:   Return
 
 Compound(Binding("foo"), [Value(Bar), Binding("baz")])
 
@@ -569,86 +519,76 @@ macro([A, B, [C, :foo]], {})
       =>
         () ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: PushString("()")
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003: PushString(""foo"")
+00004: PushString("Binding")
 00005: Apply
-00006: LoadVar(00001)
-00007: Apply
+00006: PushString("C")
+00007: PushString("Value")
 00008: Apply
-00009:   Return
-00010: PushString("()")
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013: PushString(""foo"")
-00014: PushString("Binding")
-00015: Apply
-00016: PushString("C")
-00017: PushString("Value")
-00018: Apply
-00019: PushString("[]")
+00009: PushString("[]")
+00010: Apply
+00011: Apply
+00012: PushString("[]")
+00013: PushString("Value")
+00014: Apply
+00015: PushString("Compound")
+00016: Apply
+00017: Apply
+00018: PushString("B")
+00019: PushString("Value")
 00020: Apply
-00021: Apply
-00022: PushString("[]")
-00023: PushString("Value")
-00024: Apply
-00025: PushString("Compound")
+00021: PushString("A")
+00022: PushString("Value")
+00023: Apply
+00024: PushString("[]")
+00025: Apply
 00026: Apply
 00027: Apply
-00028: PushString("B")
+00028: PushString("[]")
 00029: PushString("Value")
 00030: Apply
-00031: PushString("A")
-00032: PushString("Value")
+00031: PushString("Compound")
+00032: Apply
 00033: Apply
-00034: PushString("[]")
+00034: LoadVar(00000)
 00035: Apply
 00036: Apply
-00037: Apply
-00038: PushString("[]")
-00039: PushString("Value")
-00040: Apply
-00041: PushString("Compound")
-00042: Apply
-00043: Apply
-00044: LoadVar(00000)
-00045: Apply
-00046: Apply
-00047:   Return
-00048: LoadVar(00001)
+00037:   Return
+00038: LoadVar(00001)
+00039:   Return
+00040: LoadFn { code: 00038, fvars: 00001 }
+00041:   Return
+00042: LoadVar(00000)
+00043:   Return
+00044: LoadFn { code: 00042, fvars: 00000 }
+00045:   Return
+00046: LoadVar(00001)
+00047: LoadVar(00000)
+00048: Apply
 00049:   Return
-00050: LoadFn { code: 00048, fvars: 00001 }
+00050: LoadFn { code: 00046, fvars: 00001 }
 00051:   Return
-00052: LoadVar(00000)
+00052: LoadFn { code: 00050, fvars: 00000 }
 00053:   Return
-00054: LoadFn { code: 00052, fvars: 00000 }
-00055:   Return
-00056: LoadVar(00001)
-00057: LoadVar(00000)
-00058: Apply
-00059:   Return
-00060: LoadFn { code: 00056, fvars: 00001 }
-00061:   Return
-00062: LoadFn { code: 00060, fvars: 00000 }
-00063:   Return
-00064: LoadFn { code: 00012, fvars: 00000 }
-00065: LoadFn { code: 00050, fvars: 00000 }
-00066: PushString(""_"")
-00067: PushString(""x"")
-00068: PushString("[]")
-00069: Apply
-00070: Apply
-00071: LoadFn { code: 00054, fvars: 00000 }
-00072: Apply
-00073: Apply
-00074: PushString(""macro"")
-00075: LoadFn { code: 00062, fvars: 00000 }
-00076: Apply
-00077: Apply
-00078: Apply
-00079:   Return
+00054: LoadFn { code: 00002, fvars: 00000 }
+00055: LoadFn { code: 00040, fvars: 00000 }
+00056: PushString(""_"")
+00057: PushString(""x"")
+00058: PushString("[]")
+00059: Apply
+00060: Apply
+00061: LoadFn { code: 00044, fvars: 00000 }
+00062: Apply
+00063: Apply
+00064: PushString(""macro"")
+00065: LoadFn { code: 00052, fvars: 00000 }
+00066: Apply
+00067: Apply
+00068: Apply
+00069:   Return
 
 Compound(Value([]), [Value(A), Value(B), Compound(Value([]), [Value(C), Binding("foo")])])
 
@@ -690,58 +630,48 @@ macro(::binding, {})
       =>
         () ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: PushString("()")
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003: PushString(""binding"")
+00004: PushString("Binding")
 00005: Apply
-00006: LoadVar(00001)
+00006: LoadVar(00000)
 00007: Apply
 00008: Apply
 00009:   Return
-00010: PushString("()")
+00010: LoadVar(00001)
 00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013: PushString(""binding"")
-00014: PushString("Binding")
-00015: Apply
-00016: LoadVar(00000)
-00017: Apply
-00018: Apply
-00019:   Return
-00020: LoadVar(00001)
+00012: LoadFn { code: 00010, fvars: 00001 }
+00013:   Return
+00014: LoadVar(00000)
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00001)
+00019: LoadVar(00000)
+00020: Apply
 00021:   Return
-00022: LoadFn { code: 00020, fvars: 00001 }
+00022: LoadFn { code: 00018, fvars: 00001 }
 00023:   Return
-00024: LoadVar(00000)
+00024: LoadFn { code: 00022, fvars: 00000 }
 00025:   Return
-00026: LoadFn { code: 00024, fvars: 00000 }
-00027:   Return
-00028: LoadVar(00001)
-00029: LoadVar(00000)
-00030: Apply
-00031:   Return
-00032: LoadFn { code: 00028, fvars: 00001 }
-00033:   Return
-00034: LoadFn { code: 00032, fvars: 00000 }
-00035:   Return
-00036: LoadFn { code: 00012, fvars: 00000 }
-00037: LoadFn { code: 00022, fvars: 00000 }
-00038: PushString(""_"")
-00039: PushString(""x"")
-00040: PushString("[]")
-00041: Apply
-00042: Apply
-00043: LoadFn { code: 00026, fvars: 00000 }
-00044: Apply
-00045: Apply
-00046: PushString(""macro"")
-00047: LoadFn { code: 00034, fvars: 00000 }
-00048: Apply
-00049: Apply
-00050: Apply
-00051:   Return
+00026: LoadFn { code: 00002, fvars: 00000 }
+00027: LoadFn { code: 00012, fvars: 00000 }
+00028: PushString(""_"")
+00029: PushString(""x"")
+00030: PushString("[]")
+00031: Apply
+00032: Apply
+00033: LoadFn { code: 00016, fvars: 00000 }
+00034: Apply
+00035: Apply
+00036: PushString(""macro"")
+00037: LoadFn { code: 00024, fvars: 00000 }
+00038: Apply
+00039: Apply
+00040: Apply
+00041:   Return
 
 Binding("binding")
 
@@ -768,38 +698,28 @@ x(Bar)
     ( 0
       Bar ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: Apply
+00000: PushString("Bar")
+00001: LoadVar(00000)
+00002: Apply
+00003:   Return
+00004: PushString("Foo")
+00005:   Return
 00006: LoadVar(00001)
-00007: Apply
+00007: LoadVar(00000)
 00008: Apply
 00009:   Return
-00010: PushString("Bar")
-00011: LoadVar(00000)
-00012: Apply
+00010: LoadFn { code: 00006, fvars: 00001 }
+00011:   Return
+00012: LoadFn { code: 00010, fvars: 00000 }
 00013:   Return
-00014: PushString("Foo")
-00015:   Return
-00016: LoadVar(00001)
-00017: LoadVar(00000)
+00014: LoadFn { code: 00000, fvars: 00000 }
+00015: LoadFn { code: 00004, fvars: 00000 }
+00016: PushString(""x"")
+00017: LoadFn { code: 00012, fvars: 00000 }
 00018: Apply
-00019:   Return
-00020: LoadFn { code: 00016, fvars: 00001 }
+00019: Apply
+00020: Apply
 00021:   Return
-00022: LoadFn { code: 00020, fvars: 00000 }
-00023:   Return
-00024: LoadFn { code: 00010, fvars: 00000 }
-00025: LoadFn { code: 00014, fvars: 00000 }
-00026: PushString(""x"")
-00027: LoadFn { code: 00022, fvars: 00000 }
-00028: Apply
-00029: Apply
-00030: Apply
-00031:   Return
 
 Foo
 
@@ -872,94 +792,84 @@ foo(Bar, Baz)
             Bar )
           Baz ) ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
+00000: PushString("Baz")
+00001: PushString("Bar")
 00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: Apply
-00006: LoadVar(00001)
-00007: Apply
-00008: Apply
-00009:   Return
-00010: PushString("Baz")
-00011: PushString("Bar")
-00012: LoadVar(00000)
-00013: Apply
-00014: Apply
+00003: Apply
+00004: Apply
+00005:   Return
+00006: LoadVar(00000)
+00007: LoadVar(00001)
+00008: PushString("Foo")
+00009: Apply
+00010: Apply
+00011:   Return
+00012: LoadFn { code: 00006, fvars: 00001 }
+00013:   Return
+00014: LoadFn { code: 00012, fvars: 00000 }
 00015:   Return
-00016: LoadVar(00000)
-00017: LoadVar(00001)
-00018: PushString("Foo")
-00019: Apply
+00016: LoadFn { code: 00000, fvars: 00000 }
+00017: LoadFn { code: 00014, fvars: 00000 }
+00018: PushString(""y"")
+00019: PushString("Binding")
 00020: Apply
-00021:   Return
-00022: LoadFn { code: 00016, fvars: 00001 }
-00023:   Return
-00024: LoadFn { code: 00022, fvars: 00000 }
-00025:   Return
-00026: LoadFn { code: 00010, fvars: 00000 }
-00027: LoadFn { code: 00024, fvars: 00000 }
-00028: PushString(""y"")
-00029: PushString("Binding")
-00030: Apply
-00031: PushString(""x"")
-00032: PushString("Binding")
-00033: Apply
-00034: PushString("[]")
+00021: PushString(""x"")
+00022: PushString("Binding")
+00023: Apply
+00024: PushString("[]")
+00025: Apply
+00026: Apply
+00027: PushString(""foo"")
+00028: PushString("Binding")
+00029: Apply
+00030: PushString("Compound")
+00031: Apply
+00032: Apply
+00033: LoadVar(00000)
+00034: Apply
 00035: Apply
 00036: Apply
-00037: PushString(""foo"")
-00038: PushString("Binding")
-00039: Apply
-00040: PushString("Compound")
-00041: Apply
+00037:   Return
+00038: PushString("[]")
+00039: LoadVar(00001)
+00040: Apply
+00041: LoadVar(00000)
 00042: Apply
-00043: LoadVar(00000)
-00044: Apply
-00045: Apply
-00046: Apply
+00043:   Return
+00044: LoadFn { code: 00038, fvars: 00001 }
+00045:   Return
+00046: LoadFn { code: 00044, fvars: 00000 }
 00047:   Return
-00048: PushString("[]")
-00049: LoadVar(00001)
-00050: Apply
-00051: LoadVar(00000)
-00052: Apply
-00053:   Return
-00054: LoadFn { code: 00048, fvars: 00001 }
+00048: LoadVar(00000)
+00049:   Return
+00050: LoadFn { code: 00048, fvars: 00000 }
+00051:   Return
+00052: LoadVar(00001)
+00053: LoadVar(00000)
+00054: Apply
 00055:   Return
-00056: LoadFn { code: 00054, fvars: 00000 }
+00056: LoadFn { code: 00052, fvars: 00001 }
 00057:   Return
-00058: LoadVar(00000)
+00058: LoadFn { code: 00056, fvars: 00000 }
 00059:   Return
-00060: LoadFn { code: 00058, fvars: 00000 }
-00061:   Return
-00062: LoadVar(00001)
-00063: LoadVar(00000)
-00064: Apply
-00065:   Return
-00066: LoadFn { code: 00062, fvars: 00001 }
-00067:   Return
-00068: LoadFn { code: 00066, fvars: 00000 }
-00069:   Return
-00070: LoadFn { code: 00026, fvars: 00000 }
-00071: LoadFn { code: 00056, fvars: 00000 }
-00072: PushString(""block"")
-00073: PushString(""value"")
-00074: PushString(""binding"")
-00075: PushString("[]")
+00060: LoadFn { code: 00016, fvars: 00000 }
+00061: LoadFn { code: 00046, fvars: 00000 }
+00062: PushString(""block"")
+00063: PushString(""value"")
+00064: PushString(""binding"")
+00065: PushString("[]")
+00066: Apply
+00067: Apply
+00068: Apply
+00069: LoadFn { code: 00050, fvars: 00000 }
+00070: Apply
+00071: Apply
+00072: PushString(""="")
+00073: LoadFn { code: 00058, fvars: 00000 }
+00074: Apply
+00075: Apply
 00076: Apply
-00077: Apply
-00078: Apply
-00079: LoadFn { code: 00060, fvars: 00000 }
-00080: Apply
-00081: Apply
-00082: PushString(""="")
-00083: LoadFn { code: 00068, fvars: 00000 }
-00084: Apply
-00085: Apply
-00086: Apply
-00087:   Return
+00077:   Return
 
 Foo(Bar, Baz)
 
@@ -1098,176 +1008,165 @@ foo(Bar, Baz)
             Bar )
           Baz ) ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
+00000: PushString("Baz")
+00001: PushString("Bar")
 00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: Apply
-00006: LoadVar(00001)
-00007: Apply
-00008: Apply
-00009:   Return
-00010: PushString("Baz")
-00011: PushString("Bar")
-00012: LoadVar(00000)
-00013: Apply
-00014: Apply
+00003: Apply
+00004: Apply
+00005:   Return
+00006: LoadVar(00000)
+00007: LoadVar(00001)
+00008: PushString("Foo")
+00009: Apply
+00010: Apply
+00011:   Return
+00012: LoadFn { code: 00006, fvars: 00001 }
+00013:   Return
+00014: LoadFn { code: 00012, fvars: 00000 }
 00015:   Return
-00016: LoadVar(00000)
-00017: LoadVar(00001)
-00018: PushString("Foo")
-00019: Apply
+00016: LoadFn { code: 00000, fvars: 00000 }
+00017: LoadFn { code: 00014, fvars: 00000 }
+00018: PushString(""y"")
+00019: PushString("Binding")
 00020: Apply
-00021:   Return
-00022: LoadFn { code: 00016, fvars: 00001 }
-00023:   Return
-00024: LoadFn { code: 00022, fvars: 00000 }
-00025:   Return
-00026: LoadFn { code: 00010, fvars: 00000 }
-00027: LoadFn { code: 00024, fvars: 00000 }
-00028: PushString(""y"")
-00029: PushString("Binding")
-00030: Apply
-00031: PushString(""x"")
-00032: PushString("Binding")
-00033: Apply
-00034: PushString("[]")
+00021: PushString(""x"")
+00022: PushString("Binding")
+00023: Apply
+00024: PushString("[]")
+00025: Apply
+00026: Apply
+00027: PushString(""foo"")
+00028: PushString("Binding")
+00029: Apply
+00030: PushString("Compound")
+00031: Apply
+00032: Apply
+00033: LoadVar(00000)
+00034: Apply
 00035: Apply
 00036: Apply
-00037: PushString(""foo"")
-00038: PushString("Binding")
-00039: Apply
-00040: PushString("Compound")
-00041: Apply
-00042: Apply
-00043: LoadVar(00000)
+00037:   Return
+00038: PushString("()")
+00039: PushEffect("must-be-called-as-macro")
+00040: Apply
+00041:   Return
+00042: LoadVar(00004)
+00043: LoadVar(00003)
 00044: Apply
-00045: Apply
-00046: Apply
-00047:   Return
-00048: PushString("()")
-00049: PushEffect("must-be-called-as-macro")
-00050: Apply
-00051:   Return
-00052: LoadVar(00004)
-00053: LoadVar(00003)
+00045:   Return
+00046: LoadVar(00000)
+00047: Fix
+00048:   Return
+00049: LoadFn { code: 00046, fvars: 00000 }
+00050:   Return
+00051: LoadVar(00005)
+00052: PushString("[]")
+00053: LoadFn { code: 00049, fvars: 00000 }
 00054: Apply
-00055:   Return
-00056: LoadVar(00000)
-00057: LoadFn { code: 00000, fvars: 00000 }
-00058: Apply
-00059:   Return
-00060: LoadFn { code: 00056, fvars: 00000 }
-00061:   Return
-00062: LoadVar(00005)
-00063: PushString("[]")
-00064: LoadFn { code: 00060, fvars: 00000 }
-00065: Apply
-00066: Apply
-00067: LoadVar(00004)
-00068: Apply
-00069:   Return
-00070: LoadFn { code: 00062, fvars: 00005 }
+00055: Apply
+00056: LoadVar(00004)
+00057: Apply
+00058:   Return
+00059: LoadFn { code: 00051, fvars: 00005 }
+00060:   Return
+00061: LoadVar(00000)
+00062:   Return
+00063: LoadFn { code: 00061, fvars: 00000 }
+00064:   Return
+00065: LoadVar(00002)
+00066: LoadVar(00001)
+00067: LoadVar(00000)
+00068: Unpack
+00069: Apply
+00070: Apply
 00071:   Return
-00072: LoadVar(00000)
+00072: LoadFn { code: 00065, fvars: 00002 }
 00073:   Return
-00074: LoadFn { code: 00072, fvars: 00000 }
+00074: LoadFn { code: 00072, fvars: 00001 }
 00075:   Return
-00076: LoadVar(00002)
-00077: LoadVar(00001)
-00078: LoadVar(00000)
-00079: Unpack
-00080: Apply
+00076: LoadFn { code: 00042, fvars: 00004 }
+00077: LoadFn { code: 00059, fvars: 00004 }
+00078: PushString(""f"")
+00079: PushString(""type"")
+00080: PushString("[]")
 00081: Apply
-00082:   Return
-00083: LoadFn { code: 00076, fvars: 00002 }
-00084:   Return
-00085: LoadFn { code: 00083, fvars: 00001 }
-00086:   Return
-00087: LoadFn { code: 00052, fvars: 00004 }
-00088: LoadFn { code: 00070, fvars: 00004 }
-00089: PushString(""f"")
-00090: PushString(""type"")
-00091: PushString("[]")
-00092: Apply
-00093: Apply
-00094: LoadFn { code: 00074, fvars: 00000 }
-00095: Apply
-00096: Apply
-00097: LoadVar(00001)
-00098: LoadFn { code: 00085, fvars: 00000 }
-00099: Apply
-00100: Apply
-00101: Apply
-00102:   Return
-00103: LoadFn { code: 00087, fvars: 00003 }
+00082: Apply
+00083: LoadFn { code: 00063, fvars: 00000 }
+00084: Apply
+00085: Apply
+00086: LoadVar(00001)
+00087: LoadFn { code: 00074, fvars: 00000 }
+00088: Apply
+00089: Apply
+00090: Apply
+00091:   Return
+00092: LoadFn { code: 00076, fvars: 00003 }
+00093:   Return
+00094: LoadVar(00000)
+00095:   Return
+00096: LoadFn { code: 00094, fvars: 00000 }
+00097:   Return
+00098: LoadVar(00002)
+00099: LoadVar(00001)
+00100: LoadVar(00000)
+00101: Unpack
+00102: Apply
+00103: Apply
 00104:   Return
-00105: LoadVar(00000)
+00105: LoadFn { code: 00098, fvars: 00002 }
 00106:   Return
-00107: LoadFn { code: 00105, fvars: 00000 }
+00107: LoadFn { code: 00105, fvars: 00001 }
 00108:   Return
-00109: LoadVar(00002)
-00110: LoadVar(00001)
-00111: LoadVar(00000)
-00112: Unpack
-00113: Apply
+00109: LoadFn { code: 00038, fvars: 00000 }
+00110: LoadFn { code: 00092, fvars: 00002 }
+00111: PushString(""arg"")
+00112: PushString(""type"")
+00113: PushString("[]")
 00114: Apply
-00115:   Return
-00116: LoadFn { code: 00109, fvars: 00002 }
-00117:   Return
-00118: LoadFn { code: 00116, fvars: 00001 }
-00119:   Return
-00120: LoadFn { code: 00048, fvars: 00000 }
-00121: LoadFn { code: 00103, fvars: 00002 }
-00122: PushString(""arg"")
-00123: PushString(""type"")
-00124: PushString("[]")
-00125: Apply
-00126: Apply
-00127: LoadFn { code: 00107, fvars: 00000 }
-00128: Apply
-00129: Apply
-00130: LoadVar(00002)
-00131: LoadFn { code: 00118, fvars: 00000 }
-00132: Apply
-00133: Apply
-00134: Apply
-00135:   Return
-00136: LoadFn { code: 00120, fvars: 00002 }
-00137:   Return
-00138: LoadFn { code: 00136, fvars: 00001 }
-00139:   Return
-00140: LoadVar(00000)
-00141:   Return
-00142: LoadFn { code: 00140, fvars: 00000 }
-00143:   Return
-00144: LoadVar(00001)
-00145: LoadVar(00000)
-00146: Apply
-00147:   Return
-00148: LoadFn { code: 00144, fvars: 00001 }
-00149:   Return
-00150: LoadFn { code: 00148, fvars: 00000 }
-00151:   Return
-00152: LoadFn { code: 00026, fvars: 00000 }
-00153: LoadFn { code: 00138, fvars: 00000 }
-00154: PushString(""block"")
-00155: PushString(""value"")
-00156: PushString(""binding"")
-00157: PushString("[]")
-00158: Apply
-00159: Apply
-00160: Apply
-00161: LoadFn { code: 00142, fvars: 00000 }
-00162: Apply
-00163: Apply
-00164: PushString(""="")
-00165: LoadFn { code: 00150, fvars: 00000 }
-00166: Apply
-00167: Apply
-00168: Apply
-00169:   Return
+00115: Apply
+00116: LoadFn { code: 00096, fvars: 00000 }
+00117: Apply
+00118: Apply
+00119: LoadVar(00002)
+00120: LoadFn { code: 00107, fvars: 00000 }
+00121: Apply
+00122: Apply
+00123: Apply
+00124:   Return
+00125: LoadFn { code: 00109, fvars: 00002 }
+00126:   Return
+00127: LoadFn { code: 00125, fvars: 00001 }
+00128:   Return
+00129: LoadVar(00000)
+00130:   Return
+00131: LoadFn { code: 00129, fvars: 00000 }
+00132:   Return
+00133: LoadVar(00001)
+00134: LoadVar(00000)
+00135: Apply
+00136:   Return
+00137: LoadFn { code: 00133, fvars: 00001 }
+00138:   Return
+00139: LoadFn { code: 00137, fvars: 00000 }
+00140:   Return
+00141: LoadFn { code: 00016, fvars: 00000 }
+00142: LoadFn { code: 00127, fvars: 00000 }
+00143: PushString(""block"")
+00144: PushString(""value"")
+00145: PushString(""binding"")
+00146: PushString("[]")
+00147: Apply
+00148: Apply
+00149: Apply
+00150: LoadFn { code: 00131, fvars: 00000 }
+00151: Apply
+00152: Apply
+00153: PushString(""="")
+00154: LoadFn { code: 00139, fvars: 00000 }
+00155: Apply
+00156: Apply
+00157: Apply
+00158:   Return
 
 Foo(Bar, Baz)
 
@@ -1469,249 +1368,238 @@ fold([:acc, :x] => { acc(x) }, [], [A, B, C])
               B )
             C ) ) ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
-00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005: Apply
-00006: LoadVar(00001)
-00007: Apply
-00008: Apply
+00000: LoadVar(00000)
+00001: LoadVar(00001)
+00002: Apply
+00003:   Return
+00004: LoadFn { code: 00000, fvars: 00001 }
+00005:   Return
+00006: LoadVar(00000)
+00007:   Return
+00008: LoadFn { code: 00006, fvars: 00000 }
 00009:   Return
-00010: LoadVar(00000)
-00011: LoadVar(00001)
-00012: Apply
-00013:   Return
-00014: LoadFn { code: 00010, fvars: 00001 }
-00015:   Return
-00016: LoadVar(00000)
-00017:   Return
-00018: LoadFn { code: 00016, fvars: 00000 }
-00019:   Return
-00020: PushString("C")
-00021: PushString("B")
-00022: PushString("A")
-00023: PushString("[]")
-00024: Apply
+00010: PushString("C")
+00011: PushString("B")
+00012: PushString("A")
+00013: PushString("[]")
+00014: Apply
+00015: Apply
+00016: Apply
+00017: PushString("[]")
+00018: LoadFn { code: 00004, fvars: 00000 }
+00019: PushString(""x"")
+00020: PushString(""acc"")
+00021: PushString("[]")
+00022: Apply
+00023: Apply
+00024: LoadFn { code: 00008, fvars: 00000 }
 00025: Apply
 00026: Apply
-00027: PushString("[]")
-00028: LoadFn { code: 00014, fvars: 00000 }
-00029: PushString(""x"")
-00030: PushString(""acc"")
-00031: PushString("[]")
-00032: Apply
-00033: Apply
-00034: LoadFn { code: 00018, fvars: 00000 }
-00035: Apply
-00036: Apply
-00037: LoadVar(00000)
+00027: LoadVar(00000)
+00028: Apply
+00029: Apply
+00030: Apply
+00031:   Return
+00032: LoadVar(00002)
+00033:   Return
+00034: LoadVar(00001)
+00035: LoadVar(00000)
+00036: LoadVar(00003)
+00037: LoadVar(00004)
 00038: Apply
 00039: Apply
-00040: Apply
-00041:   Return
-00042: LoadVar(00002)
-00043:   Return
-00044: LoadVar(00001)
-00045: LoadVar(00000)
-00046: LoadVar(00003)
-00047: LoadVar(00004)
-00048: Apply
-00049: Apply
-00050: LoadVar(00004)
-00051: LoadVar(00005)
-00052: Apply
-00053: Apply
-00054: Apply
-00055:   Return
-00056: LoadFn { code: 00044, fvars: 00005 }
-00057:   Return
-00058: LoadVar(00000)
-00059:   Return
-00060: LoadFn { code: 00058, fvars: 00000 }
-00061:   Return
-00062: LoadVar(00002)
-00063: LoadVar(00001)
-00064: LoadVar(00000)
-00065: Unpack
-00066: Apply
-00067: Apply
-00068:   Return
-00069: LoadFn { code: 00062, fvars: 00002 }
-00070:   Return
-00071: LoadFn { code: 00069, fvars: 00001 }
-00072:   Return
-00073: LoadFn { code: 00042, fvars: 00002 }
-00074: LoadFn { code: 00056, fvars: 00004 }
-00075: PushString(""x"")
-00076: PushString(""xs"")
-00077: PushString("[]")
-00078: Apply
-00079: Apply
-00080: LoadFn { code: 00060, fvars: 00000 }
-00081: Apply
-00082: Apply
-00083: LoadVar(00000)
-00084: LoadFn { code: 00071, fvars: 00000 }
-00085: Apply
-00086: Apply
-00087: Apply
-00088:   Return
-00089: LoadFn { code: 00073, fvars: 00003 }
-00090:   Return
-00091: LoadFn { code: 00089, fvars: 00002 }
-00092:   Return
-00093: LoadFn { code: 00091, fvars: 00001 }
-00094:   Return
-00095: LoadFn { code: 00020, fvars: 00000 }
-00096: LoadFn { code: 00093, fvars: 00000 }
-00097: PushString(""xs"")
-00098: PushString("Binding")
+00040: LoadVar(00004)
+00041: LoadVar(00005)
+00042: Apply
+00043: Apply
+00044: Apply
+00045:   Return
+00046: LoadFn { code: 00034, fvars: 00005 }
+00047:   Return
+00048: LoadVar(00000)
+00049:   Return
+00050: LoadFn { code: 00048, fvars: 00000 }
+00051:   Return
+00052: LoadVar(00002)
+00053: LoadVar(00001)
+00054: LoadVar(00000)
+00055: Unpack
+00056: Apply
+00057: Apply
+00058:   Return
+00059: LoadFn { code: 00052, fvars: 00002 }
+00060:   Return
+00061: LoadFn { code: 00059, fvars: 00001 }
+00062:   Return
+00063: LoadFn { code: 00032, fvars: 00002 }
+00064: LoadFn { code: 00046, fvars: 00004 }
+00065: PushString(""x"")
+00066: PushString(""xs"")
+00067: PushString("[]")
+00068: Apply
+00069: Apply
+00070: LoadFn { code: 00050, fvars: 00000 }
+00071: Apply
+00072: Apply
+00073: LoadVar(00000)
+00074: LoadFn { code: 00061, fvars: 00000 }
+00075: Apply
+00076: Apply
+00077: Apply
+00078:   Return
+00079: LoadFn { code: 00063, fvars: 00003 }
+00080:   Return
+00081: LoadFn { code: 00079, fvars: 00002 }
+00082:   Return
+00083: LoadFn { code: 00081, fvars: 00001 }
+00084:   Return
+00085: LoadFn { code: 00010, fvars: 00000 }
+00086: LoadFn { code: 00083, fvars: 00000 }
+00087: PushString(""xs"")
+00088: PushString("Binding")
+00089: Apply
+00090: PushString(""acc"")
+00091: PushString("Binding")
+00092: Apply
+00093: PushString(""f"")
+00094: PushString("Binding")
+00095: Apply
+00096: PushString("[]")
+00097: Apply
+00098: Apply
 00099: Apply
-00100: PushString(""acc"")
+00100: PushString(""fold"")
 00101: PushString("Binding")
 00102: Apply
-00103: PushString(""f"")
-00104: PushString("Binding")
+00103: PushString("Compound")
+00104: Apply
 00105: Apply
-00106: PushString("[]")
+00106: LoadVar(00000)
 00107: Apply
 00108: Apply
 00109: Apply
-00110: PushString(""fold"")
-00111: PushString("Binding")
-00112: Apply
-00113: PushString("Compound")
-00114: Apply
-00115: Apply
-00116: LoadVar(00000)
+00110:   Return
+00111: PushString("()")
+00112: PushEffect("must-be-called-as-macro")
+00113: Apply
+00114:   Return
+00115: LoadVar(00004)
+00116: LoadVar(00003)
 00117: Apply
-00118: Apply
-00119: Apply
-00120:   Return
-00121: PushString("()")
-00122: PushEffect("must-be-called-as-macro")
-00123: Apply
-00124:   Return
-00125: LoadVar(00004)
-00126: LoadVar(00003)
+00118:   Return
+00119: LoadVar(00000)
+00120: Fix
+00121:   Return
+00122: LoadFn { code: 00119, fvars: 00000 }
+00123:   Return
+00124: LoadVar(00005)
+00125: PushString("[]")
+00126: LoadFn { code: 00122, fvars: 00000 }
 00127: Apply
-00128:   Return
-00129: LoadVar(00000)
-00130: LoadFn { code: 00000, fvars: 00000 }
-00131: Apply
-00132:   Return
-00133: LoadFn { code: 00129, fvars: 00000 }
-00134:   Return
-00135: LoadVar(00005)
-00136: PushString("[]")
-00137: LoadFn { code: 00133, fvars: 00000 }
-00138: Apply
-00139: Apply
-00140: LoadVar(00004)
-00141: Apply
-00142:   Return
-00143: LoadFn { code: 00135, fvars: 00005 }
+00128: Apply
+00129: LoadVar(00004)
+00130: Apply
+00131:   Return
+00132: LoadFn { code: 00124, fvars: 00005 }
+00133:   Return
+00134: LoadVar(00000)
+00135:   Return
+00136: LoadFn { code: 00134, fvars: 00000 }
+00137:   Return
+00138: LoadVar(00002)
+00139: LoadVar(00001)
+00140: LoadVar(00000)
+00141: Unpack
+00142: Apply
+00143: Apply
 00144:   Return
-00145: LoadVar(00000)
+00145: LoadFn { code: 00138, fvars: 00002 }
 00146:   Return
-00147: LoadFn { code: 00145, fvars: 00000 }
+00147: LoadFn { code: 00145, fvars: 00001 }
 00148:   Return
-00149: LoadVar(00002)
-00150: LoadVar(00001)
-00151: LoadVar(00000)
-00152: Unpack
-00153: Apply
+00149: LoadFn { code: 00115, fvars: 00004 }
+00150: LoadFn { code: 00132, fvars: 00004 }
+00151: PushString(""f"")
+00152: PushString(""type"")
+00153: PushString("[]")
 00154: Apply
-00155:   Return
-00156: LoadFn { code: 00149, fvars: 00002 }
-00157:   Return
-00158: LoadFn { code: 00156, fvars: 00001 }
-00159:   Return
-00160: LoadFn { code: 00125, fvars: 00004 }
-00161: LoadFn { code: 00143, fvars: 00004 }
-00162: PushString(""f"")
-00163: PushString(""type"")
-00164: PushString("[]")
-00165: Apply
-00166: Apply
-00167: LoadFn { code: 00147, fvars: 00000 }
-00168: Apply
-00169: Apply
-00170: LoadVar(00001)
-00171: LoadFn { code: 00158, fvars: 00000 }
-00172: Apply
-00173: Apply
-00174: Apply
-00175:   Return
-00176: LoadFn { code: 00160, fvars: 00003 }
+00155: Apply
+00156: LoadFn { code: 00136, fvars: 00000 }
+00157: Apply
+00158: Apply
+00159: LoadVar(00001)
+00160: LoadFn { code: 00147, fvars: 00000 }
+00161: Apply
+00162: Apply
+00163: Apply
+00164:   Return
+00165: LoadFn { code: 00149, fvars: 00003 }
+00166:   Return
+00167: LoadVar(00000)
+00168:   Return
+00169: LoadFn { code: 00167, fvars: 00000 }
+00170:   Return
+00171: LoadVar(00002)
+00172: LoadVar(00001)
+00173: LoadVar(00000)
+00174: Unpack
+00175: Apply
+00176: Apply
 00177:   Return
-00178: LoadVar(00000)
+00178: LoadFn { code: 00171, fvars: 00002 }
 00179:   Return
-00180: LoadFn { code: 00178, fvars: 00000 }
+00180: LoadFn { code: 00178, fvars: 00001 }
 00181:   Return
-00182: LoadVar(00002)
-00183: LoadVar(00001)
-00184: LoadVar(00000)
-00185: Unpack
-00186: Apply
+00182: LoadFn { code: 00111, fvars: 00000 }
+00183: LoadFn { code: 00165, fvars: 00002 }
+00184: PushString(""arg"")
+00185: PushString(""type"")
+00186: PushString("[]")
 00187: Apply
-00188:   Return
-00189: LoadFn { code: 00182, fvars: 00002 }
-00190:   Return
-00191: LoadFn { code: 00189, fvars: 00001 }
-00192:   Return
-00193: LoadFn { code: 00121, fvars: 00000 }
-00194: LoadFn { code: 00176, fvars: 00002 }
-00195: PushString(""arg"")
-00196: PushString(""type"")
-00197: PushString("[]")
-00198: Apply
-00199: Apply
-00200: LoadFn { code: 00180, fvars: 00000 }
-00201: Apply
-00202: Apply
-00203: LoadVar(00002)
-00204: LoadFn { code: 00191, fvars: 00000 }
-00205: Apply
-00206: Apply
-00207: Apply
-00208:   Return
-00209: LoadFn { code: 00193, fvars: 00002 }
-00210:   Return
-00211: LoadFn { code: 00209, fvars: 00001 }
-00212:   Return
-00213: LoadVar(00000)
-00214:   Return
-00215: LoadFn { code: 00213, fvars: 00000 }
-00216:   Return
-00217: LoadVar(00001)
-00218: LoadVar(00000)
-00219: Apply
-00220:   Return
-00221: LoadFn { code: 00217, fvars: 00001 }
-00222:   Return
-00223: LoadFn { code: 00221, fvars: 00000 }
-00224:   Return
-00225: LoadFn { code: 00095, fvars: 00000 }
-00226: LoadFn { code: 00211, fvars: 00000 }
-00227: PushString(""block"")
-00228: PushString(""value"")
-00229: PushString(""binding"")
-00230: PushString("[]")
-00231: Apply
-00232: Apply
-00233: Apply
-00234: LoadFn { code: 00215, fvars: 00000 }
-00235: Apply
-00236: Apply
-00237: PushString(""="")
-00238: LoadFn { code: 00223, fvars: 00000 }
-00239: Apply
-00240: Apply
-00241: Apply
-00242:   Return
+00188: Apply
+00189: LoadFn { code: 00169, fvars: 00000 }
+00190: Apply
+00191: Apply
+00192: LoadVar(00002)
+00193: LoadFn { code: 00180, fvars: 00000 }
+00194: Apply
+00195: Apply
+00196: Apply
+00197:   Return
+00198: LoadFn { code: 00182, fvars: 00002 }
+00199:   Return
+00200: LoadFn { code: 00198, fvars: 00001 }
+00201:   Return
+00202: LoadVar(00000)
+00203:   Return
+00204: LoadFn { code: 00202, fvars: 00000 }
+00205:   Return
+00206: LoadVar(00001)
+00207: LoadVar(00000)
+00208: Apply
+00209:   Return
+00210: LoadFn { code: 00206, fvars: 00001 }
+00211:   Return
+00212: LoadFn { code: 00210, fvars: 00000 }
+00213:   Return
+00214: LoadFn { code: 00085, fvars: 00000 }
+00215: LoadFn { code: 00200, fvars: 00000 }
+00216: PushString(""block"")
+00217: PushString(""value"")
+00218: PushString(""binding"")
+00219: PushString("[]")
+00220: Apply
+00221: Apply
+00222: Apply
+00223: LoadFn { code: 00204, fvars: 00000 }
+00224: Apply
+00225: Apply
+00226: PushString(""="")
+00227: LoadFn { code: 00212, fvars: 00000 }
+00228: Apply
+00229: Apply
+00230: Apply
+00231:   Return
 
 [C, B, A]
 
@@ -1754,58 +1642,48 @@ x
       =>
         0 ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadVar(00000)
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003: PushString(""x"")
+00004: PushString("Binding")
 00005: Apply
-00006: LoadVar(00001)
+00006: LoadVar(00000)
 00007: Apply
 00008: Apply
 00009:   Return
-00010: LoadVar(00000)
+00010: LoadVar(00001)
 00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013: PushString(""x"")
-00014: PushString("Binding")
-00015: Apply
-00016: LoadVar(00000)
-00017: Apply
-00018: Apply
-00019:   Return
-00020: LoadVar(00001)
+00012: LoadFn { code: 00010, fvars: 00001 }
+00013:   Return
+00014: LoadVar(00000)
+00015:   Return
+00016: LoadFn { code: 00014, fvars: 00000 }
+00017:   Return
+00018: LoadVar(00001)
+00019: LoadVar(00000)
+00020: Apply
 00021:   Return
-00022: LoadFn { code: 00020, fvars: 00001 }
+00022: LoadFn { code: 00018, fvars: 00001 }
 00023:   Return
-00024: LoadVar(00000)
+00024: LoadFn { code: 00022, fvars: 00000 }
 00025:   Return
-00026: LoadFn { code: 00024, fvars: 00000 }
-00027:   Return
-00028: LoadVar(00001)
-00029: LoadVar(00000)
-00030: Apply
-00031:   Return
-00032: LoadFn { code: 00028, fvars: 00001 }
-00033:   Return
-00034: LoadFn { code: 00032, fvars: 00000 }
-00035:   Return
-00036: LoadFn { code: 00012, fvars: 00000 }
-00037: LoadFn { code: 00022, fvars: 00000 }
-00038: PushString(""_"")
-00039: PushString(""x"")
-00040: PushString("[]")
-00041: Apply
-00042: Apply
-00043: LoadFn { code: 00026, fvars: 00000 }
-00044: Apply
-00045: Apply
-00046: PushString(""macro"")
-00047: LoadFn { code: 00034, fvars: 00000 }
-00048: Apply
-00049: Apply
-00050: Apply
-00051:   Return
+00026: LoadFn { code: 00002, fvars: 00000 }
+00027: LoadFn { code: 00012, fvars: 00000 }
+00028: PushString(""_"")
+00029: PushString(""x"")
+00030: PushString("[]")
+00031: Apply
+00032: Apply
+00033: LoadFn { code: 00016, fvars: 00000 }
+00034: Apply
+00035: Apply
+00036: PushString(""macro"")
+00037: LoadFn { code: 00024, fvars: 00000 }
+00038: Apply
+00039: Apply
+00040: Apply
+00041:   Return
 
 Binding("x")
 
@@ -1979,215 +1857,204 @@ foo
       =>
         0 ) )
 
-00000: LoadFn { code: 00002, fvars: 00001 }
+00000: LoadVar(00000)
 00001:   Return
-00002: LoadVar(00000)
-00003: LoadVar(00001)
-00004: LoadFn { code: 00000, fvars: 00000 }
+00002: LoadFn { code: 00000, fvars: 00000 }
+00003: PushString("Foo")
+00004: PushString("Value")
 00005: Apply
-00006: LoadVar(00001)
-00007: Apply
+00006: PushString(""foo"")
+00007: PushString("Binding")
 00008: Apply
-00009:   Return
-00010: LoadVar(00000)
-00011:   Return
-00012: LoadFn { code: 00010, fvars: 00000 }
-00013: PushString("Foo")
-00014: PushString("Value")
-00015: Apply
-00016: PushString(""foo"")
-00017: PushString("Binding")
-00018: Apply
-00019: LoadVar(00000)
+00009: LoadVar(00000)
+00010: Apply
+00011: Apply
+00012: Apply
+00013:   Return
+00014: PushString("()")
+00015: PushEffect("must-be-called-as-macro")
+00016: Apply
+00017:   Return
+00018: PushString("()")
+00019: PushEffect("todo")
 00020: Apply
-00021: Apply
-00022: Apply
-00023:   Return
-00024: PushString("()")
-00025: PushEffect("must-be-called-as-macro")
-00026: Apply
-00027:   Return
-00028: PushString("()")
-00029: PushEffect("todo")
-00030: Apply
-00031:   Return
-00032: PushString("()")
-00033: PushEffect("todo")
-00034: Apply
-00035:   Return
-00036: LoadVar(00001)
-00037: LoadVar(00006)
-00038: Apply
-00039:   Return
-00040: LoadVar(00003)
-00041: LoadVar(00002)
-00042: LoadVar(00001)
-00043: LoadVar(00000)
-00044: Compare
-00045: Apply
-00046:   Return
-00047: LoadFn { code: 00040, fvars: 00003 }
-00048:   Return
-00049: LoadFn { code: 00047, fvars: 00002 }
-00050:   Return
-00051: LoadFn { code: 00049, fvars: 00001 }
+00021:   Return
+00022: PushString("()")
+00023: PushEffect("todo")
+00024: Apply
+00025:   Return
+00026: LoadVar(00001)
+00027: LoadVar(00006)
+00028: Apply
+00029:   Return
+00030: LoadVar(00003)
+00031: LoadVar(00002)
+00032: LoadVar(00001)
+00033: LoadVar(00000)
+00034: Compare
+00035: Apply
+00036:   Return
+00037: LoadFn { code: 00030, fvars: 00003 }
+00038:   Return
+00039: LoadFn { code: 00037, fvars: 00002 }
+00040:   Return
+00041: LoadFn { code: 00039, fvars: 00001 }
+00042:   Return
+00043: LoadFn { code: 00022, fvars: 00000 }
+00044: LoadFn { code: 00026, fvars: 00006 }
+00045: PushString("Value")
+00046: LoadVar(00001)
+00047: LoadFn { code: 00041, fvars: 00000 }
+00048: Apply
+00049: Apply
+00050: Apply
+00051: Apply
 00052:   Return
-00053: LoadFn { code: 00032, fvars: 00000 }
-00054: LoadFn { code: 00036, fvars: 00006 }
-00055: PushString("Value")
-00056: LoadVar(00001)
-00057: LoadFn { code: 00051, fvars: 00000 }
-00058: Apply
-00059: Apply
-00060: Apply
-00061: Apply
-00062:   Return
-00063: LoadFn { code: 00053, fvars: 00005 }
-00064:   Return
-00065: LoadVar(00000)
-00066:   Return
-00067: LoadFn { code: 00065, fvars: 00000 }
-00068:   Return
-00069: LoadVar(00002)
-00070: LoadVar(00001)
-00071: LoadVar(00000)
-00072: Unpack
-00073: Apply
-00074: Apply
-00075:   Return
-00076: LoadFn { code: 00069, fvars: 00002 }
-00077:   Return
-00078: LoadFn { code: 00076, fvars: 00001 }
-00079:   Return
-00080: LoadFn { code: 00028, fvars: 00000 }
-00081: LoadFn { code: 00063, fvars: 00004 }
-00082: PushString(""arg"")
-00083: PushString(""type"")
-00084: PushString("[]")
-00085: Apply
-00086: Apply
-00087: LoadFn { code: 00067, fvars: 00000 }
-00088: Apply
-00089: Apply
-00090: LoadVar(00004)
-00091: LoadFn { code: 00078, fvars: 00000 }
-00092: Apply
-00093: Apply
+00053: LoadFn { code: 00043, fvars: 00005 }
+00054:   Return
+00055: LoadVar(00000)
+00056:   Return
+00057: LoadFn { code: 00055, fvars: 00000 }
+00058:   Return
+00059: LoadVar(00002)
+00060: LoadVar(00001)
+00061: LoadVar(00000)
+00062: Unpack
+00063: Apply
+00064: Apply
+00065:   Return
+00066: LoadFn { code: 00059, fvars: 00002 }
+00067:   Return
+00068: LoadFn { code: 00066, fvars: 00001 }
+00069:   Return
+00070: LoadFn { code: 00018, fvars: 00000 }
+00071: LoadFn { code: 00053, fvars: 00004 }
+00072: PushString(""arg"")
+00073: PushString(""type"")
+00074: PushString("[]")
+00075: Apply
+00076: Apply
+00077: LoadFn { code: 00057, fvars: 00000 }
+00078: Apply
+00079: Apply
+00080: LoadVar(00004)
+00081: LoadFn { code: 00068, fvars: 00000 }
+00082: Apply
+00083: Apply
+00084: Apply
+00085:   Return
+00086: LoadVar(00000)
+00087: Fix
+00088:   Return
+00089: LoadFn { code: 00086, fvars: 00000 }
+00090:   Return
+00091: LoadVar(00005)
+00092: PushString("[]")
+00093: LoadFn { code: 00089, fvars: 00000 }
 00094: Apply
-00095:   Return
-00096: LoadVar(00000)
-00097: LoadFn { code: 00000, fvars: 00000 }
-00098: Apply
-00099:   Return
-00100: LoadFn { code: 00096, fvars: 00000 }
-00101:   Return
-00102: LoadVar(00005)
-00103: PushString("[]")
-00104: LoadFn { code: 00100, fvars: 00000 }
-00105: Apply
-00106: Apply
-00107: LoadVar(00004)
-00108: Apply
-00109:   Return
-00110: LoadFn { code: 00102, fvars: 00005 }
+00095: Apply
+00096: LoadVar(00004)
+00097: Apply
+00098:   Return
+00099: LoadFn { code: 00091, fvars: 00005 }
+00100:   Return
+00101: LoadVar(00000)
+00102:   Return
+00103: LoadFn { code: 00101, fvars: 00000 }
+00104:   Return
+00105: LoadVar(00002)
+00106: LoadVar(00001)
+00107: LoadVar(00000)
+00108: Unpack
+00109: Apply
+00110: Apply
 00111:   Return
-00112: LoadVar(00000)
+00112: LoadFn { code: 00105, fvars: 00002 }
 00113:   Return
-00114: LoadFn { code: 00112, fvars: 00000 }
+00114: LoadFn { code: 00112, fvars: 00001 }
 00115:   Return
-00116: LoadVar(00002)
-00117: LoadVar(00001)
-00118: LoadVar(00000)
-00119: Unpack
-00120: Apply
+00116: LoadFn { code: 00070, fvars: 00004 }
+00117: LoadFn { code: 00099, fvars: 00004 }
+00118: PushString(""f"")
+00119: PushString(""type"")
+00120: PushString("[]")
 00121: Apply
-00122:   Return
-00123: LoadFn { code: 00116, fvars: 00002 }
-00124:   Return
-00125: LoadFn { code: 00123, fvars: 00001 }
-00126:   Return
-00127: LoadFn { code: 00080, fvars: 00004 }
-00128: LoadFn { code: 00110, fvars: 00004 }
-00129: PushString(""f"")
-00130: PushString(""type"")
-00131: PushString("[]")
-00132: Apply
-00133: Apply
-00134: LoadFn { code: 00114, fvars: 00000 }
-00135: Apply
-00136: Apply
-00137: LoadVar(00001)
-00138: LoadFn { code: 00125, fvars: 00000 }
-00139: Apply
-00140: Apply
-00141: Apply
-00142:   Return
-00143: LoadFn { code: 00127, fvars: 00003 }
+00122: Apply
+00123: LoadFn { code: 00103, fvars: 00000 }
+00124: Apply
+00125: Apply
+00126: LoadVar(00001)
+00127: LoadFn { code: 00114, fvars: 00000 }
+00128: Apply
+00129: Apply
+00130: Apply
+00131:   Return
+00132: LoadFn { code: 00116, fvars: 00003 }
+00133:   Return
+00134: LoadVar(00000)
+00135:   Return
+00136: LoadFn { code: 00134, fvars: 00000 }
+00137:   Return
+00138: LoadVar(00002)
+00139: LoadVar(00001)
+00140: LoadVar(00000)
+00141: Unpack
+00142: Apply
+00143: Apply
 00144:   Return
-00145: LoadVar(00000)
+00145: LoadFn { code: 00138, fvars: 00002 }
 00146:   Return
-00147: LoadFn { code: 00145, fvars: 00000 }
+00147: LoadFn { code: 00145, fvars: 00001 }
 00148:   Return
-00149: LoadVar(00002)
-00150: LoadVar(00001)
-00151: LoadVar(00000)
-00152: Unpack
-00153: Apply
+00149: LoadFn { code: 00014, fvars: 00000 }
+00150: LoadFn { code: 00132, fvars: 00002 }
+00151: PushString(""arg"")
+00152: PushString(""type"")
+00153: PushString("[]")
 00154: Apply
-00155:   Return
-00156: LoadFn { code: 00149, fvars: 00002 }
-00157:   Return
-00158: LoadFn { code: 00156, fvars: 00001 }
-00159:   Return
-00160: LoadFn { code: 00024, fvars: 00000 }
-00161: LoadFn { code: 00143, fvars: 00002 }
-00162: PushString(""arg"")
-00163: PushString(""type"")
-00164: PushString("[]")
-00165: Apply
-00166: Apply
-00167: LoadFn { code: 00147, fvars: 00000 }
-00168: Apply
-00169: Apply
-00170: LoadVar(00002)
-00171: LoadFn { code: 00158, fvars: 00000 }
-00172: Apply
-00173: Apply
-00174: Apply
-00175:   Return
-00176: LoadFn { code: 00160, fvars: 00002 }
-00177:   Return
-00178: LoadFn { code: 00176, fvars: 00001 }
-00179:   Return
-00180: LoadVar(00000)
-00181:   Return
-00182: LoadFn { code: 00180, fvars: 00000 }
-00183:   Return
-00184: LoadVar(00001)
-00185: LoadVar(00000)
-00186: Apply
-00187:   Return
-00188: LoadFn { code: 00184, fvars: 00001 }
-00189:   Return
-00190: LoadFn { code: 00188, fvars: 00000 }
-00191:   Return
-00192: LoadFn { code: 00012, fvars: 00000 }
-00193: LoadFn { code: 00178, fvars: 00000 }
-00194: PushString(""block"")
-00195: PushString(""value"")
-00196: PushString(""binding"")
-00197: PushString("[]")
-00198: Apply
-00199: Apply
-00200: Apply
-00201: LoadFn { code: 00182, fvars: 00000 }
-00202: Apply
-00203: Apply
-00204: PushString(""="")
-00205: LoadFn { code: 00190, fvars: 00000 }
-00206: Apply
-00207: Apply
-00208: Apply
-00209:   Return
+00155: Apply
+00156: LoadFn { code: 00136, fvars: 00000 }
+00157: Apply
+00158: Apply
+00159: LoadVar(00002)
+00160: LoadFn { code: 00147, fvars: 00000 }
+00161: Apply
+00162: Apply
+00163: Apply
+00164:   Return
+00165: LoadFn { code: 00149, fvars: 00002 }
+00166:   Return
+00167: LoadFn { code: 00165, fvars: 00001 }
+00168:   Return
+00169: LoadVar(00000)
+00170:   Return
+00171: LoadFn { code: 00169, fvars: 00000 }
+00172:   Return
+00173: LoadVar(00001)
+00174: LoadVar(00000)
+00175: Apply
+00176:   Return
+00177: LoadFn { code: 00173, fvars: 00001 }
+00178:   Return
+00179: LoadFn { code: 00177, fvars: 00000 }
+00180:   Return
+00181: LoadFn { code: 00002, fvars: 00000 }
+00182: LoadFn { code: 00167, fvars: 00000 }
+00183: PushString(""block"")
+00184: PushString(""value"")
+00185: PushString(""binding"")
+00186: PushString("[]")
+00187: Apply
+00188: Apply
+00189: Apply
+00190: LoadFn { code: 00171, fvars: 00000 }
+00191: Apply
+00192: Apply
+00193: PushString(""="")
+00194: LoadFn { code: 00179, fvars: 00000 }
+00195: Apply
+00196: Apply
+00197: Apply
+00198:   Return
 
 Foo

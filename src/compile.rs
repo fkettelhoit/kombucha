@@ -436,8 +436,7 @@ fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
             }
             Expr::Rec(body) => {
                 emit(&[body], ops, fns);
-                // Fn at code 0 is the built-in fixed-point combinator:
-                ops.extend([Op::LoadFn { code: 0, fvars: 0 }, Op::Apply]);
+                ops.push(Op::Fix);
             }
             Expr::Type(body) => {
                 emit(&[body], ops, fns);
@@ -461,22 +460,7 @@ fn emit(exprs: &[&Expr], ops: &mut Vec<Op>, fns: &mut Vec<Op>) {
 
 pub fn codegen(expr: Expr, ctx: Ctx) -> Bytecode {
     let mut main = vec![];
-
-    // fix = f => x => f(fix(f))(x)
-    let mut bytecode = vec![
-        // 0: f => ...
-        Op::LoadFn { code: 2, fvars: 1 },
-        Op::Return,
-        // 2: ... x => f(fix(f))(x)
-        Op::LoadVar(0),                   // x
-        Op::LoadVar(1),                   // x, f
-        Op::LoadFn { code: 0, fvars: 0 }, // x, f, fix
-        Op::Apply,                        // x, fix(f)
-        Op::LoadVar(1),                   // x, fix(f), f
-        Op::Apply,                        // x, f(fix(f))
-        Op::Apply,                        // f(fix(f))(x)
-        Op::Return,
-    ];
+    let mut bytecode = vec![];
     emit(&[&expr], &mut main, &mut bytecode);
     main.push(Op::Return);
     let start = bytecode.len();
