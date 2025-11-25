@@ -183,6 +183,7 @@ impl Vm {
             // }
             // println!("{i}: {op:?}");
             match op {
+                Op::LoadVar(v) if v >= vars.len() => return Err(i),
                 Op::LoadVar(v) => {
                     let v: &Val = &vars[vars.len() - 1 - v];
                     temps.push(v.clone());
@@ -190,7 +191,7 @@ impl Vm {
                 }
                 Op::LoadString(s) => temps.push(Val::String(s)),
                 Op::LoadEffect(eff) => temps.push(Val::Effect(eff)),
-                Op::LoadFn { code: _, fvars } if fvars > vars.len() => return Err(ip),
+                Op::LoadFn { code: _, fvars } if fvars > vars.len() => return Err(i),
                 Op::LoadFn { code, fvars } => match bytecode.ops.get(i + 1).ok_or(i)? {
                     Op::Apply => {
                         frames.push((vars.len(), ip + 1));
