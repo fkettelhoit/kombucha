@@ -424,6 +424,14 @@ impl Expr {
         }
     }
 
+    fn is_value(&self) -> bool {
+        match self {
+            Expr::String(_) => true,
+            Expr::App(f, _) => f.is_value(),
+            _ => false,
+        }
+    }
+
     fn shift(self, min: usize, by: isize) -> Self {
         match self {
             Expr::Var(v) if v >= min => Expr::Var((v as isize + by) as usize),
@@ -486,7 +494,17 @@ impl Expr {
                 let v = v.simplify(env);
                 let t = t.simplify(env);
                 let f = f.simplify(env);
-                Expr::Unpack([v.into(), t.into(), f.into()])
+                if v.is_value() && v.is_pure() {
+                    match (v, t, f) {
+                        (Expr::App(xs, x), t, _) => {
+                            Expr::App(Expr::App(t.into(), xs).into(), x).simplify(env)
+                        }
+                        (_, _, Expr::Abs(f)) => *f,
+                        (v, t, f) => Expr::Unpack([v.into(), t.into(), f.into()]),
+                    }
+                } else {
+                    Expr::Unpack([v.into(), t.into(), f.into()])
+                }
             }
             Expr::Handle([val, handler]) => {
                 let val = val.simplify(env);
@@ -498,7 +516,7 @@ impl Expr {
                 let b = b.simplify(env);
                 let t = t.simplify(env);
                 let f = f.simplify(env);
-                if a.is_pure() && b.is_pure() && t.is_pure() && f.is_pure() {
+                if a.is_pure() && b.is_pure() {
                     match (a, b, t, f) {
                         (a, b, Expr::Abs(t), _) if a == b => *t,
                         (Expr::String(_), Expr::String(_), _, Expr::Abs(f)) => *f,
