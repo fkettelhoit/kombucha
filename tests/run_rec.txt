@@ -7,21 +7,10 @@
       { Foo }) })
   Bar)
 
-( ~>
-    =>
-      =>
-        Foo
-  Bar )
+Foo
 
 00000: PushString("Foo")
 00001:   Return
-00002: LoadFn { code: 00000, fvars: 00000 }
-00003:   Return
-00004: PushString("Bar")
-00005: LoadFn { code: 00002, fvars: 00000 }
-00006: Fix
-00007: Apply
-00008:   Return
 
 Foo
 
@@ -39,21 +28,10 @@ Foo
 (f
   Bar)
 
-( ~>
-    =>
-      =>
-        Foo
-  Bar )
+Foo
 
 00000: PushString("Foo")
 00001:   Return
-00002: LoadFn { code: 00000, fvars: 00000 }
-00003:   Return
-00004: PushString("Bar")
-00005: LoadFn { code: 00002, fvars: 00000 }
-00006: Fix
-00007: Apply
-00008:   Return
 
 Foo
 
@@ -72,24 +50,13 @@ Foo
 (f
   Bar)
 
-( ~>
-    =>
-      =>
-        ( Foo
-          0 )
+( Foo
   Bar )
 
-00000: LoadVar(00000)
+00000: PushString("Bar")
 00001: PushString("Foo")
 00002: Apply
 00003:   Return
-00004: LoadFn { code: 00000, fvars: 00000 }
-00005:   Return
-00006: PushString("Bar")
-00007: LoadFn { code: 00004, fvars: 00000 }
-00008: Fix
-00009: Apply
-00010:   Return
 
 Foo(Bar)
 
@@ -117,47 +84,10 @@ Foo(Bar)
     Bar
     Baz))
 
-( ~>
-    =>
-      =>
-        ( pop
-          0
-          =>
-            =>
-              ( 3
-                1 )
-          =>
-            1 )
-  ( ( Foo
-      Bar )
-    Baz ) )
+Foo
 
-00000: LoadVar(00001)
-00001: LoadVar(00003)
-00002: Apply
-00003:   Return
-00004: LoadFn { code: 00000, fvars: 00003 }
-00005:   Return
-00006: LoadVar(00001)
-00007:   Return
-00008: LoadVar(00000)
-00009: LoadFn { code: 00004, fvars: 00002 }
-00010: LoadFn { code: 00006, fvars: 00001 }
-00011: Unpack
-00012: Apply
-00013: Apply
-00014:   Return
-00015: LoadFn { code: 00008, fvars: 00001 }
-00016:   Return
-00017: PushString("Baz")
-00018: PushString("Bar")
-00019: PushString("Foo")
-00020: Apply
-00021: Apply
-00022: LoadFn { code: 00015, fvars: 00000 }
-00023: Fix
-00024: Apply
-00025:   Return
+00000: PushString("Foo")
+00001:   Return
 
 Foo
 
@@ -180,20 +110,9 @@ g(Bar)
 (g
   Bar)
 
-( ~>
-    =>
-      =>
-        Foo
-  Bar )
+Foo
 
 00000: PushString("Foo")
 00001:   Return
-00002: LoadFn { code: 00000, fvars: 00000 }
-00003:   Return
-00004: PushString("Bar")
-00005: LoadFn { code: 00002, fvars: 00000 }
-00006: Fix
-00007: Apply
-00008:   Return
 
 Foo

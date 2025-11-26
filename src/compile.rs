@@ -406,7 +406,7 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
     }
     match desug_val(Ast(0, A::Block(block)), ctx) {
         Err((i, v)) => Err(format!("Unbound variable '{v}' at {}", pos_at(i, code))),
-        Ok(Expr::Abs(body)) => Ok(body.simplify(&mut vec![])),
+        Ok(Expr::Abs(body)) => Ok(body.simplify(&mut vec![], 100)),
         Ok(_) => unreachable!("Expected the main block to be desugared to an abstraction!"),
     }
 }
@@ -429,6 +429,17 @@ impl Expr {
             Expr::String(_) => true,
             Expr::App(f, _) => f.is_value(),
             _ => false,
+        }
+    }
+
+    fn size(&self) -> usize {
+        match self {
+            Expr::Var(_) | Expr::String(_) | Expr::Effect(_) => 1,
+            Expr::Abs(expr) | Expr::Rec(expr) | Expr::Type(expr) => 1 + expr.size(),
+            Expr::App(f, arg) => 1 + f.size() + arg.size(),
+            Expr::Unpack([v, t, f]) => 1 + v.size() + t.size() + f.size(),
+            Expr::Handle([v, h]) => 1 + v.size() + h.size(),
+            Expr::Compare([a, b, t, f]) => 1 + a.size() + b.size() + t.size() + f.size(),
         }
     }
 
@@ -458,7 +469,7 @@ impl Expr {
         }
     }
 
-    fn simplify(self, env: &mut Vec<Option<Expr>>) -> Self {
+    fn simplify(self, env: &mut Vec<Option<Expr>>, budget: usize) -> Self {
         match self {
             Expr::Var(v) if v < env.len() => env[env.len() - v - 1]
                 .clone()
@@ -467,37 +478,51 @@ impl Expr {
             val @ (Expr::Var(_) | Expr::String(_) | Expr::Effect(_)) => val,
             Expr::Abs(body) => {
                 env.push(None);
-                let expr = Expr::Abs(body.simplify(env).into());
+                let expr = Expr::Abs(body.simplify(env, budget).into());
                 env.pop();
                 expr
             }
-            Expr::Rec(body) => Expr::Rec(body.simplify(env).into()),
+            Expr::Rec(body) => Expr::Rec(body.simplify(env, budget).into()),
             Expr::App(f, arg) => {
-                let arg = arg.simplify(env);
-                let f = f.simplify(env);
-                if let Expr::Abs(body) = f {
-                    if arg.is_pure() {
+                let arg = arg.simplify(env, budget);
+                let f = f.simplify(env, budget);
+
+                match f {
+                    Expr::Abs(body) if arg.is_pure() => {
                         let arg = arg.shift(0, 1);
                         env.push(Some(arg));
-                        let expr = body.simplify(env).shift(0, -1);
+                        let expr = body.simplify(env, budget).shift(0, -1);
                         env.pop();
                         expr
-                    } else {
-                        Expr::App(Expr::Abs(body).into(), arg.into())
                     }
-                } else {
-                    Expr::App(f.into(), arg.into())
+                    Expr::Rec(r) if arg.is_pure() && f.size() + arg.size() < budget => match *r {
+                        Expr::Abs(body) => {
+                            let original = Expr::App(
+                                Expr::Rec(Expr::Abs(body.clone().into()).into()).into(),
+                                arg.clone().into(),
+                            );
+                            let rec_shifted =
+                                Expr::Rec(Expr::Abs(body.clone().into()).into()).shift(0, 1);
+                            env.push(Some(rec_shifted));
+                            let app = Expr::App(body.into(), arg.into());
+                            let unrolled = app.simplify(env, budget - original.size()).shift(0, -1);
+                            env.pop();
+                            if unrolled.size() <= original.size() { unrolled } else { original }
+                        }
+                        r => Expr::App(Expr::Rec(r.into()).into(), arg.into()),
+                    },
+                    f => Expr::App(f.into(), arg.into()),
                 }
             }
-            Expr::Type(expr) => Expr::Type(expr.simplify(env).into()),
+            Expr::Type(expr) => Expr::Type(expr.simplify(env, budget).into()),
             Expr::Unpack([v, t, f]) => {
-                let v = v.simplify(env);
-                let t = t.simplify(env);
-                let f = f.simplify(env);
+                let v = v.simplify(env, budget);
+                let t = t.simplify(env, budget);
+                let f = f.simplify(env, budget);
                 if v.is_value() && v.is_pure() {
                     match (v, t, f) {
                         (Expr::App(xs, x), t, _) => {
-                            Expr::App(Expr::App(t.into(), xs).into(), x).simplify(env)
+                            Expr::App(Expr::App(t.into(), xs).into(), x).simplify(env, budget)
                         }
                         (_, _, Expr::Abs(f)) => *f,
                         (v, t, f) => Expr::Unpack([v.into(), t.into(), f.into()]),
@@ -507,15 +532,15 @@ impl Expr {
                 }
             }
             Expr::Handle([val, handler]) => {
-                let val = val.simplify(env);
-                let handler = handler.simplify(env);
+                let val = val.simplify(env, budget);
+                let handler = handler.simplify(env, budget);
                 Expr::Handle([val.into(), handler.into()])
             }
             Expr::Compare([a, b, t, f]) => {
-                let a = a.simplify(env);
-                let b = b.simplify(env);
-                let t = t.simplify(env);
-                let f = f.simplify(env);
+                let a = a.simplify(env, budget);
+                let b = b.simplify(env, budget);
+                let t = t.simplify(env, budget);
+                let f = f.simplify(env, budget);
                 if a.is_pure() && b.is_pure() {
                     match (a, b, t, f) {
                         (a, b, Expr::Abs(t), _) if a == b => *t,
