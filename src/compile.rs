@@ -469,7 +469,12 @@ impl Expr {
         }
     }
 
-    fn simplify(self, env: &mut Vec<Option<Expr>>, budget: usize) -> Self {
+    fn simplify(self, env: &mut Vec<Option<Expr>>, mut depth: usize) -> Self {
+        if depth == 0 {
+            return self;
+        }
+        depth -= 1;
+        println!("simplifying {self:?}");
         match self {
             Expr::Var(v) if v < env.len() => env[env.len() - v - 1]
                 .clone()
@@ -478,34 +483,29 @@ impl Expr {
             val @ (Expr::Var(_) | Expr::String(_) | Expr::Effect(_)) => val,
             Expr::Abs(body) => {
                 env.push(None);
-                let expr = Expr::Abs(body.simplify(env, budget).into());
+                let expr = Expr::Abs(body.simplify(env, depth).into());
                 env.pop();
                 expr
             }
-            Expr::Rec(body) => Expr::Rec(body.simplify(env, budget).into()),
+            Expr::Rec(body) => Expr::Rec(body.simplify(env, depth).into()),
             Expr::App(f, arg) => {
-                let arg = arg.simplify(env, budget);
-                let f = f.simplify(env, budget);
-
+                let arg = arg.simplify(env, depth);
+                let f = f.simplify(env, depth);
+                let original = Expr::App(f.clone().into(), arg.clone().into());
                 match f {
                     Expr::Abs(body) if arg.is_pure() => {
                         let arg = arg.shift(0, 1);
                         env.push(Some(arg));
-                        let expr = body.simplify(env, budget).shift(0, -1);
+                        let expr = body.simplify(env, depth).shift(0, -1);
                         env.pop();
-                        expr
+                        if expr.size() < original.size() { expr } else { original }
                     }
-                    Expr::Rec(r) if arg.is_pure() && f.size() + arg.size() < budget => match *r {
+                    Expr::Rec(r) if arg.is_pure() => match *r {
                         Expr::Abs(body) => {
-                            let original = Expr::App(
-                                Expr::Rec(Expr::Abs(body.clone().into()).into()).into(),
-                                arg.clone().into(),
-                            );
-                            let rec_shifted =
-                                Expr::Rec(Expr::Abs(body.clone().into()).into()).shift(0, 1);
-                            env.push(Some(rec_shifted));
+                            let f = Expr::Rec(Expr::Abs(body.clone().into()).into()).shift(0, 1);
+                            env.push(Some(f));
                             let app = Expr::App(body.into(), arg.into());
-                            let unrolled = app.simplify(env, budget - original.size()).shift(0, -1);
+                            let unrolled = app.simplify(env, depth).shift(0, -1);
                             env.pop();
                             if unrolled.size() <= original.size() { unrolled } else { original }
                         }
@@ -514,15 +514,15 @@ impl Expr {
                     f => Expr::App(f.into(), arg.into()),
                 }
             }
-            Expr::Type(expr) => Expr::Type(expr.simplify(env, budget).into()),
+            Expr::Type(expr) => Expr::Type(expr.simplify(env, depth).into()),
             Expr::Unpack([v, t, f]) => {
-                let v = v.simplify(env, budget);
-                let t = t.simplify(env, budget);
-                let f = f.simplify(env, budget);
+                let v = v.simplify(env, depth);
+                let t = t.simplify(env, depth);
+                let f = f.simplify(env, depth);
                 if v.is_value() && v.is_pure() {
                     match (v, t, f) {
                         (Expr::App(xs, x), t, _) => {
-                            Expr::App(Expr::App(t.into(), xs).into(), x).simplify(env, budget)
+                            Expr::App(Expr::App(t.into(), xs).into(), x).simplify(env, depth)
                         }
                         (_, _, Expr::Abs(f)) => *f,
                         (v, t, f) => Expr::Unpack([v.into(), t.into(), f.into()]),
@@ -532,15 +532,15 @@ impl Expr {
                 }
             }
             Expr::Handle([val, handler]) => {
-                let val = val.simplify(env, budget);
-                let handler = handler.simplify(env, budget);
+                let val = val.simplify(env, depth);
+                let handler = handler.simplify(env, depth);
                 Expr::Handle([val.into(), handler.into()])
             }
             Expr::Compare([a, b, t, f]) => {
-                let a = a.simplify(env, budget);
-                let b = b.simplify(env, budget);
-                let t = t.simplify(env, budget);
-                let f = f.simplify(env, budget);
+                let a = a.simplify(env, depth);
+                let b = b.simplify(env, depth);
+                let t = t.simplify(env, depth);
+                let f = f.simplify(env, depth);
                 if a.is_pure() && b.is_pure() {
                     match (a, b, t, f) {
                         (a, b, Expr::Abs(t), _) if a == b => *t,

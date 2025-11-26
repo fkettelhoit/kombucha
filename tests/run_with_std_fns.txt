@@ -340,95 +340,81 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
     B
     C))
 
-( ( ( ~>
+( =>
+    ( ( ( 0
+          =>
+            =>
+              ( 1
+                0 ) )
         =>
           =>
             =>
-              =>
-                ( pop
-                  0
-                  =>
-                    =>
-                      ( ( ( 5
-                            4 )
-                          ( ( 4
-                              3 )
-                            0 ) )
-                        1 )
-                  =>
+              ( ( ( Triple
                     2 )
-      =>
-        =>
-          ( 1
-            0 ) )
+                  1 )
+                0 ) )
+      ( ( ( 0
+            =>
+              =>
+                ( 1
+                  0 ) )
+          [] )
+        ( ( ( []
+              A )
+            B )
+          C ) ) )
+  ~>
     =>
       =>
         =>
-          ( ( ( Triple
-                2 )
-              1 )
-            0 ) )
-  ( ( ( ~>
           =>
-            =>
+            ( pop
+              0
               =>
                 =>
-                  ( pop
-                    0
-                    =>
-                      =>
-                        ( ( ( 5
-                              4 )
-                            ( ( 4
-                                3 )
-                              0 ) )
-                          1 )
-                    =>
-                      2 )
-        =>
-          =>
-            ( 1
-              0 ) )
-      [] )
-    ( ( ( []
-          A )
-        B )
-      C ) ) )
+                  ( ( ( 5
+                        4 )
+                      ( ( 4
+                          3 )
+                        0 ) )
+                    1 )
+              =>
+                2 ) )
 
-00000: LoadVar(00000)
-00001: LoadVar(00001)
-00002: Apply
-00003:   Return
-00004: LoadFn { code: 00000, fvars: 00001 }
-00005:   Return
-00006: LoadVar(00001)
-00007: LoadVar(00000)
-00008: LoadVar(00003)
-00009: LoadVar(00004)
+00000: LoadVar(00001)
+00001: LoadVar(00000)
+00002: LoadVar(00003)
+00003: LoadVar(00004)
+00004: Apply
+00005: Apply
+00006: LoadVar(00004)
+00007: LoadVar(00005)
+00008: Apply
+00009: Apply
 00010: Apply
-00011: Apply
-00012: LoadVar(00004)
-00013: LoadVar(00005)
-00014: Apply
-00015: Apply
-00016: Apply
-00017:   Return
-00018: LoadFn { code: 00006, fvars: 00005 }
-00019:   Return
-00020: LoadVar(00002)
-00021:   Return
-00022: LoadVar(00000)
-00023: LoadFn { code: 00018, fvars: 00004 }
-00024: LoadFn { code: 00020, fvars: 00002 }
-00025: Unpack
-00026: Apply
-00027: Apply
+00011:   Return
+00012: LoadFn { code: 00000, fvars: 00005 }
+00013:   Return
+00014: LoadVar(00002)
+00015:   Return
+00016: LoadVar(00000)
+00017: LoadFn { code: 00012, fvars: 00004 }
+00018: LoadFn { code: 00014, fvars: 00002 }
+00019: Unpack
+00020: Apply
+00021: Apply
+00022:   Return
+00023: LoadFn { code: 00016, fvars: 00003 }
+00024:   Return
+00025: LoadFn { code: 00023, fvars: 00002 }
+00026:   Return
+00027: LoadFn { code: 00025, fvars: 00001 }
 00028:   Return
-00029: LoadFn { code: 00022, fvars: 00003 }
-00030:   Return
-00031: LoadFn { code: 00029, fvars: 00002 }
+00029: LoadVar(00000)
+00030: LoadVar(00001)
+00031: Apply
 00032:   Return
-00033: LoadFn { code: 00031, fvars: 00001 }
+00033: LoadFn { code: 00029, fvars: 00001 }
 00034:   Return
 00035: LoadVar(00000)
 00036: LoadVar(00001)
@@ -448,57 +434,31 @@ apply([:x, :y, :z] => { Triple(x, y, z) }, [A, B, C])
 00050:   Return
 00051: LoadFn { code: 00047, fvars: 00001 }
 00052:   Return
-00053: LoadVar(00001)
-00054: LoadVar(00000)
-00055: LoadVar(00003)
-00056: LoadVar(00004)
+00053: PushString("C")
+00054: PushString("B")
+00055: PushString("A")
+00056: PushString("[]")
 00057: Apply
 00058: Apply
-00059: LoadVar(00004)
-00060: LoadVar(00005)
-00061: Apply
-00062: Apply
+00059: Apply
+00060: PushString("[]")
+00061: LoadFn { code: 00033, fvars: 00000 }
+00062: LoadVar(00000)
 00063: Apply
-00064:   Return
-00065: LoadFn { code: 00053, fvars: 00005 }
-00066:   Return
-00067: LoadVar(00002)
-00068:   Return
-00069: LoadVar(00000)
-00070: LoadFn { code: 00065, fvars: 00004 }
-00071: LoadFn { code: 00067, fvars: 00002 }
-00072: Unpack
-00073: Apply
-00074: Apply
-00075:   Return
-00076: LoadFn { code: 00069, fvars: 00003 }
+00064: Apply
+00065: Apply
+00066: LoadFn { code: 00045, fvars: 00000 }
+00067: LoadFn { code: 00051, fvars: 00000 }
+00068: LoadVar(00000)
+00069: Apply
+00070: Apply
+00071: Apply
+00072:   Return
+00073: LoadFn { code: 00027, fvars: 00000 }
+00074: Fix
+00075: LoadFn { code: 00053, fvars: 00000 }
+00076: Apply
 00077:   Return
-00078: LoadFn { code: 00076, fvars: 00002 }
-00079:   Return
-00080: LoadFn { code: 00078, fvars: 00001 }
-00081:   Return
-00082: PushString("C")
-00083: PushString("B")
-00084: PushString("A")
-00085: PushString("[]")
-00086: Apply
-00087: Apply
-00088: Apply
-00089: PushString("[]")
-00090: LoadFn { code: 00004, fvars: 00000 }
-00091: LoadFn { code: 00033, fvars: 00000 }
-00092: Fix
-00093: Apply
-00094: Apply
-00095: Apply
-00096: LoadFn { code: 00045, fvars: 00000 }
-00097: LoadFn { code: 00051, fvars: 00000 }
-00098: LoadFn { code: 00080, fvars: 00000 }
-00099: Fix
-00100: Apply
-00101: Apply
-00102: Apply
-00103:   Return
 
 Triple(A, B, C)
 
@@ -581,90 +541,76 @@ map(:x => { Foo(x) }, [A, B, C])
     B
     C))
 
-( ( ( ~>
-        =>
+( =>
+    ( ( ( 0
           =>
             =>
+              ( 1
+                ( Foo
+                  0 ) ) )
+        [] )
+      ( ( ( 0
+            =>
               =>
-                ( pop
-                  0
-                  =>
-                    =>
-                      ( ( ( 5
-                            4 )
-                          ( ( 4
-                              3 )
-                            0 ) )
-                        1 )
-                  =>
-                    2 )
+                ( 1
+                  0 ) )
+          [] )
+        ( ( ( []
+              A )
+            B )
+          C ) ) )
+  ~>
+    =>
       =>
         =>
-          ( 1
-            ( Foo
-              0 ) ) )
-    [] )
-  ( ( ( ~>
           =>
-            =>
+            ( pop
+              0
               =>
                 =>
-                  ( pop
-                    0
-                    =>
-                      =>
-                        ( ( ( 5
-                              4 )
-                            ( ( 4
-                                3 )
-                              0 ) )
-                          1 )
-                    =>
-                      2 )
-        =>
-          =>
-            ( 1
-              0 ) )
-      [] )
-    ( ( ( []
-          A )
-        B )
-      C ) ) )
+                  ( ( ( 5
+                        4 )
+                      ( ( 4
+                          3 )
+                        0 ) )
+                    1 )
+              =>
+                2 ) )
 
-00000: LoadVar(00000)
-00001: LoadVar(00001)
-00002: Apply
-00003:   Return
-00004: LoadFn { code: 00000, fvars: 00001 }
-00005:   Return
-00006: LoadVar(00001)
-00007: LoadVar(00000)
-00008: LoadVar(00003)
-00009: LoadVar(00004)
+00000: LoadVar(00001)
+00001: LoadVar(00000)
+00002: LoadVar(00003)
+00003: LoadVar(00004)
+00004: Apply
+00005: Apply
+00006: LoadVar(00004)
+00007: LoadVar(00005)
+00008: Apply
+00009: Apply
 00010: Apply
-00011: Apply
-00012: LoadVar(00004)
-00013: LoadVar(00005)
-00014: Apply
-00015: Apply
-00016: Apply
-00017:   Return
-00018: LoadFn { code: 00006, fvars: 00005 }
-00019:   Return
-00020: LoadVar(00002)
-00021:   Return
-00022: LoadVar(00000)
-00023: LoadFn { code: 00018, fvars: 00004 }
-00024: LoadFn { code: 00020, fvars: 00002 }
-00025: Unpack
-00026: Apply
-00027: Apply
+00011:   Return
+00012: LoadFn { code: 00000, fvars: 00005 }
+00013:   Return
+00014: LoadVar(00002)
+00015:   Return
+00016: LoadVar(00000)
+00017: LoadFn { code: 00012, fvars: 00004 }
+00018: LoadFn { code: 00014, fvars: 00002 }
+00019: Unpack
+00020: Apply
+00021: Apply
+00022:   Return
+00023: LoadFn { code: 00016, fvars: 00003 }
+00024:   Return
+00025: LoadFn { code: 00023, fvars: 00002 }
+00026:   Return
+00027: LoadFn { code: 00025, fvars: 00001 }
 00028:   Return
-00029: LoadFn { code: 00022, fvars: 00003 }
-00030:   Return
-00031: LoadFn { code: 00029, fvars: 00002 }
+00029: LoadVar(00000)
+00030: LoadVar(00001)
+00031: Apply
 00032:   Return
-00033: LoadFn { code: 00031, fvars: 00001 }
+00033: LoadFn { code: 00029, fvars: 00001 }
 00034:   Return
 00035: LoadVar(00000)
 00036: PushString("Foo")
@@ -674,57 +620,31 @@ map(:x => { Foo(x) }, [A, B, C])
 00040:   Return
 00041: LoadFn { code: 00035, fvars: 00001 }
 00042:   Return
-00043: LoadVar(00001)
-00044: LoadVar(00000)
-00045: LoadVar(00003)
-00046: LoadVar(00004)
+00043: PushString("C")
+00044: PushString("B")
+00045: PushString("A")
+00046: PushString("[]")
 00047: Apply
 00048: Apply
-00049: LoadVar(00004)
-00050: LoadVar(00005)
-00051: Apply
-00052: Apply
+00049: Apply
+00050: PushString("[]")
+00051: LoadFn { code: 00033, fvars: 00000 }
+00052: LoadVar(00000)
 00053: Apply
-00054:   Return
-00055: LoadFn { code: 00043, fvars: 00005 }
-00056:   Return
-00057: LoadVar(00002)
-00058:   Return
-00059: LoadVar(00000)
-00060: LoadFn { code: 00055, fvars: 00004 }
-00061: LoadFn { code: 00057, fvars: 00002 }
-00062: Unpack
-00063: Apply
-00064: Apply
-00065:   Return
-00066: LoadFn { code: 00059, fvars: 00003 }
+00054: Apply
+00055: Apply
+00056: PushString("[]")
+00057: LoadFn { code: 00041, fvars: 00000 }
+00058: LoadVar(00000)
+00059: Apply
+00060: Apply
+00061: Apply
+00062:   Return
+00063: LoadFn { code: 00027, fvars: 00000 }
+00064: Fix
+00065: LoadFn { code: 00043, fvars: 00000 }
+00066: Apply
 00067:   Return
-00068: LoadFn { code: 00066, fvars: 00002 }
-00069:   Return
-00070: LoadFn { code: 00068, fvars: 00001 }
-00071:   Return
-00072: PushString("C")
-00073: PushString("B")
-00074: PushString("A")
-00075: PushString("[]")
-00076: Apply
-00077: Apply
-00078: Apply
-00079: PushString("[]")
-00080: LoadFn { code: 00004, fvars: 00000 }
-00081: LoadFn { code: 00033, fvars: 00000 }
-00082: Fix
-00083: Apply
-00084: Apply
-00085: Apply
-00086: PushString("[]")
-00087: LoadFn { code: 00041, fvars: 00000 }
-00088: LoadFn { code: 00070, fvars: 00000 }
-00089: Fix
-00090: Apply
-00091: Apply
-00092: Apply
-00093:   Return
 
 [Foo(A), Foo(B), Foo(C)]
 
@@ -875,128 +795,44 @@ map(:x => { Foo(x) }, [A, B, C])
     Foo
     Bar))
 
-( ( ( ( ( []
-          ( ( ( ~>
-                  =>
-                    =>
-                      =>
-                        =>
-                          ( pop
-                            0
-                            =>
-                              =>
-                                ( ( ( 5
-                                      4 )
-                                    ( ( 4
-                                        3 )
-                                      0 ) )
-                                  1 )
-                            =>
-                              2 )
-                =>
-                  =>
-                    ( 1
-                      0 ) )
-              [] )
-            ( ( ( ~>
-                    =>
-                      =>
-                        =>
-                          =>
-                            ( pop
-                              1
-                              =>
-                                =>
-                                  ( pop
-                                    2
-                                    =>
-                                      =>
-                                        ( ( ( 7
-                                              ( 6
-                                                ( ( []
-                                                    2 )
-                                                  0 ) ) )
-                                            3 )
-                                          1 )
-                                    =>
-                                      () )
-                              =>
-                                ( pop
-                                  1
-                                  =>
-                                    =>
-                                      ()
-                                  =>
-                                    4 ) )
-                  [] )
+( =>
+    ( ( ( ( ( []
+              ( ( 0
+                  ( ( ( []
+                        A )
+                      B )
+                    C ) )
+                ( ( ( []
+                      X )
+                    Y )
+                  Z ) ) )
+            ( ( 0
                 ( ( ( []
                       A )
                     B )
                   C ) )
-              ( ( ( []
-                    X )
-                  Y )
-                Z ) ) ) )
-        ( ( ( ~>
-                =>
-                  =>
-                    =>
-                      =>
-                        ( pop
-                          0
-                          =>
-                            =>
-                              ( ( ( 5
-                                    4 )
-                                  ( ( 4
-                                      3 )
-                                    0 ) )
-                                1 )
-                          =>
-                            2 )
-              =>
-                =>
-                  ( 1
-                    0 ) )
-            [] )
-          ( ( ( ~>
-                  =>
-                    =>
-                      =>
-                        =>
-                          ( pop
-                            1
-                            =>
-                              =>
-                                ( pop
-                                  2
-                                  =>
-                                    =>
-                                      ( ( ( 7
-                                            ( 6
-                                              ( ( []
-                                                  2 )
-                                                0 ) ) )
-                                          3 )
-                                        1 )
-                                  =>
-                                    () )
-                            =>
-                              ( pop
-                                1
-                                =>
-                                  =>
-                                    ()
-                                =>
-                                  4 ) )
-                [] )
-              ( ( ( []
-                    A )
-                  B )
-                C ) )
-            ( ( []
+              ( ( []
+                  X )
+                Y ) ) )
+          ( ( 0
+              ( ( []
+                  A )
+                B ) )
+            ( ( ( []
+                  X )
+                Y )
+              Z ) ) )
+        ( ( 0
+            Foo )
+          ( ( ( []
                 X )
-              Y ) ) ) )
+              Y )
+            Z ) ) )
+      ( ( 0
+          Foo )
+        Bar ) )
+  =>
+    =>
       ( ( ( ~>
               =>
                 =>
@@ -1050,126 +886,8 @@ map(:x => { Foo(x) }, [A, B, C])
                               =>
                                 4 ) )
               [] )
-            ( ( []
-                A )
-              B ) )
-          ( ( ( []
-                X )
-              Y )
-            Z ) ) ) )
-    ( ( ( ~>
-            =>
-              =>
-                =>
-                  =>
-                    ( pop
-                      0
-                      =>
-                        =>
-                          ( ( ( 5
-                                4 )
-                              ( ( 4
-                                  3 )
-                                0 ) )
-                            1 )
-                      =>
-                        2 )
-          =>
-            =>
-              ( 1
-                0 ) )
-        [] )
-      ( ( ( ~>
-              =>
-                =>
-                  =>
-                    =>
-                      ( pop
-                        1
-                        =>
-                          =>
-                            ( pop
-                              2
-                              =>
-                                =>
-                                  ( ( ( 7
-                                        ( 6
-                                          ( ( []
-                                              2 )
-                                            0 ) ) )
-                                      3 )
-                                    1 )
-                              =>
-                                () )
-                        =>
-                          ( pop
-                            1
-                            =>
-                              =>
-                                ()
-                            =>
-                              4 ) )
-            [] )
-          Foo )
-        ( ( ( []
-              X )
-            Y )
-          Z ) ) ) )
-  ( ( ( ~>
-          =>
-            =>
-              =>
-                =>
-                  ( pop
-                    0
-                    =>
-                      =>
-                        ( ( ( 5
-                              4 )
-                            ( ( 4
-                                3 )
-                              0 ) )
-                          1 )
-                    =>
-                      2 )
-        =>
-          =>
-            ( 1
-              0 ) )
-      [] )
-    ( ( ( ~>
-            =>
-              =>
-                =>
-                  =>
-                    ( pop
-                      1
-                      =>
-                        =>
-                          ( pop
-                            2
-                            =>
-                              =>
-                                ( ( ( 7
-                                      ( 6
-                                        ( ( []
-                                            2 )
-                                          0 ) ) )
-                                    3 )
-                                  1 )
-                            =>
-                              () )
-                      =>
-                        ( pop
-                          1
-                          =>
-                            =>
-                              ()
-                          =>
-                            4 ) )
-          [] )
-        Foo )
-      Bar ) ) )
+            1 )
+          0 ) ) )
 
 00000: LoadVar(00001)
 00001: LoadVar(00003)
@@ -1259,478 +977,98 @@ map(:x => { Foo(x) }, [A, B, C])
 00085:   Return
 00086: LoadFn { code: 00084, fvars: 00001 }
 00087:   Return
-00088: LoadVar(00001)
-00089: LoadVar(00003)
-00090: LoadVar(00000)
-00091: LoadVar(00002)
-00092: PushString("[]")
+00088: LoadVar(00000)
+00089: LoadVar(00001)
+00090: PushString("[]")
+00091: LoadFn { code: 00051, fvars: 00000 }
+00092: Fix
 00093: Apply
 00094: Apply
-00095: LoadVar(00006)
-00096: Apply
-00097: LoadVar(00007)
-00098: Apply
-00099: Apply
+00095: Apply
+00096: PushString("[]")
+00097: LoadFn { code: 00057, fvars: 00000 }
+00098: LoadFn { code: 00086, fvars: 00000 }
+00099: Fix
 00100: Apply
-00101:   Return
-00102: LoadFn { code: 00088, fvars: 00007 }
+00101: Apply
+00102: Apply
 00103:   Return
-00104: PushString("()")
+00104: LoadFn { code: 00088, fvars: 00001 }
 00105:   Return
-00106: LoadVar(00002)
-00107: LoadFn { code: 00102, fvars: 00006 }
-00108: LoadFn { code: 00104, fvars: 00000 }
-00109: Unpack
+00106: PushString("Bar")
+00107: PushString("Foo")
+00108: LoadVar(00000)
+00109: Apply
 00110: Apply
-00111: Apply
-00112:   Return
-00113: LoadFn { code: 00106, fvars: 00005 }
-00114:   Return
-00115: PushString("()")
-00116:   Return
-00117: LoadFn { code: 00115, fvars: 00000 }
-00118:   Return
-00119: LoadVar(00004)
-00120:   Return
-00121: LoadVar(00001)
-00122: LoadFn { code: 00117, fvars: 00000 }
-00123: LoadFn { code: 00119, fvars: 00004 }
-00124: Unpack
-00125: Apply
+00111: PushString("Z")
+00112: PushString("Y")
+00113: PushString("X")
+00114: PushString("[]")
+00115: Apply
+00116: Apply
+00117: Apply
+00118: PushString("Foo")
+00119: LoadVar(00000)
+00120: Apply
+00121: Apply
+00122: PushString("Z")
+00123: PushString("Y")
+00124: PushString("X")
+00125: PushString("[]")
 00126: Apply
-00127:   Return
-00128: LoadVar(00001)
-00129: LoadFn { code: 00113, fvars: 00004 }
-00130: LoadFn { code: 00121, fvars: 00003 }
-00131: Unpack
+00127: Apply
+00128: Apply
+00129: PushString("B")
+00130: PushString("A")
+00131: PushString("[]")
 00132: Apply
 00133: Apply
-00134:   Return
-00135: LoadFn { code: 00128, fvars: 00003 }
-00136:   Return
-00137: LoadFn { code: 00135, fvars: 00002 }
-00138:   Return
-00139: LoadFn { code: 00137, fvars: 00001 }
-00140:   Return
-00141: LoadVar(00000)
-00142: LoadVar(00001)
-00143: Apply
-00144:   Return
-00145: LoadFn { code: 00141, fvars: 00001 }
-00146:   Return
-00147: LoadVar(00001)
-00148: LoadVar(00000)
-00149: LoadVar(00003)
-00150: LoadVar(00004)
+00134: LoadVar(00000)
+00135: Apply
+00136: Apply
+00137: PushString("Y")
+00138: PushString("X")
+00139: PushString("[]")
+00140: Apply
+00141: Apply
+00142: PushString("C")
+00143: PushString("B")
+00144: PushString("A")
+00145: PushString("[]")
+00146: Apply
+00147: Apply
+00148: Apply
+00149: LoadVar(00000)
+00150: Apply
 00151: Apply
-00152: Apply
-00153: LoadVar(00004)
-00154: LoadVar(00005)
-00155: Apply
+00152: PushString("Z")
+00153: PushString("Y")
+00154: PushString("X")
+00155: PushString("[]")
 00156: Apply
 00157: Apply
-00158:   Return
-00159: LoadFn { code: 00147, fvars: 00005 }
-00160:   Return
-00161: LoadVar(00002)
-00162:   Return
-00163: LoadVar(00000)
-00164: LoadFn { code: 00159, fvars: 00004 }
-00165: LoadFn { code: 00161, fvars: 00002 }
-00166: Unpack
+00158: Apply
+00159: PushString("C")
+00160: PushString("B")
+00161: PushString("A")
+00162: PushString("[]")
+00163: Apply
+00164: Apply
+00165: Apply
+00166: LoadVar(00000)
 00167: Apply
 00168: Apply
-00169:   Return
-00170: LoadFn { code: 00163, fvars: 00003 }
-00171:   Return
-00172: LoadFn { code: 00170, fvars: 00002 }
-00173:   Return
-00174: LoadFn { code: 00172, fvars: 00001 }
+00169: PushString("[]")
+00170: Apply
+00171: Apply
+00172: Apply
+00173: Apply
+00174: Apply
 00175:   Return
-00176: LoadVar(00001)
-00177: LoadVar(00003)
-00178: LoadVar(00000)
-00179: LoadVar(00002)
-00180: PushString("[]")
-00181: Apply
-00182: Apply
-00183: LoadVar(00006)
-00184: Apply
-00185: LoadVar(00007)
-00186: Apply
-00187: Apply
-00188: Apply
-00189:   Return
-00190: LoadFn { code: 00176, fvars: 00007 }
-00191:   Return
-00192: PushString("()")
-00193:   Return
-00194: LoadVar(00002)
-00195: LoadFn { code: 00190, fvars: 00006 }
-00196: LoadFn { code: 00192, fvars: 00000 }
-00197: Unpack
-00198: Apply
-00199: Apply
-00200:   Return
-00201: LoadFn { code: 00194, fvars: 00005 }
-00202:   Return
-00203: PushString("()")
-00204:   Return
-00205: LoadFn { code: 00203, fvars: 00000 }
-00206:   Return
-00207: LoadVar(00004)
-00208:   Return
-00209: LoadVar(00001)
-00210: LoadFn { code: 00205, fvars: 00000 }
-00211: LoadFn { code: 00207, fvars: 00004 }
-00212: Unpack
-00213: Apply
-00214: Apply
-00215:   Return
-00216: LoadVar(00001)
-00217: LoadFn { code: 00201, fvars: 00004 }
-00218: LoadFn { code: 00209, fvars: 00003 }
-00219: Unpack
-00220: Apply
-00221: Apply
-00222:   Return
-00223: LoadFn { code: 00216, fvars: 00003 }
-00224:   Return
-00225: LoadFn { code: 00223, fvars: 00002 }
-00226:   Return
-00227: LoadFn { code: 00225, fvars: 00001 }
-00228:   Return
-00229: LoadVar(00000)
-00230: LoadVar(00001)
-00231: Apply
-00232:   Return
-00233: LoadFn { code: 00229, fvars: 00001 }
-00234:   Return
-00235: LoadVar(00001)
-00236: LoadVar(00000)
-00237: LoadVar(00003)
-00238: LoadVar(00004)
-00239: Apply
-00240: Apply
-00241: LoadVar(00004)
-00242: LoadVar(00005)
-00243: Apply
-00244: Apply
-00245: Apply
-00246:   Return
-00247: LoadFn { code: 00235, fvars: 00005 }
-00248:   Return
-00249: LoadVar(00002)
-00250:   Return
-00251: LoadVar(00000)
-00252: LoadFn { code: 00247, fvars: 00004 }
-00253: LoadFn { code: 00249, fvars: 00002 }
-00254: Unpack
-00255: Apply
-00256: Apply
-00257:   Return
-00258: LoadFn { code: 00251, fvars: 00003 }
-00259:   Return
-00260: LoadFn { code: 00258, fvars: 00002 }
-00261:   Return
-00262: LoadFn { code: 00260, fvars: 00001 }
-00263:   Return
-00264: LoadVar(00001)
-00265: LoadVar(00003)
-00266: LoadVar(00000)
-00267: LoadVar(00002)
-00268: PushString("[]")
-00269: Apply
-00270: Apply
-00271: LoadVar(00006)
-00272: Apply
-00273: LoadVar(00007)
-00274: Apply
-00275: Apply
-00276: Apply
-00277:   Return
-00278: LoadFn { code: 00264, fvars: 00007 }
-00279:   Return
-00280: PushString("()")
-00281:   Return
-00282: LoadVar(00002)
-00283: LoadFn { code: 00278, fvars: 00006 }
-00284: LoadFn { code: 00280, fvars: 00000 }
-00285: Unpack
-00286: Apply
-00287: Apply
-00288:   Return
-00289: LoadFn { code: 00282, fvars: 00005 }
-00290:   Return
-00291: PushString("()")
-00292:   Return
-00293: LoadFn { code: 00291, fvars: 00000 }
-00294:   Return
-00295: LoadVar(00004)
-00296:   Return
-00297: LoadVar(00001)
-00298: LoadFn { code: 00293, fvars: 00000 }
-00299: LoadFn { code: 00295, fvars: 00004 }
-00300: Unpack
-00301: Apply
-00302: Apply
-00303:   Return
-00304: LoadVar(00001)
-00305: LoadFn { code: 00289, fvars: 00004 }
-00306: LoadFn { code: 00297, fvars: 00003 }
-00307: Unpack
-00308: Apply
-00309: Apply
-00310:   Return
-00311: LoadFn { code: 00304, fvars: 00003 }
-00312:   Return
-00313: LoadFn { code: 00311, fvars: 00002 }
-00314:   Return
-00315: LoadFn { code: 00313, fvars: 00001 }
-00316:   Return
-00317: LoadVar(00000)
-00318: LoadVar(00001)
-00319: Apply
-00320:   Return
-00321: LoadFn { code: 00317, fvars: 00001 }
-00322:   Return
-00323: LoadVar(00001)
-00324: LoadVar(00000)
-00325: LoadVar(00003)
-00326: LoadVar(00004)
-00327: Apply
-00328: Apply
-00329: LoadVar(00004)
-00330: LoadVar(00005)
-00331: Apply
-00332: Apply
-00333: Apply
-00334:   Return
-00335: LoadFn { code: 00323, fvars: 00005 }
-00336:   Return
-00337: LoadVar(00002)
-00338:   Return
-00339: LoadVar(00000)
-00340: LoadFn { code: 00335, fvars: 00004 }
-00341: LoadFn { code: 00337, fvars: 00002 }
-00342: Unpack
-00343: Apply
-00344: Apply
-00345:   Return
-00346: LoadFn { code: 00339, fvars: 00003 }
-00347:   Return
-00348: LoadFn { code: 00346, fvars: 00002 }
-00349:   Return
-00350: LoadFn { code: 00348, fvars: 00001 }
-00351:   Return
-00352: LoadVar(00001)
-00353: LoadVar(00003)
-00354: LoadVar(00000)
-00355: LoadVar(00002)
-00356: PushString("[]")
-00357: Apply
-00358: Apply
-00359: LoadVar(00006)
-00360: Apply
-00361: LoadVar(00007)
-00362: Apply
-00363: Apply
-00364: Apply
-00365:   Return
-00366: LoadFn { code: 00352, fvars: 00007 }
-00367:   Return
-00368: PushString("()")
-00369:   Return
-00370: LoadVar(00002)
-00371: LoadFn { code: 00366, fvars: 00006 }
-00372: LoadFn { code: 00368, fvars: 00000 }
-00373: Unpack
-00374: Apply
-00375: Apply
-00376:   Return
-00377: LoadFn { code: 00370, fvars: 00005 }
-00378:   Return
-00379: PushString("()")
-00380:   Return
-00381: LoadFn { code: 00379, fvars: 00000 }
-00382:   Return
-00383: LoadVar(00004)
-00384:   Return
-00385: LoadVar(00001)
-00386: LoadFn { code: 00381, fvars: 00000 }
-00387: LoadFn { code: 00383, fvars: 00004 }
-00388: Unpack
-00389: Apply
-00390: Apply
-00391:   Return
-00392: LoadVar(00001)
-00393: LoadFn { code: 00377, fvars: 00004 }
-00394: LoadFn { code: 00385, fvars: 00003 }
-00395: Unpack
-00396: Apply
-00397: Apply
-00398:   Return
-00399: LoadFn { code: 00392, fvars: 00003 }
-00400:   Return
-00401: LoadFn { code: 00399, fvars: 00002 }
-00402:   Return
-00403: LoadFn { code: 00401, fvars: 00001 }
-00404:   Return
-00405: LoadVar(00000)
-00406: LoadVar(00001)
-00407: Apply
-00408:   Return
-00409: LoadFn { code: 00405, fvars: 00001 }
-00410:   Return
-00411: LoadVar(00001)
-00412: LoadVar(00000)
-00413: LoadVar(00003)
-00414: LoadVar(00004)
-00415: Apply
-00416: Apply
-00417: LoadVar(00004)
-00418: LoadVar(00005)
-00419: Apply
-00420: Apply
-00421: Apply
-00422:   Return
-00423: LoadFn { code: 00411, fvars: 00005 }
-00424:   Return
-00425: LoadVar(00002)
-00426:   Return
-00427: LoadVar(00000)
-00428: LoadFn { code: 00423, fvars: 00004 }
-00429: LoadFn { code: 00425, fvars: 00002 }
-00430: Unpack
-00431: Apply
-00432: Apply
-00433:   Return
-00434: LoadFn { code: 00427, fvars: 00003 }
-00435:   Return
-00436: LoadFn { code: 00434, fvars: 00002 }
-00437:   Return
-00438: LoadFn { code: 00436, fvars: 00001 }
-00439:   Return
-00440: PushString("Bar")
-00441: PushString("Foo")
-00442: PushString("[]")
-00443: LoadFn { code: 00051, fvars: 00000 }
-00444: Fix
-00445: Apply
-00446: Apply
-00447: Apply
-00448: PushString("[]")
-00449: LoadFn { code: 00057, fvars: 00000 }
-00450: LoadFn { code: 00086, fvars: 00000 }
-00451: Fix
-00452: Apply
-00453: Apply
-00454: Apply
-00455: PushString("Z")
-00456: PushString("Y")
-00457: PushString("X")
-00458: PushString("[]")
-00459: Apply
-00460: Apply
-00461: Apply
-00462: PushString("Foo")
-00463: PushString("[]")
-00464: LoadFn { code: 00139, fvars: 00000 }
-00465: Fix
-00466: Apply
-00467: Apply
-00468: Apply
-00469: PushString("[]")
-00470: LoadFn { code: 00145, fvars: 00000 }
-00471: LoadFn { code: 00174, fvars: 00000 }
-00472: Fix
-00473: Apply
-00474: Apply
-00475: Apply
-00476: PushString("Z")
-00477: PushString("Y")
-00478: PushString("X")
-00479: PushString("[]")
-00480: Apply
-00481: Apply
-00482: Apply
-00483: PushString("B")
-00484: PushString("A")
-00485: PushString("[]")
-00486: Apply
-00487: Apply
-00488: PushString("[]")
-00489: LoadFn { code: 00227, fvars: 00000 }
-00490: Fix
-00491: Apply
-00492: Apply
-00493: Apply
-00494: PushString("[]")
-00495: LoadFn { code: 00233, fvars: 00000 }
-00496: LoadFn { code: 00262, fvars: 00000 }
-00497: Fix
-00498: Apply
-00499: Apply
-00500: Apply
-00501: PushString("Y")
-00502: PushString("X")
-00503: PushString("[]")
-00504: Apply
-00505: Apply
-00506: PushString("C")
-00507: PushString("B")
-00508: PushString("A")
-00509: PushString("[]")
-00510: Apply
-00511: Apply
-00512: Apply
-00513: PushString("[]")
-00514: LoadFn { code: 00315, fvars: 00000 }
-00515: Fix
-00516: Apply
-00517: Apply
-00518: Apply
-00519: PushString("[]")
-00520: LoadFn { code: 00321, fvars: 00000 }
-00521: LoadFn { code: 00350, fvars: 00000 }
-00522: Fix
-00523: Apply
-00524: Apply
-00525: Apply
-00526: PushString("Z")
-00527: PushString("Y")
-00528: PushString("X")
-00529: PushString("[]")
-00530: Apply
-00531: Apply
-00532: Apply
-00533: PushString("C")
-00534: PushString("B")
-00535: PushString("A")
-00536: PushString("[]")
-00537: Apply
-00538: Apply
-00539: Apply
-00540: PushString("[]")
-00541: LoadFn { code: 00403, fvars: 00000 }
-00542: Fix
-00543: Apply
-00544: Apply
-00545: Apply
-00546: PushString("[]")
-00547: LoadFn { code: 00409, fvars: 00000 }
-00548: LoadFn { code: 00438, fvars: 00000 }
-00549: Fix
-00550: Apply
-00551: Apply
-00552: Apply
-00553: PushString("[]")
-00554: Apply
-00555: Apply
-00556: Apply
-00557: Apply
-00558: Apply
-00559:   Return
+00176: LoadFn { code: 00104, fvars: 00000 }
+00177: LoadFn { code: 00106, fvars: 00000 }
+00178: Apply
+00179:   Return
 
 [[[A, X], [B, Y], [C, Z]], [], [], [], []]
 
@@ -1942,217 +1280,131 @@ flatten([[A, B], [C, D]])
       C
       D)))
 
-( ( ( ~>
-        =>
+( =>
+    ( ( ( 0
           =>
             =>
-              =>
-                ( pop
-                  0
-                  =>
-                    =>
-                      ( ( ( 5
-                            4 )
-                          ( ( 4
-                              3 )
-                            0 ) )
-                        1 )
-                  =>
-                    2 )
-      =>
-        =>
-          ( 1
-            0 ) )
-    [] )
-  ( ( ( ~>
-          =>
+              ( 1
+                0 ) )
+        [] )
+      ( ( ( 0
             =>
               =>
-                =>
-                  ( pop
-                    0
-                    =>
-                      =>
-                        ( ( ( 5
-                              4 )
-                            ( ( 4
-                                3 )
-                              0 ) )
-                          1 )
-                    =>
-                      2 )
-        =>
-          =>
-            ( ( ( ~>
-                    =>
+                ( ( ( 2
                       =>
                         =>
-                          =>
-                            ( pop
-                              0
-                              =>
-                                =>
-                                  ( ( ( 5
-                                        4 )
-                                      ( ( 4
-                                          3 )
-                                        0 ) )
-                                    1 )
-                              =>
-                                2 )
-                  =>
-                    =>
-                      ( 1
-                        0 ) )
-                1 )
-              0 ) )
-      [] )
-    ( ( []
+                          ( 1
+                            0 ) )
+                    1 )
+                  0 ) )
+          [] )
         ( ( []
-            A )
-          B ) )
-      ( ( []
-          C )
-        D ) ) ) )
+            ( ( []
+                A )
+              B ) )
+          ( ( []
+              C )
+            D ) ) ) )
+  ~>
+    =>
+      =>
+        =>
+          =>
+            ( pop
+              0
+              =>
+                =>
+                  ( ( ( 5
+                        4 )
+                      ( ( 4
+                          3 )
+                        0 ) )
+                    1 )
+              =>
+                2 ) )
 
-00000: LoadVar(00000)
-00001: LoadVar(00001)
-00002: Apply
-00003:   Return
-00004: LoadFn { code: 00000, fvars: 00001 }
-00005:   Return
-00006: LoadVar(00001)
-00007: LoadVar(00000)
-00008: LoadVar(00003)
-00009: LoadVar(00004)
+00000: LoadVar(00001)
+00001: LoadVar(00000)
+00002: LoadVar(00003)
+00003: LoadVar(00004)
+00004: Apply
+00005: Apply
+00006: LoadVar(00004)
+00007: LoadVar(00005)
+00008: Apply
+00009: Apply
 00010: Apply
-00011: Apply
-00012: LoadVar(00004)
-00013: LoadVar(00005)
-00014: Apply
-00015: Apply
-00016: Apply
-00017:   Return
-00018: LoadFn { code: 00006, fvars: 00005 }
-00019:   Return
-00020: LoadVar(00002)
-00021:   Return
-00022: LoadVar(00000)
-00023: LoadFn { code: 00018, fvars: 00004 }
-00024: LoadFn { code: 00020, fvars: 00002 }
-00025: Unpack
-00026: Apply
-00027: Apply
+00011:   Return
+00012: LoadFn { code: 00000, fvars: 00005 }
+00013:   Return
+00014: LoadVar(00002)
+00015:   Return
+00016: LoadVar(00000)
+00017: LoadFn { code: 00012, fvars: 00004 }
+00018: LoadFn { code: 00014, fvars: 00002 }
+00019: Unpack
+00020: Apply
+00021: Apply
+00022:   Return
+00023: LoadFn { code: 00016, fvars: 00003 }
+00024:   Return
+00025: LoadFn { code: 00023, fvars: 00002 }
+00026:   Return
+00027: LoadFn { code: 00025, fvars: 00001 }
 00028:   Return
-00029: LoadFn { code: 00022, fvars: 00003 }
-00030:   Return
-00031: LoadFn { code: 00029, fvars: 00002 }
+00029: LoadVar(00000)
+00030: LoadVar(00001)
+00031: Apply
 00032:   Return
-00033: LoadFn { code: 00031, fvars: 00001 }
+00033: LoadFn { code: 00029, fvars: 00001 }
 00034:   Return
 00035: LoadVar(00000)
 00036: LoadVar(00001)
-00037: LoadFn { code: 00004, fvars: 00000 }
-00038: LoadFn { code: 00033, fvars: 00000 }
-00039: Fix
+00037: LoadFn { code: 00033, fvars: 00000 }
+00038: LoadVar(00002)
+00039: Apply
 00040: Apply
 00041: Apply
-00042: Apply
-00043:   Return
-00044: LoadFn { code: 00035, fvars: 00001 }
-00045:   Return
+00042:   Return
+00043: LoadFn { code: 00035, fvars: 00002 }
+00044:   Return
+00045: LoadVar(00000)
 00046: LoadVar(00001)
-00047: LoadVar(00000)
-00048: LoadVar(00003)
-00049: LoadVar(00004)
-00050: Apply
-00051: Apply
-00052: LoadVar(00004)
-00053: LoadVar(00005)
+00047: Apply
+00048:   Return
+00049: LoadFn { code: 00045, fvars: 00001 }
+00050:   Return
+00051: PushString("D")
+00052: PushString("C")
+00053: PushString("[]")
 00054: Apply
 00055: Apply
-00056: Apply
-00057:   Return
-00058: LoadFn { code: 00046, fvars: 00005 }
-00059:   Return
-00060: LoadVar(00002)
-00061:   Return
-00062: LoadVar(00000)
-00063: LoadFn { code: 00058, fvars: 00004 }
-00064: LoadFn { code: 00060, fvars: 00002 }
-00065: Unpack
-00066: Apply
+00056: PushString("B")
+00057: PushString("A")
+00058: PushString("[]")
+00059: Apply
+00060: Apply
+00061: PushString("[]")
+00062: Apply
+00063: Apply
+00064: PushString("[]")
+00065: LoadFn { code: 00043, fvars: 00001 }
+00066: LoadVar(00000)
 00067: Apply
-00068:   Return
-00069: LoadFn { code: 00062, fvars: 00003 }
-00070:   Return
-00071: LoadFn { code: 00069, fvars: 00002 }
-00072:   Return
-00073: LoadFn { code: 00071, fvars: 00001 }
-00074:   Return
-00075: LoadVar(00000)
-00076: LoadVar(00001)
-00077: Apply
-00078:   Return
-00079: LoadFn { code: 00075, fvars: 00001 }
-00080:   Return
-00081: LoadVar(00001)
-00082: LoadVar(00000)
-00083: LoadVar(00003)
-00084: LoadVar(00004)
-00085: Apply
-00086: Apply
-00087: LoadVar(00004)
-00088: LoadVar(00005)
-00089: Apply
-00090: Apply
-00091: Apply
-00092:   Return
-00093: LoadFn { code: 00081, fvars: 00005 }
-00094:   Return
-00095: LoadVar(00002)
-00096:   Return
-00097: LoadVar(00000)
-00098: LoadFn { code: 00093, fvars: 00004 }
-00099: LoadFn { code: 00095, fvars: 00002 }
-00100: Unpack
-00101: Apply
-00102: Apply
-00103:   Return
-00104: LoadFn { code: 00097, fvars: 00003 }
-00105:   Return
-00106: LoadFn { code: 00104, fvars: 00002 }
-00107:   Return
-00108: LoadFn { code: 00106, fvars: 00001 }
-00109:   Return
-00110: PushString("D")
-00111: PushString("C")
-00112: PushString("[]")
-00113: Apply
-00114: Apply
-00115: PushString("B")
-00116: PushString("A")
-00117: PushString("[]")
-00118: Apply
-00119: Apply
-00120: PushString("[]")
-00121: Apply
-00122: Apply
-00123: PushString("[]")
-00124: LoadFn { code: 00044, fvars: 00000 }
-00125: LoadFn { code: 00073, fvars: 00000 }
-00126: Fix
-00127: Apply
-00128: Apply
-00129: Apply
-00130: PushString("[]")
-00131: LoadFn { code: 00079, fvars: 00000 }
-00132: LoadFn { code: 00108, fvars: 00000 }
-00133: Fix
-00134: Apply
-00135: Apply
-00136: Apply
-00137:   Return
+00068: Apply
+00069: Apply
+00070: PushString("[]")
+00071: LoadFn { code: 00049, fvars: 00000 }
+00072: LoadVar(00000)
+00073: Apply
+00074: Apply
+00075: Apply
+00076:   Return
+00077: LoadFn { code: 00027, fvars: 00000 }
+00078: Fix
+00079: LoadFn { code: 00051, fvars: 00000 }
+00080: Apply
+00081:   Return
 
 [A, B, C, D]
 
