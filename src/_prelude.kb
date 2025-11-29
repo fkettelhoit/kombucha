@@ -104,7 +104,7 @@
                             join(reverse(map(apply(unify), zipped([f, vf]))))
                         })
                     }, {
-                        invalid!(type(f, pattern))
+                        NoMatch
                     })
                 }, {
                     __compare(pattern == value, True, {
@@ -115,7 +115,7 @@
                 })
             })
         }, {
-            invalid!(pattern)
+            NoMatch
         })
     }})
     :unified = unify(pattern, value)
@@ -141,7 +141,7 @@
     __unpack(result, [:_, :result] => {
         result
     }, {
-        no-match!(value)
+        ()
     })
 })
 :zip = ([:xs, :ys] => {
@@ -185,13 +185,13 @@
         __compare(type, Value, {
           block(arg)
         }, {
-          todo!()
+          ExpectedValueButFound(type)
         })
       }, {
-        todo!()
+        ExpectedValueWrapperButFound(value)
       })
     })
   }, {
-    must-be-called-as-macro!("="([binding, value, block]))
+    Error("="([binding, value, block]))
   })
 })

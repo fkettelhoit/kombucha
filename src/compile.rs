@@ -412,21 +412,37 @@ pub fn desugar<'c>(block: Vec<Ast>, code: &'c str, ctx: &mut Ctx) -> Result<Expr
 }
 
 impl Expr {
-    fn is_pure(&self) -> bool {
+    fn purity(&self) -> usize {
         match self {
-            Expr::Var(_) | Expr::String(_) => true,
-            Expr::Effect(_) => false,
-            Expr::Abs(expr) | Expr::Rec(expr) | Expr::Type(expr) => expr.is_pure(),
-            Expr::App(f, arg) => f.is_pure() && arg.is_pure(),
-            Expr::Unpack([v, t, f]) => v.is_pure() && t.is_pure() && f.is_pure(),
-            Expr::Handle([v, h]) => v.is_pure() && h.is_pure(),
-            Expr::Compare([a, b, t, f]) => a.is_pure() && b.is_pure() && t.is_pure() && f.is_pure(),
+            Expr::Var(_) | Expr::String(_) => usize::MAX,
+            Expr::Effect(_) => 1,
+            Expr::Abs(expr) => expr.purity().saturating_add(1),
+            Expr::Type(expr) if expr.purity() == 0 => 0,
+            Expr::Type(_) => usize::MAX,
+            Expr::Rec(expr) => expr.purity().saturating_sub(1),
+            Expr::App(_, arg) if arg.purity() == 0 => 0,
+            Expr::App(f, arg) => std::cmp::min(f.purity().saturating_sub(1), arg.purity()),
+            Expr::Unpack([v, t, f]) => {
+                [v.purity(), t.purity().saturating_sub(2), f.purity().saturating_sub(1)]
+                    .into_iter()
+                    .min()
+                    .unwrap()
+            }
+            Expr::Handle([v, h]) => {
+                std::cmp::min(v.purity().saturating_sub(1), h.purity().saturating_sub(3))
+            }
+            Expr::Compare([a, b, t, f]) => {
+                [a.purity(), b.purity(), t.purity().saturating_sub(1), f.purity().saturating_sub(1)]
+                    .into_iter()
+                    .min()
+                    .unwrap()
+            }
         }
     }
 
     fn is_value(&self) -> bool {
         match self {
-            Expr::String(_) => true,
+            Expr::String(_) | Expr::Effect(_) => true,
             Expr::App(f, _) => f.is_value(),
             _ => false,
         }
@@ -470,25 +486,23 @@ impl Expr {
     }
 
     fn simplify(self, env: &mut Vec<Option<Expr>>) -> Self {
-        let mut min_size = self.size();
         let mut expr = self.clone();
         for _ in 0..100 {
-            let simplified = expr.clone().partial_eval(env, true);
+            let simplified = expr.clone().partial_eval(env, &mut true);
             if expr == simplified {
                 break;
             }
-            min_size = std::cmp::min(min_size, simplified.size());
             expr = simplified;
         }
-        if min_size < self.size() {
-            println!("Compressed to {:.2}%", 100.0 * min_size as f32 / self.size() as f32);
+        if expr.size() < self.size() {
+            println!("Compressed to {:.2}%", 100.0 * expr.size() as f32 / self.size() as f32);
             expr
         } else {
             self
         }
     }
 
-    fn partial_eval(self, env: &mut Vec<Option<Expr>>, rec: bool) -> Self {
+    fn partial_eval(self, env: &mut Vec<Option<Expr>>, rec: &mut bool) -> Self {
         match self {
             Expr::Var(v) if v < env.len() => env[env.len() - v - 1]
                 .clone()
@@ -506,23 +520,24 @@ impl Expr {
                 let arg = arg.partial_eval(env, rec);
                 let f = f.partial_eval(env, rec);
                 match f {
-                    Expr::Abs(body) if arg.is_pure() => {
+                    Expr::Abs(body) if arg.purity() > 0 => {
                         let arg = arg;
                         env.push(Some(arg));
                         let body = body.partial_eval(env, rec);
                         env.pop();
                         body.shift(0, -1)
                     }
-                    Expr::Rec(r) if rec && arg.is_pure() => match *r {
+                    Expr::Rec(r) if *rec && arg.purity() > 0 => match *r {
                         Expr::Abs(body) => match *body {
                             Expr::Abs(body) => {
+                                *rec = false;
                                 let f_non_rec = Box::new(Expr::Abs(Expr::Abs(body.into()).into()));
                                 Expr::App(
                                     Expr::App(f_non_rec.clone(), Expr::Rec(f_non_rec).into())
                                         .into(),
                                     arg.into(),
                                 )
-                                .partial_eval(env, false)
+                                .partial_eval(env, rec)
                             }
                             body => Expr::App(
                                 Expr::Rec(Expr::Abs(body.into()).into()).into(),
@@ -534,12 +549,33 @@ impl Expr {
                     f => Expr::App(f.into(), arg.into()),
                 }
             }
-            Expr::Type(expr) => Expr::Type(expr.partial_eval(env, rec).into()),
+            Expr::Type(v) => {
+                let v = v.partial_eval(env, rec);
+                if v.purity() > 0 {
+                    match v {
+                        Expr::String(s) if s == Str::Null as usize => {
+                            Expr::String(Str::TyNull as usize)
+                        }
+                        Expr::String(s) if s == Str::List as usize => {
+                            Expr::String(Str::TyList as usize)
+                        }
+                        Expr::String(_) | Expr::Type(_) => Expr::String(Str::TyString as usize),
+                        Expr::Effect(_) | Expr::Abs(_) => Expr::String(Str::TyFunction as usize),
+                        app @ Expr::App(_, _) if app.is_value() => {
+                            Expr::String(Str::TyStruct as usize)
+                        }
+                        v => Expr::Type(v.into()),
+                    }
+                } else {
+                    Expr::Type(v.into())
+                }
+            }
             Expr::Unpack([v, t, f]) => {
                 let v = v.partial_eval(env, rec);
-                let t = t.partial_eval(env, v.is_value() && rec);
-                let f = f.partial_eval(env, v.is_value() && rec);
-                if v.is_value() && v.is_pure() {
+                let rec = if v.is_value() { rec } else { &mut false };
+                let t = t.partial_eval(env, rec);
+                let f = f.partial_eval(env, rec);
+                if v.is_value() && v.purity() > 0 {
                     match (v, t, f) {
                         (Expr::App(xs, x), t, _) => {
                             Expr::App(Expr::App(t.into(), xs).into(), x).partial_eval(env, rec)
@@ -551,27 +587,27 @@ impl Expr {
                     Expr::Unpack([v.into(), t.into(), f.into()])
                 }
             }
-            Expr::Handle([val, handler]) => {
-                let val = val.partial_eval(env, rec);
-                let handler = handler.partial_eval(env, val.is_value() && rec);
-                Expr::Handle([val.into(), handler.into()])
+            Expr::Handle([v, h]) => {
+                let v = v.partial_eval(env, rec);
+                let rec = if v.is_value() { rec } else { &mut false };
+                let h = h.partial_eval(env, rec);
+                Expr::Handle([v.into(), h.into()])
             }
             Expr::Compare([a, b, t, f]) => {
                 let a = a.partial_eval(env, rec);
                 let b = b.partial_eval(env, rec);
-                let t = t.partial_eval(env, a.is_value() && b.is_value() && rec);
-                let f = f.partial_eval(env, a.is_value() && b.is_value() && rec);
-                if a.is_pure() && b.is_pure() {
-                    match (a, b, t, f) {
-                        (Expr::String(a), Expr::String(b), t, _) if a == b => {
-                            Expr::App(t.into(), Expr::String(Str::Null as usize).into())
-                        }
-                        (Expr::String(_), Expr::String(_), _, f) => {
-                            Expr::App(f.into(), Expr::String(Str::Null as usize).into())
-                        }
-                        (a, b, t, f) => Expr::Compare([a.into(), b.into(), t.into(), f.into()]),
-                    }
+                if a.is_value() && b.is_value() {
+                    let t = t.partial_eval(env, rec);
+                    let f = f.partial_eval(env, rec);
+                    let branch = match (a, b) {
+                        (Expr::String(a), Expr::String(b)) if a == b => t,
+                        (Expr::Effect(a), Expr::Effect(b)) if a == b => t,
+                        _ => f,
+                    };
+                    Expr::App(branch.into(), Expr::String(Str::Null as usize).into())
                 } else {
+                    let t = t.partial_eval(env, &mut false);
+                    let f = f.partial_eval(env, &mut false);
                     Expr::Compare([a.into(), b.into(), t.into(), f.into()])
                 }
             }

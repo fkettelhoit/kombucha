@@ -78,48 +78,9 @@ __compare(foo!, foo!, { True }, { False })
   { True }
   { False })
 
-( ( ( ( =>
-          =>
-            =>
-              =>
-                ( if
-                  3
-                  2
-                  1
-                  0 )
-        foo! )
-      foo! )
-    =>
-      True )
-  =>
-    False )
+True
 
-00000: PushString("False")
+00000: PushString("True")
 00001:   Return
-00002: PushString("True")
-00003:   Return
-00004: LoadVar(00003)
-00005: LoadVar(00002)
-00006: LoadVar(00001)
-00007: LoadVar(00000)
-00008: Compare
-00009: Apply
-00010:   Return
-00011: LoadFn { code: 00004, fvars: 00003 }
-00012:   Return
-00013: LoadFn { code: 00011, fvars: 00002 }
-00014:   Return
-00015: LoadFn { code: 00013, fvars: 00001 }
-00016:   Return
-00017: LoadFn { code: 00000, fvars: 00000 }
-00018: LoadFn { code: 00002, fvars: 00000 }
-00019: PushEffect("foo")
-00020: PushEffect("foo")
-00021: LoadFn { code: 00015, fvars: 00000 }
-00022: Apply
-00023: Apply
-00024: Apply
-00025: Apply
-00026:   Return
 
 True
