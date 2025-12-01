@@ -1,6 +1,26 @@
 use kombucha::{compile::compile, run::State};
 
 #[test]
+fn prelude_arrow_single() -> Result<(), String> {
+    let code = "
+[
+    (Bar -> { Foo })(Bar)
+    (:x -> { x })(Foo)
+    (:x -> { Foo })(Bar)
+    (Pair(Foo, Bar) -> { Foo })(Pair(Foo, Bar))
+    (Pair(:x, :y) -> { y })(Pair(Bar, Foo))
+]
+";
+    match compile(code)?.run().unwrap() {
+        State::Done(v) => {
+            assert_eq!(v.to_string(), format!("[{}]", ["Match(Foo)"; 5].join(", ")))
+        }
+        State::Resumable(vm) => panic!("{}!({})", vm.effect(), vm.arg.to_string()),
+    }
+    Ok(())
+}
+
+#[test]
 fn prelude_arrow_match() -> Result<(), String> {
     let code = "
 [

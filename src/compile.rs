@@ -443,7 +443,10 @@ impl Expr {
     fn is_value(&self) -> bool {
         match self {
             Expr::String(_) | Expr::Effect(_) => true,
-            Expr::App(f, _) => f.is_value(),
+            Expr::App(f, _) => match f.as_ref() {
+                Expr::Effect(_) => false,
+                f => f.is_value(),
+            },
             _ => false,
         }
     }
@@ -487,11 +490,12 @@ impl Expr {
 
     fn simplify(self, env: &mut Vec<Option<Expr>>) -> Self {
         let mut expr = self.clone();
-        for _ in 0..100 {
+        for i in 0..100 {
             let simplified = expr.clone().partial_eval(env, &mut true);
             if expr == simplified {
                 break;
             }
+            println!("{i:3}: {} -> {}", expr.size(), simplified.size());
             expr = simplified;
         }
         if expr.size() < self.size() {
