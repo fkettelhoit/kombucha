@@ -107,7 +107,29 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
       (toggle!)
       (toggle!)) })
 
-( try
+( ( ~>
+      =>
+        =>
+          =>
+            ( try
+              =>
+                ( 1
+                  2 )
+              =>
+                =>
+                  =>
+                    ( if
+                      4
+                      True
+                      =>
+                        ( ( 6
+                            False )
+                          3 )
+                      =>
+                        ( ( 6
+                            True )
+                          3 ) ) )
+    False )
   =>
     ( ( ( List
           ( toggle!
@@ -115,34 +137,7 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
         ( toggle!
           () ) )
       ( toggle!
-        () ) )
-  =>
-    =>
-      =>
-        ( ( ~>
-              =>
-                =>
-                  =>
-                    ( try
-                      =>
-                        ( 1
-                          2 )
-                      =>
-                        =>
-                          =>
-                            ( if
-                              4
-                              True
-                              =>
-                                ( ( 6
-                                    False )
-                                  3 )
-                              =>
-                                ( ( 6
-                                    True )
-                                  3 ) ) )
-            True )
-          2 ) )
+        () ) ) )
 
 00000: PushString("()")
 00001: PushEffect("toggle")
@@ -198,25 +193,12 @@ with-toggle(False, { List(toggle!(), toggle!(), toggle!()) })
 00051:   Return
 00052: LoadFn { code: 00050, fvars: 00001 }
 00053:   Return
-00054: LoadVar(00002)
-00055: PushString("True")
+00054: LoadFn { code: 00000, fvars: 00000 }
+00055: PushString("False")
 00056: LoadFn { code: 00052, fvars: 00000 }
 00057: Fix
 00058: Apply
 00059: Apply
 00060:   Return
-00061: LoadFn { code: 00054, fvars: 00002 }
-00062:   Return
-00063: LoadFn { code: 00061, fvars: 00001 }
-00064:   Return
-00065: LoadFn { code: 00000, fvars: 00000 }
-00066: LoadFn { code: 00063, fvars: 00000 }
-00067: Try
-00068: Apply
-00069: Unwind
-00070: Apply
-00071: Apply
-00072: Apply
-00073:   Return
 
 List(True, False, True)

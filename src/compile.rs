@@ -488,22 +488,66 @@ impl Expr {
         }
     }
 
+    // fn simplify(self, env: &mut Vec<Option<Expr>>) -> Self {
+    //     let mut expr = self.clone();
+    //     for i in 0..1000 {
+    //         let simplified =
+    //             expr.clone().partial_eval(env, &mut true);
+    //         if expr == simplified {
+    //             break;
+    //         }
+    //         println!("{i:3}: {} -> {}", expr.size(), simplified.size());
+    //         expr = simplified;
+    //     }
+    //     if expr.size() < self.size() {
+    //         println!("Compressed to {:.2}%", 100.0 * expr.size() as f32 / self.size() as f32);
+    //         expr
+    //     } else {
+    //         self
+    //     }
+    // }
+
     fn simplify(self, env: &mut Vec<Option<Expr>>) -> Self {
-        let mut expr = self.clone();
-        for i in 0..100 {
-            let simplified = expr.clone().partial_eval(env, &mut true);
-            if expr == simplified {
+        let original_size = self.size();
+        let mut expr = self;
+        let mut min_expr = expr.clone();
+        let mut min_size = original_size;
+        let mut iterations_since_improvement = 0;
+        let max_without_improvement = 100_000;
+
+        for i in 0..1_000_000 {
+            let simplified = expr.partial_eval(env, &mut false).partial_eval(env, &mut true);
+
+            if min_expr == simplified || iterations_since_improvement >= max_without_improvement {
+                if iterations_since_improvement >= max_without_improvement {
+                    println!("Stopping after {max_without_improvement} iterations");
+                }
                 break;
             }
-            println!("{i:3}: {} -> {}", expr.size(), simplified.size());
+
+            let current_size = simplified.size();
+            if true {
+                println!(
+                    "{:.2}% ({:.2}%) ({current_size})",
+                    100.0 * min_size as f32 / original_size as f32,
+                    100.0 * current_size as f32 / original_size as f32
+                );
+            }
+
+            if current_size < min_size {
+                min_size = current_size;
+                min_expr = simplified.clone();
+                iterations_since_improvement = 0;
+            } else {
+                iterations_since_improvement += 1;
+            }
+
             expr = simplified;
         }
-        if expr.size() < self.size() {
-            println!("Compressed to {:.2}%", 100.0 * expr.size() as f32 / self.size() as f32);
-            expr
-        } else {
-            self
+        if min_size < original_size {
+            println!("Compressed to {:.2}%", 100.0 * min_size as f32 / original_size as f32);
         }
+        min_expr
     }
 
     fn partial_eval(self, env: &mut Vec<Option<Expr>>, rec: &mut bool) -> Self {
@@ -521,11 +565,11 @@ impl Expr {
             }
             Expr::Rec(body) => Expr::Rec(body.partial_eval(env, rec).into()),
             Expr::App(f, arg) => {
+                let is_rec_before = *rec;
                 let arg = arg.partial_eval(env, rec);
-                let f = f.partial_eval(env, rec);
-                match f {
-                    Expr::Abs(body) if arg.purity() > 0 => {
-                        let arg = arg;
+                match *f {
+                    Expr::Abs(body) if *rec && arg.purity() > 0 => {
+                        *rec = false;
                         env.push(Some(arg));
                         let body = body.partial_eval(env, rec);
                         env.pop();
@@ -550,7 +594,8 @@ impl Expr {
                         },
                         r => Expr::App(Expr::Rec(r.into()).into(), arg.into()),
                     },
-                    f => Expr::App(f.into(), arg.into()),
+                    f if is_rec_before && !*rec => Expr::App(f.into(), arg.into()),
+                    f => Expr::App(f.partial_eval(env, rec).into(), arg.into()),
                 }
             }
             Expr::Type(v) => {
@@ -575,10 +620,9 @@ impl Expr {
                 }
             }
             Expr::Unpack([v, t, f]) => {
+                let is_rec_before = *rec;
                 let v = v.partial_eval(env, rec);
                 let rec = if v.is_value() { rec } else { &mut false };
-                let t = t.partial_eval(env, rec);
-                let f = f.partial_eval(env, rec);
                 if v.is_value() && v.purity() > 0 {
                     match (v, t, f) {
                         (Expr::App(xs, x), t, _) => {
@@ -587,8 +631,12 @@ impl Expr {
                         (_, _, f) => Expr::App(f.into(), Expr::String(Str::Null as usize).into())
                             .partial_eval(env, rec),
                     }
-                } else {
+                } else if is_rec_before && !*rec {
                     Expr::Unpack([v.into(), t.into(), f.into()])
+                } else {
+                    let t = t.partial_eval(env, rec).into();
+                    let f = if is_rec_before && !*rec { *f } else { f.partial_eval(env, rec) };
+                    Expr::Unpack([v.into(), t, f.into()])
                 }
             }
             Expr::Handle([v, h]) => {
@@ -601,12 +649,10 @@ impl Expr {
                 let a = a.partial_eval(env, rec);
                 let b = b.partial_eval(env, rec);
                 if a.is_value() && b.is_value() {
-                    let t = t.partial_eval(env, rec);
-                    let f = f.partial_eval(env, rec);
                     let branch = match (a, b) {
-                        (Expr::String(a), Expr::String(b)) if a == b => t,
-                        (Expr::Effect(a), Expr::Effect(b)) if a == b => t,
-                        _ => f,
+                        (Expr::String(a), Expr::String(b)) if a == b => t.partial_eval(env, rec),
+                        (Expr::Effect(a), Expr::Effect(b)) if a == b => t.partial_eval(env, rec),
+                        _ => f.partial_eval(env, rec),
                     };
                     Expr::App(branch.into(), Expr::String(Str::Null as usize).into())
                 } else {
