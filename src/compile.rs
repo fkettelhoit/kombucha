@@ -18,7 +18,7 @@ enum Tok<'code> {
     Separator,
 }
 
-fn scan(code: &str) -> Result<Vec<(Tok, usize, &str)>, (usize, &str)> {
+fn scan(code: &str) -> Result<Vec<(Tok<'_>, usize, &str)>, (usize, &str)> {
     let mut toks = vec![];
     let mut i = 0;
     let mut chars = code.char_indices().chain(iter::once((code.len(), ' ')));
