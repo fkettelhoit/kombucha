@@ -36,13 +36,13 @@ Expected function arguments to end with ')' at line 1, col 4
 
 {{a} {b}}
 
-Expected ',', '\n', or '}', found '{' at line 1, col 6
+Expected ',' or '\n' or '}', found '{' at line 1, col 6
 
 ---
 
 f({a} {b}
 
-Expected ',', '\n', or ')', found '{' at line 1, col 7
+Expected ',' or '\n' or ')', found '{' at line 1, col 7
 
 ---
 
@@ -66,7 +66,7 @@ Expected tuple elements after '(' to end with ')' at line 1, col 3
 
 ({a} {b})
 
-Expected ',', '\n', or ')', found '{' at line 1, col 6
+Expected ',' or '\n' or ')', found '{' at line 1, col 6
 
 ---
 

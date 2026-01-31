@@ -193,7 +193,7 @@ impl<'c> Parser<'c> {
                     return Err((*i, format!("Expected ',' or '\\n', found {t}")));
                 }
                 (None, Some((i, t)), Some(until)) => {
-                    return Err((*i, format!("Expected ',', '\\n', or {until}, found {t}")));
+                    return Err((*i, format!("Expected ',' or '\\n' or {until}, found {t}")));
                 }
                 (Some(_), Some(_), _) => {
                     exprs.push(self.expr(expected)?);
