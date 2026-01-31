@@ -25,9 +25,6 @@ fn pretty(ast: &Ast, lvl: usize, buf: &mut String) {
             if items.is_empty() {
                 return buf.push_str("()");
             }
-            if items.len() == 1 {
-                return pretty(&items[0], lvl, buf);
-            }
             buf.push_str("(\n");
             for (i, item) in items.iter().enumerate() {
                 if i != 0 {

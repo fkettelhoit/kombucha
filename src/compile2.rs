@@ -131,11 +131,18 @@ impl<'c> Parser<'c> {
         let Some((i, Tok::Var(f))) = self.toks.peek().copied() else {
             return Ok(x);
         };
+        x = match x {
+            Ast::Tuple(_, mut elems) if elems.len() == 1 => elems.pop().unwrap(),
+            x => x,
+        };
         while let Some((j, Tok::Var(g))) = self.toks.next_if(|(_, t)| matches!(t, Tok::Var(_))) {
             if f != g {
                 return Err((j, format!("Expected the infix function '{f}', found '{g}'")));
             }
-            let y = self.prefix("an infix argument")?;
+            let y = match self.prefix("an infix argument")? {
+                Ast::Tuple(_, mut elems) if elems.len() == 1 => elems.pop().unwrap(),
+                y => y,
+            };
             x = Ast::Infix(Box::new(Ast::Var(i, f)), [x.into(), y.into()], None);
         }
         Ok(x)
