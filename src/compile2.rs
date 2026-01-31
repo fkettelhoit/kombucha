@@ -27,12 +27,15 @@ fn scan(code: &str) -> Vec<(Pos, Tok<'_>)> {
         match s.chars().next() {
             None => {}
             Some(c) if c.is_ascii_uppercase() => toks.push((Pos(i), Tok::Str(s))),
-            _ if matches!(code[j..].chars().next(), Some(':')) => toks.push((Pos(i), Tok::Key(s))),
             _ => toks.push((Pos(i), Tok::Var(s))),
         }
     }
     while let Some((j, c)) = chars.next() {
         match c {
+            ':' if i < j => {
+                toks.push((Pos(i), Tok::Key(&code[i..j])));
+                i = j + 1;
+            }
             '(' | ')' | '[' | ']' | '{' | '}' | '.' | ':' | ';' | ',' | '\n' => {
                 push_ident(&mut toks, code, i, j);
                 toks.push((Pos(j), Tok::Sep(c)));
@@ -90,6 +93,10 @@ struct Parser<'code> {
 
 impl<'c> Parser<'c> {
     fn expr(&mut self, expected: &str) -> Result<Ast<'c>, E> {
+        if let Some((i, Tok::Key(k))) = self.toks.peek().copied() {
+            self.toks.next();
+            return Ok(Ast::Tuple(i, vec![Ast::String(i, k), self.infix("value after key")?]));
+        }
         let (expr, mut args) = match self.infix(expected)? {
             Ast::Infix(f, [x, y], None) => match self.toks.peek().map(|(_, t)| t) {
                 Some(Tok::Sep('[' | '{')) => {
@@ -107,9 +114,7 @@ impl<'c> Parser<'c> {
         }
         let mut kw_args = vec![];
         while let Some((i, Tok::Key(k))) = self.toks.peek().copied() {
-            let (_, Some((_, Tok::Sep(':')))) = (self.toks.next(), self.toks.next()) else {
-                return Err((i, format!("Expected the keyword '{k}' to end with ':'")));
-            };
+            self.toks.next();
             kw_args.push(Ast::Tuple(i, vec![Ast::String(i, k), self.infix("a keyword argument")?]));
         }
         if let Some(Ast::Tuple(i, _)) = kw_args.first() {
