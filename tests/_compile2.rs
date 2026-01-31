@@ -99,9 +99,8 @@ fn parse(code: &str) -> String {
     }
 }
 
-#[test]
-fn parse_ok() -> Result<(), String> {
-    let tests = include_str!("./_parse_ok.txt").split("\n\n---\n\n").collect::<Vec<_>>();
+fn test(tests: &str) -> Result<(), String> {
+    let tests = tests.split("\n\n---\n\n").collect::<Vec<_>>();
     let all = tests.len();
     let mut failed = 0;
     for test in tests {
@@ -116,4 +115,14 @@ fn parse_ok() -> Result<(), String> {
         }
     }
     if failed > 0 { Err(format!("{failed}/{all} tests failed")) } else { Ok(()) }
+}
+
+#[test]
+fn parse_ok() -> Result<(), String> {
+    test(include_str!("./_parse_ok.txt"))
+}
+
+#[test]
+fn parse_err() -> Result<(), String> {
+    test(include_str!("./_parse_err.txt"))
 }

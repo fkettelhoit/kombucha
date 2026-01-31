@@ -1,155 +1,129 @@
 {)}
 
-Expected the '{' at line 1, col 1 to be closed with '}', but found ')' at line 1, col 2
+Expected block elements after '{', found ')' at line 1, col 2
 
 ---
 
 a + b - c
 
-Expected all infix functions starting at line 1, col 3 to be named '+', but found '-' at line 1, col 7
+Expected the infix function '+', found '-' at line 1, col 7
 
 ---
 
 a +
 
-Expected an infix argument after the function '+' at line 1, col 3, but the code just ended
+Expected an infix argument at line 1, col 4
 
 ---
 
 f(a +)
 
-Expected an infix argument after the function '+' at line 1, col 5, but found ')' at line 1, col 6
+Expected an infix argument, found ')' at line 1, col 6
 
 ---
 
 f(
 
-Expected the '(' at line 1, col 2 to be closed with ')', but the code just ended
+Expected function arguments to end with ')' at line 1, col 3
 
 ---
 
 f(a
 
-Expected the '(' at line 1, col 2 to be closed with ')', but the code just ended
+Expected function arguments to end with ')' at line 1, col 4
 
 ---
 
 {{a} {b}}
 
-Expected a ',' or '\n' to separate the expressions starting at line 1, col 2, but found '{' at line 1, col 6
+Expected ',', '\n', or '}', found '{' at line 1, col 6
 
 ---
 
 f({a} {b}
 
-Expected a ',' or '\n' to separate the expressions starting at line 1, col 3, but found '{' at line 1, col 7
+Expected ',', '\n', or ')', found '{' at line 1, col 7
 
 ---
 
 {f(a)
 
-Expected the '{' at line 1, col 1 to be closed with '}', but the code just ended
+Expected block elements after '{' to end with '}' at line 1, col 6
 
 ---
 
 (
 
-Expected the '(' at line 1, col 1 to be closed with ')', but the code just ended
+Expected tuple elements after '(' to end with ')' at line 1, col 2
 
 ---
 
 (a
 
-Expected the '(' at line 1, col 1 to be closed with ')', but the code just ended
+Expected tuple elements after '(' to end with ')' at line 1, col 3
 
 ---
 
 ({a} {b})
 
-Expected the '(' at line 1, col 1 to be closed with ')', but found '{' at line 1, col 6
-
----
-
-({a}, {b})
-
-Expected the '(' at line 1, col 1 to be closed with ')', but found ',' at line 1, col 5
+Expected ',', '\n', or ')', found '{' at line 1, col 6
 
 ---
 
 a + keyword:
 
-Expected an infix argument after the function '+' at line 1, col 3, but found 'keyword:' at line 1, col 5
+Expected an infix argument, found 'keyword' at line 1, col 5
 
 ---
 
 foo bar: baz:
 
-Expected an argument after the keyword 'bar:' at line 1, col 5, but found 'baz:' at line 1, col 10
+Expected a keyword argument, found 'baz' at line 1, col 10
 
 ---
 
 foo bar:
 
-Expected an argument after the keyword 'bar:' at line 1, col 5, but the code just ended
+Expected a keyword argument at line 1, col 9
 
 ---
 
 a + ,
 
-Expected an infix argument after the function '+' at line 1, col 3, but found ',' at line 1, col 5
+Expected an infix argument, found ',' at line 1, col 5
 
 ---
 
 a + {a, b
 
-Expected the '{' at line 1, col 5 to be closed with '}', but the code just ended
+Expected block elements after '{' to end with '}' at line 1, col 10
 
 ---
 
 a + {a, )
 
-Expected the '{' at line 1, col 5 to be closed with '}', but found ')' at line 1, col 9
+Expected block elements after '{', found ')' at line 1, col 9
 
 ---
 
 [a, b
 
-Expected the '[' at line 1, col 1 to be closed with ']', but the code just ended
+Expected list elements after '[' to end with ']' at line 1, col 6
 
 ---
 
 f("foo)
 
-Found an unclosed string literal at line 1, col 3
+Expected function arguments to end with ')' at line 1, col 8
 
 ---
 
 f(: => {})
 
-Found an empty binding at line 1, col 3
+Expected function arguments, found ':' at line 1, col 3
 
 ---
 
 f :foo: bar
 
-Found a binding used as a keyword at line 1, col 3
-
----
-
-foo: bar
-
-([]
-  "foo"
-  bar)
-
----
-
-[foo: bar, baz: qux]
-
-([]
-  ([]
-    "foo"
-    bar)
-  ([]
-    "baz"
-    qux))
+Expected ',' or '\n', found ':' at line 1, col 3
