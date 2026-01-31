@@ -72,27 +72,13 @@ pub enum Ast<'code> {
     Infix(Box<Ast<'code>>, [Box<Ast<'code>>; 2], Option<Box<Ast<'code>>>),
 }
 
-fn pos_at(i: usize, code: &str) -> String {
-    let (mut line, mut col) = (1, 1);
-    for c in code.chars().take(i) {
-        if c == '\n' {
-            line += 1;
-            col = 0;
-        }
-        col += 1;
-    }
-    format!("line {line}, col {col}")
-}
-
-type E = (Pos, String);
-
 struct Parser<'code> {
     end_pos: Pos,
     toks: std::iter::Peekable<std::vec::IntoIter<(Pos, Tok<'code>)>>,
 }
 
 impl<'c> Parser<'c> {
-    fn expr(&mut self, expected: &str) -> Result<Ast<'c>, E> {
+    fn expr(&mut self, expected: &str) -> Result<Ast<'c>, (Pos, String)> {
         if let Some((i, Tok::Key(k))) = self.toks.peek().copied() {
             self.toks.next();
             return Ok(Ast::Tuple(i, vec![Ast::String(i, k), self.infix("value after key")?]));
@@ -126,7 +112,7 @@ impl<'c> Parser<'c> {
         }
     }
 
-    fn infix(&mut self, expected: &str) -> Result<Ast<'c>, E> {
+    fn infix(&mut self, expected: &str) -> Result<Ast<'c>, (Pos, String)> {
         let mut x = self.prefix(expected)?;
         let Some((i, Tok::Var(f))) = self.toks.peek().copied() else {
             return Ok(x);
@@ -148,7 +134,7 @@ impl<'c> Parser<'c> {
         Ok(x)
     }
 
-    fn prefix(&mut self, expected: &str) -> Result<Ast<'c>, E> {
+    fn prefix(&mut self, expected: &str) -> Result<Ast<'c>, (Pos, String)> {
         let mut expr = self.value(expected)?;
         while let Some(_) = self.toks.next_if(|(_, t)| *t == Tok::Sep('(')) {
             let args = self.exprs("function arguments", Some(Tok::Sep(')')))?;
@@ -157,7 +143,7 @@ impl<'c> Parser<'c> {
         Ok(expr)
     }
 
-    fn value(&mut self, expected: &str) -> Result<Ast<'c>, E> {
+    fn value(&mut self, expected: &str) -> Result<Ast<'c>, (Pos, String)> {
         match self.toks.next() {
             Some((i, Tok::Sep('['))) => {
                 Ok(Ast::List(i, self.exprs("list elements after '['", Some(Tok::Sep(']')))?))
@@ -175,7 +161,7 @@ impl<'c> Parser<'c> {
         }
     }
 
-    fn exprs(&mut self, expected: &str, until: Option<Tok<'c>>) -> Result<Vec<Ast<'c>>, E> {
+    fn exprs(&mut self, exp: &str, until: Option<Tok<'c>>) -> Result<Vec<Ast<'c>>, (Pos, String)> {
         let mut exprs = vec![];
         let mut last_sep = Some((self.end_pos, Tok::Sep(',')));
         loop {
@@ -187,7 +173,7 @@ impl<'c> Parser<'c> {
                 }
                 (_, Some((_, Tok::Sep(',' | '\n'))), _) => last_sep = self.toks.next(),
                 (_, None, Some(until)) => {
-                    return Err((self.end_pos, format!("Expected {expected} to end with {until}")));
+                    return Err((self.end_pos, format!("Expected {exp} to end with {until}")));
                 }
                 (None, Some((i, t)), None) => {
                     return Err((*i, format!("Expected ',' or '\\n', found {t}")));
@@ -196,7 +182,7 @@ impl<'c> Parser<'c> {
                     return Err((*i, format!("Expected ',' or '\\n' or {until}, found {t}")));
                 }
                 (Some(_), Some(_), _) => {
-                    exprs.push(self.expr(expected)?);
+                    exprs.push(self.expr(exp)?);
                     last_sep = None;
                 }
             }
@@ -205,6 +191,17 @@ impl<'c> Parser<'c> {
 }
 
 pub fn parse(code: &str) -> Result<Vec<Ast<'_>>, String> {
+    fn pos_at(i: usize, code: &str) -> String {
+        let (mut line, mut col) = (1, 1);
+        for c in code.chars().take(i) {
+            if c == '\n' {
+                line += 1;
+                col = 0;
+            }
+            col += 1;
+        }
+        format!("line {line}, col {col}")
+    }
     Parser { end_pos: Pos(code.len()), toks: scan(code).into_iter().peekable() }
         .exprs("an expression", None)
         .map_err(|(Pos(i), msg)| format!("{msg} at {}", pos_at(i, code)))
