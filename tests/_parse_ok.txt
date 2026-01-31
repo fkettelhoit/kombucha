@@ -276,3 +276,27 @@ foo: bar
     qux
   )
 ]
+
+---
+
+{
+  // = is a macro:
+  f = (x, y) {
+    // recursive call:
+    f(x, y)
+  }
+}
+
+{
+  (=
+    f
+    (
+      x
+      y
+    )
+    {
+      (f
+        x
+        y)
+    })
+}
