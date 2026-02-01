@@ -53,7 +53,7 @@ fn pretty(ast: &Ast, lvl: usize, buf: &mut String) {
             buf.push_str(&indent.repeat(lvl));
             buf.push('}');
         }
-        Ast::Infix(op, [left, right], trailing) => {
+        Ast::Infix(_, op, [left, right], trailing) => {
             buf.push('(');
             pretty(&op, lvl, buf);
             buf.push('\n');
@@ -69,7 +69,7 @@ fn pretty(ast: &Ast, lvl: usize, buf: &mut String) {
             }
             buf.push(')');
         }
-        Ast::Prefix(f, args) => {
+        Ast::Prefix(_, f, args) => {
             buf.push('(');
             pretty(&f, lvl, buf);
             for arg in args {
