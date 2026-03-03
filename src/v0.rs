@@ -24,6 +24,7 @@ enum Tok<'code> {
     Key(&'code str),
     Str(&'code str),
     Int(i64),
+    Pin(&'code str),
 }
 
 impl std::fmt::Display for Tok<'_> {
@@ -33,6 +34,7 @@ impl std::fmt::Display for Tok<'_> {
             Tok::Sep(c) => write!(f, "'{c}'"),
             Tok::Var(s) | Tok::Key(s) | Tok::Str(s) => write!(f, "'{s}'"),
             Tok::Int(n) => write!(f, "'{n}'"),
+            Tok::Pin(s) => write!(f, "'^{s}'"),
         }
     }
 }
@@ -46,7 +48,11 @@ fn scan(code: &str) -> Vec<(Pos, Tok<'_>)> {
         if s.is_empty() {
             return;
         }
-        if let Ok(n) = s.parse::<i64>() {
+        if let Some(rest) = s.strip_prefix('^') {
+            if !rest.is_empty() {
+                toks.push((Pos(i), Tok::Pin(rest)));
+            }
+        } else if let Ok(n) = s.parse::<i64>() {
             toks.push((Pos(i), Tok::Int(n)));
         } else if s.as_bytes()[0].is_ascii_uppercase() {
             toks.push((Pos(i), Tok::Str(s)));
@@ -107,6 +113,7 @@ pub enum Ast<'code> {
     Var(Pos, &'code str),
     Str(Pos, &'code str),
     Int(Pos, i64),
+    Pin(Pos, &'code str),
     List(Pos, Vec<Ast<'code>>),
     Tuple(Pos, Vec<Ast<'code>>),
     Block(Pos, Vec<Ast<'code>>),
@@ -120,6 +127,7 @@ impl std::fmt::Display for Ast<'_> {
             Ast::Var(_, s) => write!(f, "{s}"),
             Ast::Str(_, s) => write!(f, "{s}"),
             Ast::Int(_, n) => write!(f, "{n}"),
+            Ast::Pin(_, s) => write!(f, "^{s}"),
             Ast::List(_, elems) => {
                 write!(f, "[")?;
                 for (i, e) in elems.iter().enumerate() {
@@ -185,6 +193,7 @@ impl Ast<'_> {
             Ast::Var(p, _)
             | Ast::Str(p, _)
             | Ast::Int(p, _)
+            | Ast::Pin(p, _)
             | Ast::List(p, _)
             | Ast::Tuple(p, _)
             | Ast::Block(p, _)
@@ -196,7 +205,7 @@ impl Ast<'_> {
     fn size(&self) -> usize {
         match self {
             Ast::Str(_, s) if s.contains(char::is_whitespace) => 4,
-            Ast::Var(_, _) | Ast::Str(_, _) | Ast::Int(_, _) => 1,
+            Ast::Var(_, _) | Ast::Str(_, _) | Ast::Int(_, _) | Ast::Pin(_, _) => 1,
             Ast::List(_, xs) | Ast::Tuple(_, xs) | Ast::Block(_, xs) => {
                 xs.iter().map(|x| x.size()).sum::<usize>() + 1
             }
@@ -240,6 +249,7 @@ impl Ast<'_> {
             Ast::Str(_, s) if is_bare_string(s) => s.to_string(),
             Ast::Str(_, s) => format!("\"{s}\""),
             Ast::Int(_, n) => n.to_string(),
+            Ast::Pin(_, s) => format!("^{s}"),
             Ast::List(_, xs) => wrap('[', ']', xs, lvl, self.size()),
             Ast::Tuple(_, xs) => {
                 if let [Ast::Str(_, k), v] = xs.as_slice() {
@@ -412,6 +422,7 @@ impl<'c> Parser<'c> {
             Some((i, Tok::Var(s))) => Ok(Ast::Var(i, s)),
             Some((i, Tok::Str(s))) => Ok(Ast::Str(i, s)),
             Some((i, Tok::Int(n))) => Ok(Ast::Int(i, n)),
+            Some((i, Tok::Pin(s))) => Ok(Ast::Pin(i, s)),
             Some((i, t)) => Err((i, format!("Expected {expected}, found {t}"))),
             None => Err((self.end_pos, format!("Expected {expected}"))),
         }
@@ -457,6 +468,559 @@ pub fn format(code: &str) -> Result<String, String> {
     Ok(Ast::Block(Pos(0), exprs).pretty())
 }
 
+// --- Core IR (desugared) ---
+//
+// The desugared representation has no blocks, pins, or implicit bindings.
+// Blocks become sequences of calls and lambdas; binding structure is encoded
+// in Value/Binding/Call annotations determined by syntactic position.
+
+#[derive(Debug, Clone)]
+pub enum Core {
+    Var(String),
+    Str(String),
+    Int(i64),
+    List(Vec<Core>),
+    Tuple(Vec<Core>),
+    Fn(String, Box<Core>),
+    Call(Box<Core>, Vec<Core>),
+}
+
+impl Core {
+    fn fmt_nested(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if matches!(self, Core::Fn(..)) {
+            write!(f, "({self})")
+        } else {
+            write!(f, "{self}")
+        }
+    }
+}
+
+impl std::fmt::Display for Core {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Core::Var(s) => write!(f, "{s}"),
+            Core::Str(s) if s.starts_with(|c: char| c.is_ascii_uppercase()) => write!(f, "{s}"),
+            Core::Str(s) => write!(f, "\"{s}\""),
+            Core::Int(n) => write!(f, "{n}"),
+            Core::List(elems) => {
+                write!(f, "[")?;
+                for (i, e) in elems.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{e}")?;
+                }
+                write!(f, "]")
+            }
+            Core::Tuple(elems) => {
+                write!(f, "(")?;
+                for (i, e) in elems.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{e}")?;
+                }
+                write!(f, ")")
+            }
+            Core::Fn(param, body) => write!(f, "({param}) => {body}"),
+            Core::Call(func, args) => {
+                func.fmt_nested(f)?;
+                write!(f, "(")?;
+                for (i, a) in args.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{a}")?;
+                }
+                write!(f, ")")
+            }
+        }
+    }
+}
+
+// --- Desugaring ---
+//
+// Implicit binding rules:
+//
+// 1. Argument scope: LHS of infix whose RHS is a { ... } block.
+//    Names from LHS are consumed by the block (bound inside it).
+//
+// 2. Enclosing scope: LHS of infix as a block element, non-block RHS.
+//    Names from LHS are bound for the rest of the enclosing block.
+//
+// 3. Double binding: infix with trailing block as block element.
+//    LHS names bound in both trailing block and enclosing scope.
+//
+// Special operators:
+//   =>  always means lambda (never binding context)
+//   ->  match arm constructor (uses binding context)
+//   =   binding (enclosing scope via desugar_block)
+
+fn collect_var_names<'a>(ast: &'a Ast<'_>) -> Vec<&'a str> {
+    match ast {
+        Ast::Var(_, s) if *s != "_" => vec![s],
+        Ast::Var(..) | Ast::Pin(..) | Ast::Str(..) | Ast::Int(..) | Ast::Block(..) => vec![],
+        Ast::List(_, elems) | Ast::Tuple(_, elems) => {
+            elems.iter().flat_map(collect_var_names).collect()
+        }
+        Ast::Prefix(_, f, args) => {
+            let mut names = collect_var_names(f);
+            names.extend(args.iter().flat_map(collect_var_names));
+            names
+        }
+        Ast::Infix(_, _, [x, y], trailing) => {
+            let mut names = collect_var_names(x);
+            names.extend(collect_var_names(y));
+            if let Some(t) = trailing {
+                names.extend(collect_var_names(t));
+            }
+            names
+        }
+    }
+}
+
+fn enclosing_names<'a>(ast: &'a Ast<'_>) -> Vec<&'a str> {
+    match ast {
+        Ast::Infix(_, _, [lhs, rhs], trailing) => {
+            if matches!(rhs.as_ref(), Ast::Block(..)) && trailing.is_none() {
+                vec![]
+            } else {
+                collect_var_names(lhs)
+            }
+        }
+        _ => vec![],
+    }
+}
+
+fn tag(name: &str, arg: Core) -> Core {
+    Core::Call(Box::new(Core::Str(name.to_string())), vec![arg])
+}
+
+fn tag_args(name: &str, args: Vec<Core>) -> Core {
+    Core::Call(Box::new(Core::Str(name.to_string())), args)
+}
+
+fn desugar_in_binding_context(ast: &Ast<'_>) -> Core {
+    match ast {
+        Ast::Var(_, "_") => tag("Binding", Core::Str("_".to_string())),
+        Ast::Var(_, s) => tag("Binding", Core::Str(s.to_string())),
+        Ast::Pin(_, s) => tag("Value", Core::Var(s.to_string())),
+        Ast::Str(_, s) => tag("Value", Core::Str(s.to_string())),
+        Ast::Int(_, n) => tag("Value", Core::Int(*n)),
+        Ast::Block(..) => desugar(ast),
+        Ast::List(_, elems) => {
+            let mut parts = vec![Core::Str("List".to_string())];
+            parts.extend(elems.iter().map(desugar_in_binding_context));
+            tag_args("Call", parts)
+        }
+        Ast::Tuple(_, elems) if elems.len() == 1 => desugar_in_binding_context(&elems[0]),
+        Ast::Tuple(_, elems) => {
+            let mut parts = vec![Core::Str("List".to_string())];
+            parts.extend(elems.iter().map(desugar_in_binding_context));
+            tag_args("Call", parts)
+        }
+        Ast::Prefix(_, f, args) => {
+            let has_block = args.iter().any(|a| matches!(a, Ast::Block(..)));
+            if has_block {
+                let mut pending: Vec<String> =
+                    collect_var_names(f).into_iter().map(|n| n.to_string()).collect();
+                let mut parts = vec![desugar_in_binding_context(f)];
+                for arg in args {
+                    if matches!(arg, Ast::Block(..)) {
+                        let body = desugar(arg);
+                        if pending.is_empty() {
+                            parts.push(Core::Fn("_".to_string(), Box::new(body)));
+                        } else {
+                            parts.push(wrap_in_lambdas(pending.drain(..), body));
+                        }
+                    } else {
+                        pending
+                            .extend(collect_var_names(arg).into_iter().map(|n| n.to_string()));
+                        parts.push(desugar_in_binding_context(arg));
+                    }
+                }
+                tag_args("Call", parts)
+            } else {
+                let mut parts = vec![desugar_in_binding_context(f)];
+                parts.extend(args.iter().map(desugar_in_binding_context));
+                tag_args("Call", parts)
+            }
+        }
+        Ast::Infix(_, op, [x, y], trailing) => {
+            let mut parts = vec![
+                tag("Value", Core::Var(op.to_string())),
+                desugar_in_binding_context(x),
+                desugar_in_binding_context(y),
+            ];
+            if let Some(t) = trailing {
+                parts.push(desugar_in_binding_context(t));
+            }
+            tag_args("Call", parts)
+        }
+    }
+}
+
+fn wrap_in_lambdas(names: impl DoubleEndedIterator<Item = String>, body: Core) -> Core {
+    names
+        .rev()
+        .fold(body, |body, name| Core::Fn(name, Box::new(body)))
+}
+
+fn append_arg(expr: Core, arg: Core) -> Core {
+    match expr {
+        Core::Call(f, mut args) => {
+            args.push(arg);
+            Core::Call(f, args)
+        }
+        other => Core::Call(Box::new(other), vec![arg]),
+    }
+}
+
+pub fn desugar(ast: &Ast<'_>) -> Core {
+    match ast {
+        Ast::Var(_, s) => Core::Var(s.to_string()),
+        Ast::Pin(_, s) => Core::Var(s.to_string()),
+        Ast::Str(_, s) => Core::Str(s.to_string()),
+        Ast::Int(_, n) => Core::Int(*n),
+        Ast::List(_, elems) => Core::List(elems.iter().map(desugar).collect()),
+        Ast::Tuple(_, elems) if elems.len() == 1 => desugar(&elems[0]),
+        Ast::Tuple(_, elems) => Core::Tuple(elems.iter().map(desugar).collect()),
+        Ast::Block(_, elems) => desugar_block(elems),
+        Ast::Prefix(_, f, args) => desugar_prefix(f, args),
+        Ast::Infix(_, op, [x, y], trailing) => desugar_infix(op, x, y, trailing.as_deref()),
+    }
+}
+
+fn desugar_block(elems: &[Ast<'_>]) -> Core {
+    if elems.is_empty() {
+        return Core::Str("Unit".to_string());
+    }
+    let (last, init) = elems.split_last().unwrap();
+    let mut result = desugar(last);
+    for elem in init.iter().rev() {
+        let names: Vec<String> = enclosing_names(elem)
+            .into_iter()
+            .map(|name| name.to_string())
+            .collect();
+        if names.is_empty() {
+            let lambda = Core::Fn("_".to_string(), Box::new(result));
+            result = Core::Call(Box::new(lambda), vec![desugar(elem)]);
+        } else {
+            let continuation = wrap_in_lambdas(names.into_iter(), result);
+            result = append_arg(desugar_enclosing_macro(elem), continuation);
+        }
+    }
+    result
+}
+
+fn desugar_enclosing_macro(ast: &Ast<'_>) -> Core {
+    match ast {
+        Ast::Infix(_, op, [lhs, rhs], Some(trailing))
+            if matches!(trailing.as_ref(), Ast::Block(..)) =>
+        {
+            let annotated_lhs = desugar_in_binding_context(lhs);
+            let annotated_rhs = desugar_in_binding_context(rhs);
+            let lhs_names: Vec<String> =
+                collect_var_names(lhs).into_iter().map(|n| n.to_string()).collect();
+            let rhs_names: Vec<String> =
+                collect_var_names(rhs).into_iter().map(|n| n.to_string()).collect();
+            let all_names: Vec<String> = lhs_names.into_iter().chain(rhs_names).collect();
+            let body = desugar(trailing);
+            let body_lambda = if all_names.is_empty() {
+                Core::Fn("_".to_string(), Box::new(body))
+            } else {
+                wrap_in_lambdas(all_names.into_iter(), body)
+            };
+            let combined = tag_args("Call", vec![annotated_lhs, annotated_rhs]);
+            Core::Call(Box::new(Core::Var(op.to_string())), vec![combined, body_lambda])
+        }
+        Ast::Infix(_, op, [lhs, rhs], _) => {
+            let annotated_lhs = desugar_in_binding_context(lhs);
+            let annotated_rhs = tag("Value", desugar(rhs));
+            Core::Call(
+                Box::new(Core::Var(op.to_string())),
+                vec![annotated_lhs, annotated_rhs],
+            )
+        }
+        _ => desugar(ast),
+    }
+}
+
+fn desugar_prefix(f: &Ast<'_>, args: &[Ast<'_>]) -> Core {
+    // Recognize if(cond, {then}, kw_else) and try({body}, kw_catch)
+    if let Ast::Var(_, "if") = f {
+        if let Some(core) = desugar_if_sugar(args) {
+            return core;
+        }
+    }
+    if let Ast::Var(_, "try") = f {
+        if let Some(core) = desugar_try_sugar(args) {
+            return core;
+        }
+    }
+    let desugared_args: Vec<Core> = args
+        .iter()
+        .map(|arg| {
+            if matches!(arg, Ast::Block(..)) {
+                Core::Fn(String::new(), Box::new(desugar(arg)))
+            } else {
+                desugar(arg)
+            }
+        })
+        .collect();
+    Core::Call(Box::new(desugar(f)), desugared_args)
+}
+
+/// Extract keyword value from keyword arg list: [Tuple([Str(key), value]), ...]
+fn extract_keyword<'a, 'c>(kw_args: &'a [Ast<'c>], key: &str) -> Option<&'a Ast<'c>> {
+    kw_args.iter().find_map(|kw| {
+        if let Ast::Tuple(_, elems) = kw {
+            if let [Ast::Str(_, k), body] = elems.as_slice() {
+                if *k == key {
+                    return Some(body);
+                }
+            }
+        }
+        None
+    })
+}
+
+fn desugar_thunk(ast: &Ast<'_>) -> Core {
+    match ast {
+        Ast::Block(_, elems) => desugar_block(elems),
+        other => desugar(other),
+    }
+}
+
+/// Desugar `if (cond) { then } else: { else }` → `if(cond, thunk, thunk)`
+fn desugar_if_sugar(args: &[Ast<'_>]) -> Option<Core> {
+    // Keyword form: if(cond, then_block, [else: else_block])
+    if args.len() == 3 {
+        if let Ast::List(_, kw_args) = &args[2] {
+            if let Some(else_body) = extract_keyword(kw_args, "else") {
+                return Some(Core::Call(
+                    Box::new(Core::Var("if".to_string())),
+                    vec![
+                        desugar(&args[0]),
+                        Core::Fn(String::new(), Box::new(desugar_thunk(&args[1]))),
+                        Core::Fn(String::new(), Box::new(desugar_thunk(else_body))),
+                    ],
+                ));
+            }
+        }
+    }
+    // 3-arg form: if(cond, {then}, {else}) — used by prelude
+    if args.len() == 3
+        && matches!(&args[1], Ast::Block(..))
+        && matches!(&args[2], Ast::Block(..))
+    {
+        return Some(Core::Call(
+            Box::new(Core::Var("if".to_string())),
+            vec![
+                desugar(&args[0]),
+                Core::Fn(String::new(), Box::new(desugar_thunk(&args[1]))),
+                Core::Fn(String::new(), Box::new(desugar_thunk(&args[2]))),
+            ],
+        ));
+    }
+    None
+}
+
+/// Desugar `try { body } catch: [handlers]` → `__try(thunk, handlers)`
+fn desugar_try_sugar(args: &[Ast<'_>]) -> Option<Core> {
+    if args.len() != 2 {
+        return None;
+    }
+    let handlers_ast = if let Ast::List(_, kw_args) = &args[1] {
+        extract_keyword(kw_args, "catch")
+    } else {
+        None
+    };
+    let handlers_list = match handlers_ast {
+        Some(Ast::List(_, handlers)) => handlers,
+        _ => return None,
+    };
+    let body_thunk = Core::Fn(String::new(), Box::new(desugar_thunk(&args[0])));
+    let handler_cores: Vec<Core> = handlers_list
+        .iter()
+        .filter_map(|h| {
+            if let Ast::Tuple(_, elems) = h {
+                if let [Ast::Str(_, eff_name), handler_expr] = elems.as_slice() {
+                    if eff_name.ends_with('!') {
+                        let name = &eff_name[..eff_name.len() - 1];
+                        return Some(Core::Tuple(vec![
+                            Core::Str(name.to_string()),
+                            desugar(handler_expr),
+                        ]));
+                    }
+                }
+            }
+            None
+        })
+        .collect();
+    Some(Core::Call(
+        Box::new(Core::Var("__try".to_string())),
+        vec![body_thunk, Core::List(handler_cores)],
+    ))
+}
+
+fn desugar_infix(op: &str, x: &Ast<'_>, y: &Ast<'_>, trailing: Option<&Ast<'_>>) -> Core {
+    // => is always lambda
+    if op == "=>" {
+        let params: Vec<String> = collect_var_names(x)
+            .into_iter()
+            .map(|n| n.to_string())
+            .collect();
+        let body = match trailing {
+            Some(t) => desugar(t),
+            None => desugar(y),
+        };
+        return if params.is_empty() {
+            Core::Fn("_".to_string(), Box::new(body))
+        } else {
+            wrap_in_lambdas(params.into_iter(), body)
+        };
+    }
+
+    // -> : match arm constructor (always binding context on LHS)
+    if op == "->" && trailing.is_none() {
+        let names: Vec<String> = collect_var_names(x)
+            .into_iter()
+            .map(|n| n.to_string())
+            .collect();
+        let desugared_x = desugar_in_binding_context(x);
+        let body = desugar(y);
+        let desugared_y = if names.is_empty() {
+            Core::Fn("_".to_string(), Box::new(body))
+        } else {
+            wrap_in_lambdas(names.into_iter(), body)
+        };
+        return Core::Call(
+            Box::new(Core::Str("->".to_string())),
+            vec![desugared_x, desugared_y],
+        );
+    }
+
+    // General infix: follow binding rules
+    if matches!(y, Ast::Block(..)) && trailing.is_none() {
+        // Argument scope
+        let names: Vec<String> = collect_var_names(x)
+            .into_iter()
+            .map(|n| n.to_string())
+            .collect();
+        let is_macro = !names.is_empty();
+        let desugared_x = if is_macro {
+            desugar_in_binding_context(x)
+        } else {
+            desugar(x)
+        };
+        let body = desugar(y);
+        let desugared_y = if names.is_empty() {
+            Core::Fn("_".to_string(), Box::new(body))
+        } else {
+            wrap_in_lambdas(names.into_iter(), body)
+        };
+        Core::Call(
+            Box::new(Core::Str(op.to_string())),
+            vec![desugared_x, desugared_y],
+        )
+    } else if let Some(trailing) = trailing {
+        if matches!(trailing, Ast::Block(..)) {
+            // Trailing block: combined binding
+            let lhs_names: Vec<String> =
+                collect_var_names(x).into_iter().map(|n| n.to_string()).collect();
+            let rhs_names: Vec<String> =
+                collect_var_names(y).into_iter().map(|n| n.to_string()).collect();
+            let all_names: Vec<String> = lhs_names.into_iter().chain(rhs_names).collect();
+            let is_macro = !all_names.is_empty();
+            let desugared_x = if is_macro {
+                desugar_in_binding_context(x)
+            } else {
+                desugar(x)
+            };
+            let desugared_y = if is_macro {
+                desugar_in_binding_context(y)
+            } else {
+                desugar(y)
+            };
+            let body = desugar(trailing);
+            let desugared_trailing = if all_names.is_empty() {
+                Core::Fn("_".to_string(), Box::new(body))
+            } else {
+                wrap_in_lambdas(all_names.into_iter(), body)
+            };
+            let combined = tag_args("Call", vec![desugared_x, desugared_y]);
+            Core::Call(
+                Box::new(Core::Var(op.to_string())),
+                vec![combined, desugared_trailing],
+            )
+        } else {
+            Core::Call(
+                Box::new(Core::Var(op.to_string())),
+                vec![desugar(x), desugar(y), desugar(trailing)],
+            )
+        }
+    } else {
+        Core::Call(
+            Box::new(Core::Var(op.to_string())),
+            vec![desugar(x), desugar(y)],
+        )
+    }
+}
+
+pub fn desugar_program(exprs: &[Ast<'_>]) -> Core {
+    desugar_block(exprs)
+}
+
+// --- Validation ---
+
+fn validate_block_elems(elems: &[Ast<'_>], code: &str) -> Result<(), String> {
+    for elem in elems {
+        if let Ast::Infix(pos, _, [_, rhs], None) = elem {
+            if matches!(rhs.as_ref(), Ast::Block(..)) {
+                return Err(format!(
+                    "infix with block body as a block element is not yet supported \
+                     (at {}); use trailing block syntax instead, \
+                     e.g. `name = (args) {{ body }}`",
+                    pos.line_in(code)
+                ));
+            }
+        }
+        validate(elem, code)?;
+    }
+    Ok(())
+}
+
+fn validate(ast: &Ast<'_>, code: &str) -> Result<(), String> {
+    match ast {
+        Ast::Block(_, elems) => validate_block_elems(elems, code),
+        Ast::List(_, elems) | Ast::Tuple(_, elems) => {
+            elems.iter().try_for_each(|e| validate(e, code))
+        }
+        Ast::Prefix(_, f, args) => {
+            validate(f, code)?;
+            args.iter().try_for_each(|a| validate(a, code))
+        }
+        Ast::Infix(_, _, [x, y], trailing) => {
+            validate(x, code)?;
+            validate(y, code)?;
+            if let Some(t) = trailing {
+                validate(t, code)?;
+            }
+            Ok(())
+        }
+        _ => Ok(()),
+    }
+}
+
+pub fn parse_and_desugar(code: &str) -> Result<Core, String> {
+    let ast = parse(code)?;
+    for expr in &ast {
+        validate(expr, code)?;
+    }
+    Ok(desugar_program(&ast))
+}
+
 // --- Bytecode ---
 
 use std::rc::Rc;
@@ -495,22 +1059,7 @@ pub enum Builtin {
     Cons,
     Len,
     Panic,
-}
-
-#[derive(Debug, Clone)]
-pub enum Pattern {
-    Wildcard,
-    Var,
-    IntLit(i64),
-    BoolLit(bool),
-    UnitLit,
-    Tag(StrId, Vec<PatField>),
-}
-
-#[derive(Debug, Clone)]
-pub enum PatField {
-    Bind,
-    Wildcard,
+    Eq,
 }
 
 #[derive(Debug, Clone)]
@@ -539,12 +1088,10 @@ enum Op {
     SetupTry(usize),
     PushHandler(EffId),
     CleanupTry,
-    TestMatch(Pattern, usize),
-    MatchFail,
     Halt,
 }
 
-// --- Compiler (AST → bytecode) ---
+// --- Compiler (Core → bytecode) ---
 
 struct Compiler {
     code: Vec<Op>,
@@ -608,63 +1155,324 @@ impl Compiler {
         }
     }
 
-    fn compile_program(&mut self, exprs: &[Ast<'_>]) -> Result<(), (Pos, String)> {
-        self.compile_block(exprs, &mut vec![])
-    }
-
-    fn compile_block(
-        &mut self,
-        exprs: &[Ast<'_>],
-        scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
-        if exprs.is_empty() {
-            self.emit(Op::PushUnit);
-            return Ok(());
-        }
-        let scope_base = scope.len();
-        for (i, expr) in exprs.iter().enumerate() {
-            let is_last = i == exprs.len() - 1;
-
-            if let Some((name, params_ast, body_ast)) = self.try_fn_def(expr) {
-                let name_str = name.to_string();
-                let params = Self::extract_params(params_ast)?;
-                self.compile_closure(Some(&name_str), &params, body_ast, scope)?;
-                scope.push(name_str);
-                self.emit(Op::StoreEnv);
-                if is_last {
-                    self.emit(Op::LoadVar(0));
+    fn compile_core(&mut self, expr: &Core, scope: &mut Vec<String>) -> Result<(), String> {
+        match expr {
+            Core::Int(n) => {
+                self.emit(Op::PushInt(*n));
+            }
+            Core::Str(s) => match s.as_str() {
+                "True" => { self.emit(Op::PushBool(true)); }
+                "False" => { self.emit(Op::PushBool(false)); }
+                "Unit" => { self.emit(Op::PushUnit); }
+                _ => {
+                    let id = self.intern_str(s);
+                    self.emit(Op::MakeTagged(id, 0));
                 }
-            } else if let Some((name, value_ast)) = Self::try_assign(expr) {
-                self.compile_expr(value_ast, scope)?;
-                scope.push(name.to_string());
-                self.emit(Op::StoreEnv);
-                if is_last {
-                    self.emit(Op::LoadVar(0));
-                }
-            } else {
-                self.compile_expr(expr, scope)?;
-                if !is_last {
-                    self.emit(Op::Pop);
+            },
+            Core::Var(name) => {
+                if let Some(idx) = scope.iter().rev().position(|n| n == name) {
+                    self.emit(Op::LoadVar(idx));
+                } else {
+                    return Err(format!("Unbound variable: {name}"));
                 }
             }
+            Core::List(elems) => {
+                for e in elems {
+                    self.compile_core(e, scope)?;
+                }
+                self.emit(Op::MakeList(elems.len() as u16));
+            }
+            Core::Tuple(elems) => {
+                for e in elems {
+                    self.compile_core(e, scope)?;
+                }
+                self.emit(Op::MakeList(elems.len() as u16));
+            }
+            Core::Fn(param, body) => {
+                if param.is_empty() {
+                    // Thunk: arity-0 closure
+                    self.compile_closure_core(&[], body, scope, false)?;
+                } else {
+                    self.compile_closure_core(&[param.clone()], body, scope, false)?;
+                }
+            }
+            Core::Call(func, args) => {
+                self.compile_call_core(func, args, scope)?;
+            }
         }
-        let n_bindings = scope.len() - scope_base;
-        if n_bindings > 0 {
-            self.emit(Op::PopEnv(n_bindings as u16));
-        }
-        scope.truncate(scope_base);
         Ok(())
     }
 
-    fn compile_closure(
+    fn compile_call_core(
         &mut self,
-        rec_name: Option<&str>,
-        params: &[String],
-        body: &Ast<'_>,
+        func: &Core,
+        args: &[Core],
         scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
+    ) -> Result<(), String> {
+        // Special forms
+        if let Core::Var(name) = func {
+            match name.as_str() {
+                "=" => return self.compile_bind(args, scope),
+                "if" => return self.compile_if_core(args, scope),
+                "__try" => return self.compile_try_core(args, scope),
+                "not" => {
+                    if args.len() != 1 {
+                        return Err("not() expects 1 argument".into());
+                    }
+                    self.compile_core(&args[0], scope)?;
+                    self.emit(Op::UnaryOp(UnaryOp::Not));
+                    return Ok(());
+                }
+                "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | ">" | "<=" | ">=" => {
+                    if args.len() != 2 {
+                        return Err(format!("{name} expects 2 arguments"));
+                    }
+                    self.compile_core(&args[0], scope)?;
+                    self.compile_core(&args[1], scope)?;
+                    let binop = match name.as_str() {
+                        "+" => BinOp::Add, "-" => BinOp::Sub,
+                        "*" => BinOp::Mul, "/" => BinOp::Div, "%" => BinOp::Mod,
+                        "==" => BinOp::Eq, "!=" => BinOp::Ne,
+                        "<" => BinOp::Lt, ">" => BinOp::Gt,
+                        "<=" => BinOp::Le, ">=" => BinOp::Ge,
+                        _ => unreachable!(),
+                    };
+                    self.emit(Op::BinOp(binop));
+                    return Ok(());
+                }
+                _ if name.ends_with('!') => {
+                    let effect_name = &name[..name.len() - 1];
+                    let eff_id = self.intern_effect(effect_name);
+                    for a in args {
+                        self.compile_core(a, scope)?;
+                    }
+                    self.emit(Op::Effect(eff_id, args.len() as u8));
+                    return Ok(());
+                }
+                _ => {
+                    if let Some(builtin) = self.try_builtin(name, args.len()) {
+                        for a in args {
+                            self.compile_core(a, scope)?;
+                        }
+                        self.emit(Op::Builtin(builtin, args.len() as u8));
+                        return Ok(());
+                    }
+                }
+            }
+        }
+
+        // Constructor call: Core::Str as function → MakeTagged
+        if let Core::Str(tag_name) = func {
+            let tag_id = self.intern_str(tag_name);
+            for a in args {
+                self.compile_core(a, scope)?;
+            }
+            self.emit(Op::MakeTagged(tag_id, args.len() as u16));
+            return Ok(());
+        }
+
+        // General function call
+        self.compile_core(func, scope)?;
+        for a in args {
+            self.compile_core(a, scope)?;
+        }
+        self.emit(Op::Call(args.len() as u8));
+        Ok(())
+    }
+
+    fn try_builtin(&self, name: &str, arity: usize) -> Option<Builtin> {
+        match (name, arity) {
+            ("tag", 1) => Some(Builtin::Tag),
+            ("fields", 1) => Some(Builtin::Fields),
+            ("head", 1) => Some(Builtin::Head),
+            ("tail", 1) => Some(Builtin::Tail),
+            ("is_empty", 1) => Some(Builtin::IsEmpty),
+            ("len", 1) => Some(Builtin::Len),
+            ("panic", 1) => Some(Builtin::Panic),
+            ("eq", 2) => Some(Builtin::Eq),
+            ("cons", 2) => Some(Builtin::Cons),
+            _ => None,
+        }
+    }
+
+    /// Compile `=(pattern, value, continuation)`
+    ///
+    /// The desugarer produces: `=(Binding("x"), Value(expr), (x) => rest)`
+    /// For simple bindings we optimize to StoreEnv + inline the continuation.
+    /// For recursive bindings (where the value is a Fn containing self-reference),
+    /// we use MakeRecClosure.
+    fn compile_bind(&mut self, args: &[Core], scope: &mut Vec<String>) -> Result<(), String> {
+        if args.len() != 3 {
+            return Err(format!("= expects 3 arguments, got {}", args.len()));
+        }
+        let (pattern, value, continuation) = (&args[0], &args[1], &args[2]);
+
+        // Simple binding: =(Binding("x"), Value(val), (x) => body)
+        if let (
+            Core::Call(pat_tag, pat_args),
+            Core::Call(val_tag, val_args),
+            Core::Fn(param, body),
+        ) = (pattern, value, continuation)
+        {
+            if matches!(pat_tag.as_ref(), Core::Str(s) if s == "Binding")
+                && pat_args.len() == 1
+                && matches!(val_tag.as_ref(), Core::Str(s) if s == "Value")
+                && val_args.len() == 1
+            {
+                let val_expr = &val_args[0];
+
+                // Check for recursive binding: value is a Fn and param matches
+                if let Core::Fn(fn_param, fn_body) = val_expr {
+                    let name = param.clone();
+                    // Check if the function body could reference the binding name
+                    // (we always use MakeRecClosure for Fn values in = position)
+                    let params = vec![fn_param.clone()];
+                    self.compile_closure_core(&params, fn_body, scope, true)?;
+                    scope.push(name);
+                    self.emit(Op::StoreEnv);
+                    self.compile_core(body, scope)?;
+                    scope.pop();
+                    self.emit(Op::PopEnv(1));
+                    return Ok(());
+                }
+
+                // Simple value binding
+                self.compile_core(val_expr, scope)?;
+                scope.push(param.clone());
+                self.emit(Op::StoreEnv);
+                self.compile_core(body, scope)?;
+                scope.pop();
+                self.emit(Op::PopEnv(1));
+                return Ok(());
+            }
+        }
+
+        // Double binding (fn def): =(Call(Binding("f"), params...), Fn("f", Fn(p, body)), Fn("f", rest))
+        // Pattern is Call(Str("Call"), [Binding("f"), Binding("x"), ...])
+        // Value is nested Fn: Fn("f", Fn("x", body)) — the self-ref name + params
+        // Continuation is Fn("f", rest)
+        if let (Core::Call(call_tag, _), Core::Fn(rec_name, inner), Core::Fn(_, cont_body)) =
+            (pattern, value, continuation)
+        {
+            if matches!(call_tag.as_ref(), Core::Str(s) if s == "Call") {
+                // Double binding: value is Fn(rec_name, Fn(p1, Fn(p2, ... body)))
+                // rec_name is the self-reference, remaining Fns are the actual params
+                let mut params = vec![];
+                let mut body = inner.as_ref();
+                loop {
+                    if let Core::Fn(p, next) = body {
+                        params.push(p.clone());
+                        body = next.as_ref();
+                    } else {
+                        break;
+                    }
+                }
+                let name = rec_name.clone();
+                self.compile_closure_core_named(&name, &params, body, scope)?;
+                scope.push(name);
+                self.emit(Op::StoreEnv);
+                self.compile_core(cont_body, scope)?;
+                scope.pop();
+                self.emit(Op::PopEnv(1));
+                return Ok(());
+            }
+        }
+
+        // General case: call = as a runtime function
+        self.compile_core(func_ref("="), scope)?;
+        for a in args {
+            self.compile_core(a, scope)?;
+        }
+        self.emit(Op::Call(args.len() as u8));
+        Ok(())
+    }
+
+    /// Compile `if(cond, then_thunk, else_thunk)` with JumpIfFalse optimization.
+    /// Both thunks are `Fn("_", body)` — we inline their bodies.
+    fn compile_if_core(&mut self, args: &[Core], scope: &mut Vec<String>) -> Result<(), String> {
+        if args.len() != 3 {
+            return Err(format!("if expects 3 arguments, got {}", args.len()));
+        }
+        let (cond, then_thunk, else_thunk) = (&args[0], &args[1], &args[2]);
+
+        self.compile_core(cond, scope)?;
+        let jf = self.emit(Op::JumpIfFalse(0));
+
+        // Inline then thunk
+        if let Core::Fn(_, body) = then_thunk {
+            self.compile_core(body, scope)?;
+        } else {
+            self.compile_core(then_thunk, scope)?;
+            self.emit(Op::Call(0));
+        }
+        let jend = self.emit(Op::Jump(0));
+
+        let else_addr = self.code.len();
+        // Inline else thunk
+        if let Core::Fn(_, body) = else_thunk {
+            self.compile_core(body, scope)?;
+        } else {
+            self.compile_core(else_thunk, scope)?;
+            self.emit(Op::Call(0));
+        }
+
+        let end_addr = self.code.len();
+        self.code[jf] = Op::JumpIfFalse(else_addr);
+        self.code[jend] = Op::Jump(end_addr);
+        Ok(())
+    }
+
+    /// Compile `__try(body_thunk, [handler_pairs])`.
+    /// body_thunk is `Fn("_", body)`, handler_pairs are `Tuple(eff_name, handler_fn)`.
+    fn compile_try_core(&mut self, args: &[Core], scope: &mut Vec<String>) -> Result<(), String> {
+        if args.len() != 2 {
+            return Err(format!("__try expects 2 arguments, got {}", args.len()));
+        }
+        let (body_thunk, handlers_list) = (&args[0], &args[1]);
+
+        let setup_addr = self.emit(Op::SetupTry(0));
+
+        // Compile handlers
+        if let Core::List(handlers) = handlers_list {
+            for h in handlers {
+                if let Core::Tuple(elems) = h {
+                    if let [Core::Str(eff_name), handler_expr] = elems.as_slice() {
+                        let eff_id = self.intern_effect(eff_name);
+                        self.compile_handler(handler_expr, scope)?;
+                        self.emit(Op::PushHandler(eff_id));
+                    } else {
+                        return Err("__try handler must be (effect_name, handler_fn)".into());
+                    }
+                } else {
+                    return Err("__try handler must be a tuple".into());
+                }
+            }
+        } else {
+            return Err("__try second argument must be a list".into());
+        }
+
+        // Inline body thunk
+        if let Core::Fn(_, body) = body_thunk {
+            self.compile_core(body, scope)?;
+        } else {
+            self.compile_core(body_thunk, scope)?;
+            self.emit(Op::Call(0));
+        }
+        self.emit(Op::CleanupTry);
+
+        let after_addr = self.code.len();
+        self.code[setup_addr] = Op::SetupTry(after_addr);
+        Ok(())
+    }
+
+    fn compile_closure_core(
+        &mut self,
+        params: &[String],
+        body: &Core,
+        scope: &mut Vec<String>,
+        is_rec: bool,
+    ) -> Result<(), String> {
         let arity = params.len() as u8;
-        let is_rec = rec_name.is_some();
         let closure_addr = if is_rec {
             self.emit(Op::MakeRecClosure(arity, 0))
         } else {
@@ -674,13 +1482,14 @@ impl Compiler {
         let fn_addr = self.code.len();
 
         let mut fn_scope = scope.clone();
-        if let Some(name) = rec_name {
-            fn_scope.push(name.to_string());
+        if is_rec {
+            // RecClosure pushes self into env before params
+            fn_scope.push("__self__".to_string());
         }
         for p in params {
             fn_scope.push(p.clone());
         }
-        self.compile_thunk(body, &mut fn_scope)?;
+        self.compile_core(body, &mut fn_scope)?;
         self.emit(Op::Return);
 
         let after_fn = self.code.len();
@@ -692,456 +1501,147 @@ impl Compiler {
         Ok(())
     }
 
-    fn try_fn_def<'a, 'co>(
-        &self,
-        expr: &'a Ast<'co>,
-    ) -> Option<(&'co str, &'a Ast<'co>, &'a Ast<'co>)> {
-        if let Ast::Infix(_, "=", [lhs, rhs], Some(trailing)) = expr {
-            if let Ast::Var(_, name) = lhs.as_ref() {
-                if matches!(trailing.as_ref(), Ast::Block(..)) {
-                    return Some((name, rhs.as_ref(), trailing.as_ref()));
-                }
-            }
+    /// Compile a handler expression, flattening Fn chains into multi-param closures.
+    /// Handlers get called by the VM with (continuation, args...) at once, so they
+    /// need multi-arity closures rather than curried single-arg closures.
+    fn compile_handler(&mut self, expr: &Core, scope: &mut Vec<String>) -> Result<(), String> {
+        let mut params = vec![];
+        let mut body = expr;
+        while let Core::Fn(p, next) = body {
+            params.push(p.clone());
+            body = next.as_ref();
         }
-        None
-    }
-
-    fn try_assign<'a, 'co>(expr: &'a Ast<'co>) -> Option<(&'co str, &'a Ast<'co>)> {
-        if let Ast::Infix(_, "=", [lhs, rhs], None) = expr {
-            if let Ast::Var(_, name) = lhs.as_ref() {
-                return Some((name, rhs.as_ref()));
-            }
-        }
-        None
-    }
-
-    fn extract_params(ast: &Ast<'_>) -> Result<Vec<String>, (Pos, String)> {
-        match ast {
-            Ast::List(_, elems) | Ast::Tuple(_, elems) => {
-                let mut params = vec![];
-                for e in elems {
-                    if let Ast::Var(_, name) = e {
-                        params.push(name.to_string());
-                    } else {
-                        return Err((e.pos(), format!("Expected parameter name, got {e}")));
-                    }
-                }
-                Ok(params)
-            }
-            Ast::Var(_, name) => Ok(vec![name.to_string()]),
-            _ => Err((ast.pos(), format!("Expected parameter list, got {ast}"))),
-        }
-    }
-
-    fn compile_expr(
-        &mut self,
-        expr: &Ast<'_>,
-        scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
-        match expr {
-            Ast::Int(_, n) => {
-                self.emit(Op::PushInt(*n));
-            }
-            Ast::Str(_, s) => match *s {
-                "True" => {
-                    self.emit(Op::PushBool(true));
-                }
-                "False" => {
-                    self.emit(Op::PushBool(false));
-                }
-                "Unit" => {
-                    self.emit(Op::PushUnit);
-                }
-                _ => {
-                    let id = self.intern_str(s);
-                    self.emit(Op::MakeTagged(id, 0));
-                }
-            },
-            Ast::Var(pos, name) => {
-                if name.ends_with('!') {
-                    return Err((
-                        *pos,
-                        format!("Effect '{name}' must be called, not used as a variable"),
-                    ));
-                }
-                if let Some(idx) = scope.iter().rev().position(|n| n == name) {
-                    self.emit(Op::LoadVar(idx));
-                } else {
-                    return Err((*pos, format!("Unbound variable: {name}")));
-                }
-            }
-            Ast::List(_, elems) => {
-                for e in elems {
-                    self.compile_expr(e, scope)?;
-                }
-                self.emit(Op::MakeList(elems.len() as u16));
-            }
-            Ast::Tuple(_, elems) => {
-                if elems.len() == 1 {
-                    self.compile_expr(&elems[0], scope)?;
-                } else {
-                    for e in elems {
-                        self.compile_expr(e, scope)?;
-                    }
-                    self.emit(Op::MakeList(elems.len() as u16));
-                }
-            }
-            Ast::Block(_, _) => {
-                self.compile_closure(None, &[], expr, scope)?;
-            }
-            Ast::Prefix(_, func, args) => {
-                self.compile_call(func, args, scope)?;
-            }
-            Ast::Infix(pos, op, [lhs, rhs], trailing) => {
-                self.compile_infix(*pos, op, lhs, rhs, trailing.as_deref(), scope)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn compile_call(
-        &mut self,
-        func: &Ast<'_>,
-        args: &[Ast<'_>],
-        scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
-        if let Ast::Var(_, name) = func {
-            if name.ends_with('!') {
-                let effect_name = &name[..name.len() - 1];
-                let eff_id = self.intern_effect(effect_name);
-                for a in args {
-                    self.compile_expr(a, scope)?;
-                }
-                self.emit(Op::Effect(eff_id, args.len() as u8));
-                return Ok(());
-            }
-
-            match *name {
-                "if" => return self.compile_if(func.pos(), args, scope),
-                "match" => return self.compile_match(func.pos(), args, scope),
-                "try" => return self.compile_try(func.pos(), args, scope),
-                "not" => {
-                    if args.len() != 1 {
-                        return Err((func.pos(), "not() expects 1 argument".into()));
-                    }
-                    self.compile_expr(&args[0], scope)?;
-                    self.emit(Op::UnaryOp(UnaryOp::Not));
-                    return Ok(());
-                }
-                "tag" | "fields" | "head" | "tail" | "is_empty" | "len" | "panic" => {
-                    if args.len() != 1 {
-                        return Err((func.pos(), format!("{name}() expects 1 argument")));
-                    }
-                    let builtin = match *name {
-                        "tag" => Builtin::Tag,
-                        "fields" => Builtin::Fields,
-                        "head" => Builtin::Head,
-                        "tail" => Builtin::Tail,
-                        "is_empty" => Builtin::IsEmpty,
-                        "len" => Builtin::Len,
-                        "panic" => Builtin::Panic,
-                        _ => unreachable!(),
-                    };
-                    self.compile_expr(&args[0], scope)?;
-                    self.emit(Op::Builtin(builtin, 1));
-                    return Ok(());
-                }
-                "cons" => {
-                    if args.len() != 2 {
-                        return Err((func.pos(), "cons() expects 2 arguments".into()));
-                    }
-                    self.compile_expr(&args[0], scope)?;
-                    self.compile_expr(&args[1], scope)?;
-                    self.emit(Op::Builtin(Builtin::Cons, 2));
-                    return Ok(());
-                }
-                _ => {}
-            }
-        }
-
-        if let Ast::Str(_, tag_name) = func {
-            let tag_id = self.intern_str(tag_name);
-            for a in args {
-                self.compile_expr(a, scope)?;
-            }
-            self.emit(Op::MakeTagged(tag_id, args.len() as u16));
-            return Ok(());
-        }
-
-        self.compile_expr(func, scope)?;
-        for a in args {
-            self.compile_expr(a, scope)?;
-        }
-        self.emit(Op::Call(args.len() as u8));
-        Ok(())
-    }
-
-    fn compile_if(
-        &mut self,
-        pos: Pos,
-        args: &[Ast<'_>],
-        scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
-        // if (cond) { then } else: { else }
-        let [cond, then_branch, Ast::List(_, kw_args)] = args else {
-            return Err((pos, "if expects: if (cond) { then } else: { else }".into()));
-        };
-        let else_branch = kw_args
-            .iter()
-            .find_map(|kw| {
-                if let Ast::Tuple(_, elems) = kw {
-                    if let [Ast::Str(_, "else"), body] = elems.as_slice() {
-                        return Some(body);
-                    }
-                }
-                None
-            })
-            .ok_or_else(|| (pos, "if expects else: branch".to_string()))?;
-        self.compile_expr(cond, scope)?;
-        let jf = self.emit(Op::JumpIfFalse(0));
-        self.compile_thunk(then_branch, scope)?;
-        let jend = self.emit(Op::Jump(0));
-        let else_addr = self.code.len();
-        self.compile_thunk(else_branch, scope)?;
-        let end_addr = self.code.len();
-        self.code[jf] = Op::JumpIfFalse(else_addr);
-        self.code[jend] = Op::Jump(end_addr);
-        Ok(())
-    }
-
-    fn compile_thunk(
-        &mut self,
-        expr: &Ast<'_>,
-        scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
-        match expr {
-            Ast::Block(_, exprs) => self.compile_block(exprs, scope),
-            other => self.compile_expr(other, scope),
-        }
-    }
-
-    fn compile_match(
-        &mut self,
-        pos: Pos,
-        args: &[Ast<'_>],
-        scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
-        let (scrutinee_ast, arms_ast) = if args.len() == 2 {
-            (&args[0], &args[1])
+        if params.is_empty() {
+            self.compile_core(expr, scope)
         } else {
-            return Err((pos, "match() expects 2 arguments: value, [arms]".into()));
-        };
-
-        self.compile_expr(scrutinee_ast, scope)?;
-
-        let arms_list = match arms_ast {
-            Ast::List(_, arms) => arms,
-            _ => {
-                return Err((
-                    arms_ast.pos(),
-                    "match() second argument must be a list of arms".into(),
-                ));
-            }
-        };
-
-        // First pass: emit TestMatch instructions, collect arm info
-        let mut arm_info: Vec<(usize, Vec<String>)> = vec![];
-        for arm in arms_list {
-            let (pat_ast, _) = Self::parse_match_arm(arm)?;
-            let (pattern, names) = self.compile_pattern(pat_ast)?;
-            let test_addr = self.emit(Op::TestMatch(pattern, 0));
-            arm_info.push((test_addr, names));
-        }
-        self.emit(Op::MatchFail);
-
-        // Second pass: emit arm bodies
-        let mut end_jumps = vec![];
-        for (i, arm) in arms_list.iter().enumerate() {
-            let (_, body_ast) = Self::parse_match_arm(arm)?;
-            let body_addr = self.code.len();
-            let (test_addr, ref names) = arm_info[i];
-            match &mut self.code[test_addr] {
-                Op::TestMatch(_, addr) => *addr = body_addr,
-                _ => unreachable!(),
-            }
-            for name in names {
-                scope.push(name.clone());
-            }
-            self.compile_thunk(body_ast, scope)?;
-            for _ in 0..names.len() {
-                scope.pop();
-            }
-            if !names.is_empty() {
-                self.emit(Op::PopEnv(names.len() as u16));
-            }
-            end_jumps.push(self.emit(Op::Jump(0)));
-        }
-
-        let end_addr = self.code.len();
-        for j in end_jumps {
-            self.code[j] = Op::Jump(end_addr);
-        }
-        Ok(())
-    }
-
-    fn parse_match_arm<'a, 'co>(
-        arm: &'a Ast<'co>,
-    ) -> Result<(&'a Ast<'co>, &'a Ast<'co>), (Pos, String)> {
-        match arm {
-            Ast::Infix(_, "->" | "=>", [p, b], None) => Ok((p.as_ref(), b.as_ref())),
-            _ => Err((arm.pos(), format!("Expected pattern -> body in match arm, got {arm}"))),
+            self.compile_closure_core(&params, body, scope, false)
         }
     }
 
-    fn compile_pattern(&mut self, pat: &Ast<'_>) -> Result<(Pattern, Vec<String>), (Pos, String)> {
-        match pat {
-            Ast::Var(_, "_") => Ok((Pattern::Wildcard, vec![])),
-            Ast::Var(_, name) => Ok((Pattern::Var, vec![name.to_string()])),
-            Ast::Int(_, n) => Ok((Pattern::IntLit(*n), vec![])),
-            Ast::Str(_, "True") => Ok((Pattern::BoolLit(true), vec![])),
-            Ast::Str(_, "False") => Ok((Pattern::BoolLit(false), vec![])),
-            Ast::Str(_, "Unit") => Ok((Pattern::UnitLit, vec![])),
-            Ast::Str(_, tag_name) => {
-                let tag_id = self.intern_str(tag_name);
-                Ok((Pattern::Tag(tag_id, vec![]), vec![]))
-            }
-            Ast::Prefix(_, func, args) => {
-                if let Ast::Str(_, tag_name) = func.as_ref() {
-                    let tag_id = self.intern_str(tag_name);
-                    let mut fields = vec![];
-                    let mut names = vec![];
-                    for arg in args {
-                        match arg {
-                            Ast::Var(_, "_") => fields.push(PatField::Wildcard),
-                            Ast::Var(_, name) => {
-                                fields.push(PatField::Bind);
-                                names.push(name.to_string());
-                            }
-                            _ => {
-                                return Err((
-                                    arg.pos(),
-                                    format!("Only variable names allowed in patterns, got {arg}"),
-                                ));
-                            }
-                        }
-                    }
-                    Ok((Pattern::Tag(tag_id, fields), names))
-                } else {
-                    Err((func.pos(), format!("Expected tag name in pattern, got {func}")))
-                }
-            }
-            _ => Err((pat.pos(), format!("Unsupported pattern: {pat}"))),
-        }
-    }
-
-    fn compile_try(
+    fn compile_closure_core_named(
         &mut self,
-        pos: Pos,
-        args: &[Ast<'_>],
+        rec_name: &str,
+        params: &[String],
+        body: &Core,
         scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
-        if args.len() != 2 {
-            return Err((pos, "try expects: try { body } catch: [handlers]".into()));
+    ) -> Result<(), String> {
+        let arity = params.len() as u8;
+        let closure_addr = self.emit(Op::MakeRecClosure(arity, 0));
+        let jump_addr = self.emit(Op::Jump(0));
+        let fn_addr = self.code.len();
+
+        let mut fn_scope = scope.clone();
+        fn_scope.push(rec_name.to_string());
+        for p in params {
+            fn_scope.push(p.clone());
         }
-        let handlers_ast = match &args[1] {
-            Ast::List(_, kw_args) => {
-                let catch = kw_args.iter().find_map(|kw| {
-                    if let Ast::Tuple(_, elems) = kw {
-                        if let [Ast::Str(_, "catch"), Ast::List(_, handlers)] = elems.as_slice() {
-                            return Some(handlers);
-                        }
-                    }
-                    None
-                });
-                match catch {
-                    Some(handlers) => handlers,
-                    None => return Err((pos, "try expects catch: [handlers]".into())),
-                }
-            }
-            _ => return Err((pos, "try expects: try { body } catch: [handlers]".into())),
-        };
+        self.compile_core(body, &mut fn_scope)?;
+        self.emit(Op::Return);
 
-        let setup_addr = self.emit(Op::SetupTry(0));
-
-        for h in handlers_ast {
-            let (eff_name, handler_ast) = self.parse_handler(h)?;
-            let eff_id = self.intern_effect(&eff_name);
-            self.compile_expr(handler_ast, scope)?;
-            self.emit(Op::PushHandler(eff_id));
+        let after_fn = self.code.len();
+        match &mut self.code[closure_addr] {
+            Op::MakeRecClosure(_, addr) => *addr = fn_addr,
+            _ => unreachable!(),
         }
-
-        self.compile_thunk(&args[0], scope)?;
-        self.emit(Op::CleanupTry);
-
-        let after_addr = self.code.len();
-        self.code[setup_addr] = Op::SetupTry(after_addr);
+        self.code[jump_addr] = Op::Jump(after_fn);
         Ok(())
-    }
-
-    fn parse_handler<'a, 'co>(
-        &self,
-        ast: &'a Ast<'co>,
-    ) -> Result<(String, &'a Ast<'co>), (Pos, String)> {
-        // Keyword arg syntax: Tuple(Str("read!"), handler_expr)
-        if let Ast::Tuple(_, elems) = ast {
-            if let [Ast::Str(_, name), handler] = elems.as_slice() {
-                if name.ends_with('!') {
-                    return Ok((name[..name.len() - 1].to_string(), handler));
-                }
-            }
-        }
-        Err((ast.pos(), format!("Expected effect!: handler, got {ast}")))
-    }
-
-    fn compile_infix(
-        &mut self,
-        pos: Pos,
-        op: &str,
-        lhs: &Ast<'_>,
-        rhs: &Ast<'_>,
-        trailing: Option<&Ast<'_>>,
-        scope: &mut Vec<String>,
-    ) -> Result<(), (Pos, String)> {
-        match op {
-            "=" => Err((pos, "Assignments (=) must be inside a { ... } block".into())),
-            "=>" => {
-                let params = Self::extract_params(lhs)?;
-                let body = trailing.unwrap_or(rhs);
-                self.compile_closure(None, &params, body, scope)?;
-                Ok(())
-            }
-            "->" => Err((pos, "-> can only be used inside match arms".into())),
-            "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | ">" | "<=" | ">=" => {
-                self.compile_expr(lhs, scope)?;
-                self.compile_expr(rhs, scope)?;
-                let binop = match op {
-                    "+" => BinOp::Add,
-                    "-" => BinOp::Sub,
-                    "*" => BinOp::Mul,
-                    "/" => BinOp::Div,
-                    "%" => BinOp::Mod,
-                    "==" => BinOp::Eq,
-                    "!=" => BinOp::Ne,
-                    "<" => BinOp::Lt,
-                    ">" => BinOp::Gt,
-                    "<=" => BinOp::Le,
-                    ">=" => BinOp::Ge,
-                    _ => unreachable!(),
-                };
-                self.emit(Op::BinOp(binop));
-                Ok(())
-            }
-            _ => Err((pos, format!("Unknown infix operator: {op}"))),
-        }
     }
 }
 
+fn func_ref(name: &str) -> &Core {
+    // This is used when we need to fall back to calling = as a runtime function.
+    // Since we can't return a reference to a local, we leak a static.
+    // In practice this path should rarely be hit.
+    Box::leak(Box::new(Core::Var(name.to_string())))
+}
+
+const PRELUDE: &str = r#"
+lookup = (name, list) {
+  if(is_empty(list), { NotFound }, {
+    entry = head(list)
+    if(eq(name, head(fields(entry))),
+      { Found(head(tail(fields(entry)))) },
+      { lookup(name, tail(list)) })
+  })
+}
+match_pat = (v, pat, body, seen) {
+  if(eq(tag(pat), Binding), {
+    name = head(fields(pat))
+    if(eq(name, Wildcard), {
+      Ok(body(v), seen)
+    }, {
+      prev = lookup(name, seen)
+      if(eq(tag(prev), Found), {
+        if(eq(v, head(fields(prev))),
+          { Ok(body(v), seen) },
+          { Fail })
+      }, {
+        Ok(body(v), cons(Pair(name, v), seen))
+      })
+    })
+  }, {
+    if(eq(tag(pat), Value), {
+      if(eq(v, head(fields(pat))),
+        { Ok(body, seen) },
+        { Fail })
+    }, {
+      constructor = head(fields(pat))
+      expected_tag = if(eq(tag(constructor), Value),
+        { head(fields(constructor)) }, { constructor })
+      if(eq(tag(v), expected_tag), {
+        go = (vals, pats, b, s) {
+          if(is_empty(pats), { Ok(b, s) }, {
+            result = match_pat(head(vals), head(pats), b, s)
+            if(eq(tag(result), Ok), {
+              go(tail(vals), tail(pats), head(fields(result)), head(tail(fields(result))))
+            }, { Fail })
+          })
+        }
+        go(fields(v), tail(fields(pat)), body, seen)
+      }, { Fail })
+    })
+  })
+}
+try_arm = (v, arm) {
+  pat = head(fields(arm))
+  body = head(tail(fields(arm)))
+  if(eq(tag(pat), Call), {
+    match_pat(v, pat, body, [])
+  }, {
+    if(eq(tag(pat), Binding), {
+      Ok(body(v), [])
+    }, {
+      if(eq(tag(pat), Value), {
+        if(eq(v, head(fields(pat))), { Ok(body(Unit), []) }, { Fail })
+      }, {
+        if(eq(v, pat), { Ok(body(Unit), []) }, { Fail })
+      })
+    })
+  })
+}
+try_arms = (v, arms) {
+  if(is_empty(arms), { panic(NoMatch(v)) }, {
+    result = try_arm(v, head(arms))
+    if(eq(tag(result), Ok), {
+      head(fields(result))
+    }, {
+      try_arms(v, tail(arms))
+    })
+  })
+}
+match = (value, arms) {
+  try_arms(value, arms)
+}
+uncons = (xs) {
+  if(is_empty(xs), { Nil }, { Cons(head(xs), tail(xs)) })
+}
+"#;
+
 pub fn compile(code: &str) -> Result<Program, String> {
-    let ast = parse(code)?;
+    let full_code = format!("{PRELUDE}\n{code}");
+    let core = parse_and_desugar(&full_code)?;
     let mut compiler = Compiler::new();
-    compiler
-        .compile_program(&ast)
-        .map_err(|(pos, msg)| format!("{msg} at {}", pos.line_in(code)))?;
+    compiler.compile_core(&core, &mut vec![])?;
     compiler.emit(Op::Halt);
     Ok(Program {
         code: Rc::from(compiler.code),
@@ -1639,21 +2139,6 @@ impl VM {
                         return RunResult::Effect(name, args, self);
                     }
                 }
-                Op::TestMatch(ref pattern, target) => {
-                    let scrutinee = self.stack.last().unwrap();
-                    if let Some(bindings) = match_pattern(pattern, scrutinee) {
-                        self.stack.pop();
-                        self.env.extend(bindings);
-                        self.ip = target;
-                    }
-                }
-                Op::MatchFail => {
-                    let val = self.stack.pop().unwrap_or(Value::Unit);
-                    return RunResult::Error(format!(
-                        "no matching pattern for {}",
-                        val.display_with(&self.strings)
-                    ));
-                }
             }
         }
     }
@@ -1697,18 +2182,18 @@ impl VM {
     fn eval_builtin(&self, builtin: Builtin, args: Vec<Value>) -> Result<Value, String> {
         match (builtin, args.as_slice()) {
             (Builtin::Tag, [val]) => match val {
-                Value::Tagged(tag, _) => Ok(Value::Str(*tag)),
+                Value::Tagged(tag, _) => Ok(Value::Tagged(*tag, vec![])),
                 Value::Int(_) => {
                     let id = self.strings.iter().position(|s| s == "Int");
-                    Ok(Value::Str(id.unwrap_or(usize::MAX)))
+                    Ok(Value::Tagged(id.unwrap_or(usize::MAX), vec![]))
                 }
                 Value::Bool(_) => {
                     let id = self.strings.iter().position(|s| s == "Bool");
-                    Ok(Value::Str(id.unwrap_or(usize::MAX)))
+                    Ok(Value::Tagged(id.unwrap_or(usize::MAX), vec![]))
                 }
                 Value::List(_) => {
                     let id = self.strings.iter().position(|s| s == "List");
-                    Ok(Value::Str(id.unwrap_or(usize::MAX)))
+                    Ok(Value::Tagged(id.unwrap_or(usize::MAX), vec![]))
                 }
                 _ => Err("tag: unsupported value type".into()),
             },
@@ -1752,6 +2237,7 @@ impl VM {
                 }
                 _ => Err("len: expected list".into()),
             },
+            (Builtin::Eq, [a, b]) => Ok(Value::Bool(a == b)),
             (Builtin::Panic, [val]) => Err(format!("panic: {}", val.display_with(&self.strings))),
             _ => Err("builtin: wrong number of arguments".into()),
         }
@@ -1764,50 +2250,6 @@ impl VM {
 
     pub fn intern_str(&mut self, s: &str) -> StrId {
         intern(&mut self.strings, s)
-    }
-}
-
-fn match_pattern(pattern: &Pattern, value: &Value) -> Option<Vec<Value>> {
-    match pattern {
-        Pattern::Wildcard => Some(vec![]),
-        Pattern::Var => Some(vec![value.clone()]),
-        Pattern::IntLit(n) => {
-            if matches!(value, Value::Int(v) if v == n) {
-                Some(vec![])
-            } else {
-                None
-            }
-        }
-        Pattern::BoolLit(b) => {
-            if matches!(value, Value::Bool(v) if v == b) {
-                Some(vec![])
-            } else {
-                None
-            }
-        }
-        Pattern::UnitLit => {
-            if matches!(value, Value::Unit) {
-                Some(vec![])
-            } else {
-                None
-            }
-        }
-        Pattern::Tag(tag_id, fields) => match value {
-            Value::Tagged(val_tag, val_fields) => {
-                if val_tag != tag_id || val_fields.len() != fields.len() {
-                    return None;
-                }
-                let mut bindings = vec![];
-                for (field_pat, field_val) in fields.iter().zip(val_fields) {
-                    match field_pat {
-                        PatField::Bind => bindings.push(field_val.clone()),
-                        PatField::Wildcard => {}
-                    }
-                }
-                Some(bindings)
-            }
-            _ => None,
-        },
     }
 }
 
@@ -2033,7 +2475,7 @@ mod tests {
 
     #[test]
     fn eval_block() {
-        assert_eq!(r("{ 1, 2, 3 }()"), "3");
+        assert_eq!(r("{ 1, 2, 3 }"), "3");
     }
 
     #[test]
@@ -2044,7 +2486,7 @@ mod tests {
 
     #[test]
     fn eval_nested_binding() {
-        assert_eq!(r("x = 10, { y = 20, x + y }()"), "30");
+        assert_eq!(r("x = 10, { y = 20, x + y }"), "30");
     }
 
     #[test]
@@ -2480,5 +2922,25 @@ mod tests {
     fn peano_sum_to() {
         let code = peano_prog(&format!("{PEANO_SUM_TO} from_peano(sum_to(to_peano(10)))"));
         assert_eq!(r(&code), "55");
+    }
+
+    #[test]
+    fn list_pattern_matching_via_uncons() {
+        let code = r#"
+            sum = (xs) {
+              match (uncons(xs)) [
+                Nil -> 0
+                Cons(h, t) -> { h + sum(t) }
+              ]
+            }
+            sum([1, 2, 3, 4])
+        "#;
+        assert_eq!(r(code), "10");
+    }
+
+    #[test]
+    fn ssg_compiles() {
+        let script = include_str!("../examples/ssg.kb");
+        compile(script).expect("ssg.kb should compile");
     }
 }
