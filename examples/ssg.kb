@@ -1,0 +1,423 @@
+append = (a, b) {
+  if (is_empty(a)) {
+    b
+  } else: {
+    cons(head(a), append(tail(a), b))
+  }
+}
+
+drop = (xs, n) {
+  if (n == 0) {
+    xs
+  } else: {
+    if (is_empty(xs)) {
+      []
+    } else: {
+      drop(tail(xs), n - 1)
+    }
+  }
+}
+
+take = (xs, n) {
+  if (n == 0) {
+    []
+  } else: {
+    if (is_empty(xs)) {
+      []
+    } else: {
+      cons(head(xs), take(tail(xs), n - 1))
+    }
+  }
+}
+
+starts_with = (xs, prefix) {
+  if (is_empty(prefix)) {
+    True
+  } else: {
+    if (is_empty(xs)) {
+      False
+    } else: {
+      if (head(xs) == head(prefix)) {
+        starts_with(tail(xs), tail(prefix))
+      } else: {
+        False
+      }
+    }
+  }
+}
+
+find_from = (hay, needle, i) {
+  if (is_empty(hay)) {
+    -1
+  } else: {
+    if (starts_with(hay, needle)) {
+      i
+    } else: {
+      find_from(tail(hay), needle, i + 1)
+    }
+  }
+}
+
+find = (hay, needle) {
+  find_from(hay, needle, 0)
+}
+
+min_pos = (a, b) {
+  if (a == -1) {
+    b
+  } else: {
+    if (b == -1) {
+      a
+    } else: {
+      if (a < b) {
+        a
+      } else: {
+        b
+      }
+    }
+  }
+}
+
+join_lines = (lines) {
+  if (is_empty(lines)) {
+    []
+  } else: {
+    if (is_empty(tail(lines))) {
+      head(lines)
+    } else: {
+      append(head(lines), cons("\n", join_lines(tail(lines))))
+    }
+  }
+}
+
+skip_blanks = (lines) {
+  if (is_empty(lines)) {
+    []
+  } else: {
+    if (is_empty(head(lines))) {
+      skip_blanks(tail(lines))
+    } else: {
+      lines
+    }
+  }
+}
+
+html_escape = (chars) {
+  if (is_empty(chars)) {
+    []
+  } else: {
+    c = head(chars)
+    rest = html_escape(tail(chars))
+    if (c == "&") {
+      append(["&", "a", "m", "p", ";"], rest)
+    } else: {
+      if (c == "<") {
+        append(["&", "l", "t", ";"], rest)
+      } else: {
+        if (c == ">") {
+          append(["&", "g", "t", ";"], rest)
+        } else: {
+          if (c == "\"") {
+            append(["&", "q", "u", "o", "t", ";"], rest)
+          } else: {
+            cons(c, rest)
+          }
+        }
+      }
+    }
+  }
+}
+
+classify = (line) {
+  if (is_empty(line)) {
+    Blank
+  } else: {
+    if (starts_with (line) ["#", "#", "#", " "]) {
+      H3(drop(line, 4))
+    } else: {
+      if (starts_with (line) ["#", "#", " "]) {
+        H2(drop(line, 3))
+      } else: {
+        if (starts_with (line) ["#", " "]) {
+          H1(drop(line, 2))
+        } else: {
+          if (starts_with (line) ["-", " "]) {
+            Li(drop(line, 2))
+          } else: {
+            if (starts_with (line) [">", " "]) {
+              Bq(drop(line, 2))
+            } else: {
+              if (starts_with (line) ["`", "`", "`"]) {
+                Fence
+              } else: {
+                P(line)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+collect_list = (lines) {
+  if (is_empty(lines)) {
+    Pair [] []
+  } else: {
+    line = head(lines)
+    if (starts_with (line) ["-", " "]) {
+      match (collect_list(tail(lines))) [
+        Pair(prev, rest) -> Pair(cons(drop(line, 2), prev), rest)
+      ]
+    } else: {
+      Pair([], lines)
+    }
+  }
+}
+
+collect_blockquote = (lines) {
+  if (is_empty(lines)) {
+    Pair [] []
+  } else: {
+    line = head(lines)
+    if (starts_with (line) [">", " "]) {
+      match (collect_blockquote(tail(lines))) [
+        Pair(prev, rest) -> Pair(cons(drop(line, 2), prev), rest)
+      ]
+    } else: {
+      Pair([], lines)
+    }
+  }
+}
+
+collect_code = (lines) {
+  if (is_empty(lines)) {
+    Pair [] []
+  } else: {
+    line = head(lines)
+    if (starts_with (line) ["`", "`", "`"]) {
+      Pair([], tail(lines))
+    } else: {
+      match (collect_code(tail(lines))) [Pair(prev, rest) -> Pair(cons(line, prev), rest)]
+    }
+  }
+}
+
+find_close = (text, marker) {
+  pos = find(text, marker)
+  if (pos == -1) {
+    NotFound
+  } else: {
+    Found(take(text, pos), drop(text, pos + len(marker)))
+  }
+}
+
+parse_target = (text) {
+  cb = find(text, ["]", "("])
+  if (cb == -1) {
+    NotFound
+  } else: {
+    inner = take(text, cb)
+    url_part = drop(text, cb + 2)
+    cp = find(url_part, [")"])
+    if (cp == -1) {
+      NotFound
+    } else: {
+      Found(inner, take(url_part, cp), drop(url_part, cp + 1))
+    }
+  }
+}
+
+find_marker = (text) {
+  ps = find(text, ["*", "*"])
+  pe = find(text, ["_"])
+  pc = find(text, ["`"])
+  pi = find(text, ["!", "["])
+  pl = find(text, ["["])
+  pl2 = (if (pi >= 0) {
+    if (pl == (pi + 1)) {
+      next = find(drop(text, pi + 2), ["["])
+      if (next >= 0) {
+        next + pi + 2
+      } else: {
+        -1
+      }
+    } else: {
+      pl
+    }
+  } else: {
+    pl
+  })
+  m = min_pos(ps, min_pos(pe, min_pos(pc, min_pos(pi, pl2))))
+  if (m == -1) {
+    None
+  } else: {
+    if (m == pi) {
+      At(m, Img)
+    } else: {
+      if (m == ps) {
+        At(m, Strong)
+      } else: {
+        if (m == pc) {
+          At(m, Code)
+        } else: {
+          if (m == pl2) {
+            At(m, Link)
+          } else: {
+            At(m, Em)
+          }
+        }
+      }
+    }
+  }
+}
+
+render_marker = (ri, kind, text) {
+  match (kind) [
+    Strong -> {
+      match (find_close (drop(text, 2)) ["*", "*"]) [
+        Found(inner, after) -> ["<strong>", ri(inner), "</strong>", ri(after)]
+        NotFound -> [html_escape ["*", "*"], ri(drop(text, 2))]
+      ]
+    }
+    Em -> {
+      match (find_close (drop(text, 1)) ["_"]) [
+        Found(inner, after) -> ["<em>", ri(inner), "</em>", ri(after)]
+        NotFound -> [html_escape ["_"], ri(drop(text, 1))]
+      ]
+    }
+    Code -> {
+      match (find_close (drop(text, 1)) ["`"]) [
+        Found(inner, after) -> ["<code>", html_escape(inner), "</code>", ri(after)]
+        NotFound -> [html_escape ["`"], ri(drop(text, 1))]
+      ]
+    }
+    Link -> {
+      match (parse_target(drop(text, 1))) [
+        Found(link_text, url, after) -> {
+          check_link!(url)
+          [
+            "<a href=\""
+            html_escape(url)
+            "\">"
+            ri(link_text)
+            "</a>"
+            ri(after)
+          ]
+        }
+        NotFound -> [html_escape ["["], ri(drop(text, 1))]
+      ]
+    }
+    Img -> {
+      match (parse_target(drop(text, 2))) [
+        Found(alt, url, after) -> {
+          check_link!(url)
+          [
+            "<img src=\""
+            html_escape(url)
+            "\" alt=\""
+            html_escape(alt)
+            "\" />"
+            ri(after)
+          ]
+        }
+        NotFound -> [html_escape ["!", "["], ri(drop(text, 2))]
+      ]
+    }
+  ]
+}
+
+render_inline = (text) {
+  if (is_empty(text)) {
+    []
+  } else: {
+    match (find_marker(text)) [
+      None -> [html_escape(text)]
+      At(pos, kind) -> {
+        before = (if (pos > 0) {
+          [html_escape(take(text, pos))]
+        } else: {
+          []
+        })
+        append(before, render_marker(render_inline, kind, drop(text, pos)))
+      }
+    ]
+  }
+}
+
+render_list_items = (items) {
+  if (is_empty(items)) {
+    []
+  } else: {
+    ["<li>", render_inline(head(items)), "</li>", render_list_items(tail(items))]
+  }
+}
+
+process_blocks = (lines) {
+  lines = skip_blanks(lines)
+  if (is_empty(lines)) {
+    []
+  } else: {
+    match (classify(head(lines))) [
+      H1(t) -> ["<h1>", render_inline(t), "</h1>\n", process_blocks(tail(lines))]
+      H2(t) -> ["<h2>", render_inline(t), "</h2>\n", process_blocks(tail(lines))]
+      H3(t) -> ["<h3>", render_inline(t), "</h3>\n", process_blocks(tail(lines))]
+      Li(_) -> {
+        match (collect_list(lines)) [
+          Pair(items, rest) -> ["<ul>", render_list_items(items), "</ul>\n", process_blocks(rest)]
+        ]
+      }
+      Bq(_) -> {
+        match (collect_blockquote(lines)) [
+          Pair(bq, rest) -> ["<blockquote>", process_blocks(bq), "</blockquote>\n", process_blocks(rest)]
+        ]
+      }
+      Fence -> {
+        match (collect_code(tail(lines))) [
+          Pair(code, rest) -> {
+            ["<pre><code>", html_escape(join_lines(code)), "\n", "</code></pre>\n", process_blocks(rest)]
+          }
+        ]
+      }
+      P(line) -> ["<p>", render_inline(line), "</p>\n", process_blocks(tail(lines))]
+      Blank -> process_blocks(tail(lines))
+    ]
+  }
+}
+
+find_title = (lines) {
+  if (is_empty(lines)) {
+    []
+  } else: {
+    if (starts_with (head(lines)) ["#", " "]) {
+      drop(head(lines), 2)
+    } else: {
+      find_title(tail(lines))
+    }
+  }
+}
+
+lines = input!()
+
+date = date!()
+
+footer = footer!()
+
+title = find_title(lines)
+
+[
+  "<!DOCTYPE html><html lang=\"en\">\n<head>\n"
+  "<meta charset=\"utf-8\" />\n"
+  "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n"
+  "<link rel=\"stylesheet\" href=\"../../../styles/style.css\" />\n"
+  "<title>"
+  html_escape(title)
+  "</title>\n"
+  "</head>\n<body>\n"
+  "<p><a href=\"../../..#notes\">Notes</a><br />"
+  date
+  "</p>\n"
+  process_blocks(lines)
+  footer
+  "\n</body></html>\n"
+]
